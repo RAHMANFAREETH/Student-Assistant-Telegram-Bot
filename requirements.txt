@@ -3,3 +3,4 @@ python-dotenv
 PyPDF2[crypto]
 Pillow
 deep-translator
+tzdata
