@@ -7,3 +7,6 @@ tzdata
 Flask
 gunicorn
 supabase
+gTTS
+python-docx
+requests

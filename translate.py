@@ -2,31 +2,37 @@ import time
 from collections import OrderedDict
 
 from telebot import types
-from deep_translator import (
-    GoogleTranslator,
-    MyMemoryTranslator
+from deep_translator import GoogleTranslator, MyMemoryTranslator
+
+from translation_history import (
+    save_translation,
+    get_translation_history,
+    get_translation_by_id,
+    clear_translation_history,
+)
+from translation_tts import build_pronunciation_audio
+from translation_documents import (
+    SUPPORTED_DOCUMENT_EXTENSIONS,
+    extract_text_from_document,
+    build_translated_text_file,
+)
+from translation_ocr import (
+    extract_text_with_ocr,
+    get_ocr_api_key,
 )
 
 
-# ==================================================
-# USER STATE
-# ==================================================
-
 translation_state = {}
 last_translation_time = {}
-
 translation_cache = OrderedDict()
 
 MAX_CACHE_SIZE = 200
-MAX_INPUT_LENGTH = 12000
+MAX_TEXT_INPUT_LENGTH = 12000
+MAX_DOCUMENT_TEXT_LENGTH = 30000
 TRANSLATION_CHUNK_SIZE = 3000
 TELEGRAM_CHUNK_SIZE = 3800
 USER_COOLDOWN = 1.2
 
-
-# ==================================================
-# LANGUAGES
-# ==================================================
 
 LANGUAGES = {
     "🇬🇧 English": "en",
@@ -40,165 +46,92 @@ LANGUAGES = {
     "🇮🇩 Indonesian": "id",
     "🇫🇷 French": "fr",
     "🇩🇪 German": "de",
-    "🇹🇷 Turkish": "tr"
+    "🇹🇷 Turkish": "tr",
 }
-
 
 SOURCE_LANGUAGES = {
     "🔎 Auto Detect": "auto",
-    **LANGUAGES
+    **LANGUAGES,
 }
-
 
 LANGUAGE_BY_CODE = {
     code: name
     for name, code in LANGUAGES.items()
 }
 
-
-# ==================================================
-# QUICK PAIRS
-# ==================================================
-
 QUICK_PAIRS = {
-    "⚡ English → Tamil": (
-        "en",
-        "ta"
-    ),
-
-    "⚡ Tamil → English": (
-        "ta",
-        "en"
-    ),
-
-    "⚡ Arabic → Tamil": (
-        "ar",
-        "ta"
-    ),
-
-    "⚡ Tamil → Arabic": (
-        "ta",
-        "ar"
-    ),
-
-    "⚡ Sinhala → Tamil": (
-        "si",
-        "ta"
-    ),
-
-    "⚡ Tamil → Sinhala": (
-        "ta",
-        "si"
-    )
+    "⚡ English → Tamil": ("en", "ta"),
+    "⚡ Tamil → English": ("ta", "en"),
+    "⚡ Arabic → Tamil": ("ar", "ta"),
+    "⚡ Tamil → Arabic": ("ta", "ar"),
+    "⚡ Sinhala → Tamil": ("si", "ta"),
+    "⚡ Tamil → Sinhala": ("ta", "si"),
 }
 
 
-# ==================================================
-# CACHE
-# ==================================================
-
 def cache_get(key):
-
     if key not in translation_cache:
         return None
 
-    result = translation_cache.pop(
-        key
-    )
+    value = translation_cache.pop(key)
+    translation_cache[key] = value
 
-    translation_cache[
-        key
-    ] = result
-
-    return result
+    return value
 
 
-def cache_save(
-    key,
-    value
-):
-
+def cache_save(key, value):
     if key in translation_cache:
+        translation_cache.pop(key)
 
-        translation_cache.pop(
-            key
-        )
+    translation_cache[key] = value
 
-    translation_cache[
-        key
-    ] = value
-
-    while (
-        len(translation_cache)
-        > MAX_CACHE_SIZE
-    ):
-
+    while len(translation_cache) > MAX_CACHE_SIZE:
         translation_cache.popitem(
             last=False
         )
 
 
-# ==================================================
-# SPLIT LONG TEXT
-# ==================================================
-
 def split_long_text(
     text,
-    max_size=TRANSLATION_CHUNK_SIZE
+    max_size=TRANSLATION_CHUNK_SIZE,
 ):
-
-    text = text.strip()
+    text = (text or "").strip()
 
     if len(text) <= max_size:
         return [text]
 
     chunks = []
-
     remaining = text
 
     while remaining:
-
         if len(remaining) <= max_size:
-
-            chunks.append(
-                remaining
-            )
-
+            chunks.append(remaining)
             break
 
-        split_position = (
-            remaining.rfind(
-                "\n",
-                0,
-                max_size
-            )
+        split_position = remaining.rfind(
+            "\n",
+            0,
+            max_size,
         )
 
         if split_position < max_size // 2:
-
-            split_position = (
-                remaining.rfind(
-                    ". ",
-                    0,
-                    max_size
-                )
+            split_position = remaining.rfind(
+                ". ",
+                0,
+                max_size,
             )
 
             if split_position != -1:
                 split_position += 1
 
         if split_position < max_size // 2:
-
-            split_position = (
-                remaining.rfind(
-                    " ",
-                    0,
-                    max_size
-                )
+            split_position = remaining.rfind(
+                " ",
+                0,
+                max_size,
             )
 
         if split_position <= 0:
-
             split_position = max_size
 
         chunk = remaining[
@@ -206,10 +139,7 @@ def split_long_text(
         ].strip()
 
         if chunk:
-
-            chunks.append(
-                chunk
-            )
+            chunks.append(chunk)
 
         remaining = remaining[
             split_position:
@@ -218,20 +148,15 @@ def split_long_text(
     return chunks
 
 
-# ==================================================
-# TRANSLATE ONE CHUNK
-# ==================================================
-
 def translate_chunk(
     source,
     target,
-    text
+    text,
 ):
-
     cache_key = (
         source,
         target,
-        text
+        text,
     )
 
     cached = cache_get(
@@ -239,90 +164,55 @@ def translate_chunk(
     )
 
     if cached:
-
-        return (
-            cached,
-            "Cache"
-        )
-
-
-    # ==============================================
-    # GOOGLE
-    # ==============================================
+        return cached, "Cache"
 
     google_error = None
 
     for attempt in range(2):
-
         try:
-
             result = GoogleTranslator(
                 source=source,
-                target=target
-            ).translate(
-                text
-            )
+                target=target,
+            ).translate(text)
 
             if result:
-
                 cache_save(
                     cache_key,
-                    result
+                    result,
                 )
 
-                return (
-                    result,
-                    "Google"
-                )
+                return result, "Google"
 
         except Exception as error:
-
             google_error = error
 
             print(
                 "Google translation error:",
-                repr(error)
+                repr(error),
             )
 
             if attempt == 0:
-
-                time.sleep(
-                    1.2
-                )
-
-
-    # ==============================================
-    # MYMEMORY FALLBACK
-    # ==============================================
+                time.sleep(1.2)
 
     try:
-
         result = MyMemoryTranslator(
             source=source,
-            target=target
-        ).translate(
-            text
-        )
+            target=target,
+        ).translate(text)
 
         if result:
-
             cache_save(
                 cache_key,
-                result
+                result,
             )
 
-            return (
-                result,
-                "MyMemory"
-            )
+            return result, "MyMemory"
 
     except Exception as error:
-
         print(
             "MyMemory translation error:",
-            repr(error)
+            repr(error),
         )
-
 
     raise RuntimeError(
         f"Translation services failed: "
@@ -330,33 +220,26 @@ def translate_chunk(
     )
 
 
-# ==================================================
-# TRANSLATE COMPLETE TEXT
-# ==================================================
-
 def translate_complete_text(
     source,
     target,
-    text
+    text,
 ):
-
     chunks = split_long_text(
         text
     )
 
     translated_chunks = []
-
     providers = []
 
     for index, chunk in enumerate(
         chunks
     ):
-
         result, provider = (
             translate_chunk(
                 source,
                 target,
-                chunk
+                chunk,
             )
         )
 
@@ -368,12 +251,8 @@ def translate_complete_text(
             provider
         )
 
-        # Reduce rate-limit problems
         if index < len(chunks) - 1:
-
-            time.sleep(
-                0.4
-            )
+            time.sleep(0.4)
 
     final_text = "\n\n".join(
         translated_chunks
@@ -385,53 +264,102 @@ def translate_complete_text(
         else "Multiple"
     )
 
-    return (
-        final_text,
-        provider_name
-    )
+    return final_text, provider_name
 
-
-# ==================================================
-# LANGUAGE NAME
-# ==================================================
 
 def language_name(code):
-
     if code == "auto":
-
         return "🔎 Auto Detect"
 
     return LANGUAGE_BY_CODE.get(
         code,
-        code
+        code,
     )
 
 
-# ==================================================
-# SEND TRANSLATION RESULT
-# ==================================================
+def short_preview(
+    text,
+    limit=220,
+):
+    text = " ".join(
+        (text or "").split()
+    )
+
+    if len(text) <= limit:
+        return text
+
+    return (
+        text[:limit].rstrip()
+        + "…"
+    )
+
+
+def create_result_markup(
+    translated_text,
+    history_id,
+):
+    markup = types.InlineKeyboardMarkup(
+        row_width=2
+    )
+
+    buttons = []
+
+    if (
+        1
+        <= len(translated_text)
+        <= 256
+    ):
+        buttons.append(
+            types.InlineKeyboardButton(
+                "📋 Copy",
+                copy_text=types.CopyTextButton(
+                    translated_text
+                ),
+            )
+        )
+
+    if history_id:
+        buttons.append(
+            types.InlineKeyboardButton(
+                "🔊 Listen",
+                callback_data=(
+                    f"tts:{history_id}"
+                ),
+            )
+        )
+
+    if buttons:
+        markup.add(*buttons)
+        return markup
+
+    return None
+
 
 def send_translation_result(
     bot,
-    chat_id,
+    message,
     source,
     target,
+    original_text,
     translated_text,
-    provider=None
+    provider,
+    kind="text",
 ):
-
-    source_name = language_name(
-        source
-    )
-
-    target_name = language_name(
-        target
+    history_id = save_translation(
+        user_id=message.from_user.id,
+        chat_id=message.chat.id,
+        source_language=source,
+        target_language=target,
+        original_text=original_text,
+        translated_text=translated_text,
+        provider=provider,
+        kind=kind,
     )
 
     header = (
         "✅ Translation Complete\n\n"
-        f"From: {source_name}\n"
-        f"To: {target_name}\n"
+        f"From: {language_name(source)}\n"
+        f"To: {language_name(target)}\n"
         "\n──────────────\n\n"
     )
 
@@ -440,195 +368,142 @@ def send_translation_result(
         + translated_text
     )
 
-
-    # ==============================================
-    # SHORT RESULT
-    # ==============================================
+    markup = create_result_markup(
+        translated_text,
+        history_id,
+    )
 
     if len(
         complete_message
     ) <= TELEGRAM_CHUNK_SIZE:
-
-        markup = None
-
-        # Telegram CopyTextButton supports
-        # short copyable text
-        if (
-            1
-            <= len(translated_text)
-            <= 256
-        ):
-
-            markup = (
-                types
-                .InlineKeyboardMarkup()
-            )
-
-            copy_button = (
-                types.InlineKeyboardButton(
-                    "📋 Copy Translation",
-                    copy_text=types.CopyTextButton(
-                        translated_text
-                    )
-                )
-            )
-
-            markup.add(
-                copy_button
-            )
-
         bot.send_message(
-            chat_id,
+            message.chat.id,
             complete_message,
-            reply_markup=markup
+            reply_markup=markup,
         )
+        return
 
+    bot.send_message(
+        message.chat.id,
+        header,
+    )
 
-    # ==============================================
-    # LONG RESULT
-    # ==============================================
-
-    else:
-
-        bot.send_message(
-            chat_id,
-            header
-        )
-
+    chunks = [
+        translated_text[
+            index:
+            index + TELEGRAM_CHUNK_SIZE
+        ]
         for index in range(
             0,
             len(translated_text),
-            TELEGRAM_CHUNK_SIZE
-        ):
+            TELEGRAM_CHUNK_SIZE,
+        )
+    ]
 
-            bot.send_message(
-                chat_id,
-                translated_text[
-                    index:
-                    index
-                    + TELEGRAM_CHUNK_SIZE
-                ]
-            )
+    for index, chunk in enumerate(
+        chunks
+    ):
+        bot.send_message(
+            message.chat.id,
+            chunk,
+            reply_markup=(
+                markup
+                if index
+                == len(chunks) - 1
+                else None
+            ),
+        )
 
-
-    print(
-        "Translation provider:",
-        provider
-    )
-
-
-# ==================================================
-# REGISTER TRANSLATOR
-# ==================================================
 
 def register_translation_handlers(
     bot,
-    show_main_menu
+    show_main_menu,
 ):
-
-
-    # ==============================================
-    # TRANSLATOR HOME
-    # ==============================================
 
     def show_translation_menu(
         chat_id
     ):
-
         translation_state[
             chat_id
         ] = {
             "step": "menu"
         }
 
-        markup = (
-            types.ReplyKeyboardMarkup(
-                resize_keyboard=True,
-                row_width=2
-            )
+        markup = types.ReplyKeyboardMarkup(
+            resize_keyboard=True,
+            row_width=2,
         )
 
         markup.add(
             types.KeyboardButton(
                 "⚡ English → Tamil"
             ),
-
             types.KeyboardButton(
                 "⚡ Tamil → English"
             ),
-
             types.KeyboardButton(
                 "⚡ Arabic → Tamil"
             ),
-
             types.KeyboardButton(
                 "⚡ Tamil → Arabic"
             ),
-
             types.KeyboardButton(
                 "⚡ Sinhala → Tamil"
             ),
-
             types.KeyboardButton(
                 "⚡ Tamil → Sinhala"
             ),
-
             types.KeyboardButton(
                 "⚙️ Choose Languages"
             ),
-
+            types.KeyboardButton(
+                "📄 Translate Document"
+            ),
+            types.KeyboardButton(
+                "🖼 OCR Image → Translate"
+            ),
+            types.KeyboardButton(
+                "🕘 Translation History"
+            ),
             types.KeyboardButton(
                 "🏠 Main Menu"
-            )
+            ),
         )
 
         bot.send_message(
             chat_id,
-            """
-🌐 Advanced Translator
-
-Choose a quick translation pair
-or select your own languages.
-
-⚡ Quick Translation
-⚙️ Custom Languages
-
-You can also reply to any text with:
-
-/tr ta
-
-Example:
-/tr en
-/tr ar
-/tr si
-""",
-            reply_markup=markup
+            (
+                "🌐 Advanced Translator\n\n"
+                "⚡ Quick translation\n"
+                "⚙️ Custom languages\n"
+                "📄 TXT / PDF / DOCX\n"
+                "🖼 Image OCR + translation\n"
+                "🕘 Translation history\n"
+                "🔊 Pronunciation\n\n"
+                "Reply to any text with:\n"
+                "/tr ta\n"
+                "/tr en\n"
+                "/tr ar\n"
+                "/tr si"
+            ),
+            reply_markup=markup,
         )
-
-
-    # ==============================================
-    # SOURCE LANGUAGE MENU
-    # ==============================================
 
     def show_source_menu(
         chat_id
     ):
-
         translation_state[
             chat_id
         ] = {
             "step": "source"
         }
 
-        markup = (
-            types.ReplyKeyboardMarkup(
-                resize_keyboard=True,
-                row_width=2
-            )
+        markup = types.ReplyKeyboardMarkup(
+            resize_keyboard=True,
+            row_width=2,
         )
 
         for name in SOURCE_LANGUAGES:
-
             markup.add(
                 types.KeyboardButton(
                     name
@@ -639,52 +514,44 @@ Example:
             types.KeyboardButton(
                 "🔙 Translator Menu"
             ),
-
             types.KeyboardButton(
                 "🏠 Main Menu"
-            )
+            ),
         )
 
         bot.send_message(
             chat_id,
-            """
-🌐 Source Language
-
-Choose the language of your text.
-
-If you are unsure, choose:
-
-🔎 Auto Detect
-""",
-            reply_markup=markup
+            (
+                "🌐 Choose the source language.\n\n"
+                "If you are unsure, choose:\n"
+                "🔎 Auto Detect"
+            ),
+            reply_markup=markup,
         )
 
-
-    # ==============================================
-    # TARGET LANGUAGE MENU
-    # ==============================================
-
     def show_target_menu(
-        chat_id
+        chat_id,
+        step="target",
+        prompt=(
+            "Choose the target language:"
+        ),
     ):
-
-        state = translation_state[
-            chat_id
-        ]
-
-        state[
-            "step"
-        ] = "target"
-
-        markup = (
-            types.ReplyKeyboardMarkup(
-                resize_keyboard=True,
-                row_width=2
+        state = (
+            translation_state
+            .setdefault(
+                chat_id,
+                {}
             )
         )
 
-        for name in LANGUAGES:
+        state["step"] = step
 
+        markup = types.ReplyKeyboardMarkup(
+            resize_keyboard=True,
+            row_width=2,
+        )
+
+        for name in LANGUAGES:
             markup.add(
                 types.KeyboardButton(
                     name
@@ -693,54 +560,37 @@ If you are unsure, choose:
 
         markup.add(
             types.KeyboardButton(
-                "🔙 Change Source"
+                "🔙 Translator Menu"
             ),
-
             types.KeyboardButton(
                 "🏠 Main Menu"
-            )
+            ),
         )
 
         bot.send_message(
             chat_id,
-            f"""
-✅ Source:
-
-{language_name(state["source"])}
-
-Now choose the target language:
-""",
-            reply_markup=markup
+            prompt,
+            reply_markup=markup,
         )
-
-
-    # ==============================================
-    # READY MENU
-    # ==============================================
 
     def show_ready_menu(
         chat_id
     ):
-
         state = translation_state[
             chat_id
         ]
 
-        state[
-            "step"
-        ] = "text"
+        state["step"] = "text"
 
-        markup = (
-            types.ReplyKeyboardMarkup(
-                resize_keyboard=True,
-                row_width=2
-            )
+        markup = types.ReplyKeyboardMarkup(
+            resize_keyboard=True,
+            row_width=2,
         )
 
-        if state[
-            "source"
-        ] != "auto":
-
+        if (
+            state.get("source")
+            != "auto"
+        ):
             markup.add(
                 types.KeyboardButton(
                     "🔄 Swap Languages"
@@ -751,39 +601,92 @@ Now choose the target language:
             types.KeyboardButton(
                 "🔁 Change Languages"
             ),
-
+            types.KeyboardButton(
+                "🕘 Translation History"
+            ),
             types.KeyboardButton(
                 "🔙 Translator Menu"
             ),
-
             types.KeyboardButton(
                 "🏠 Main Menu"
-            )
+            ),
         )
 
         bot.send_message(
             chat_id,
-            f"""
-🌐 Translator Ready
-
-From:
-{language_name(state["source"])}
-
-To:
-{language_name(state["target"])}
-
-📝 Send the text you want translated.
-
-You can keep sending more text using
-the same language pair.
-""",
-            reply_markup=markup
+            (
+                "🌐 Translator Ready\n\n"
+                f"From: "
+                f"{language_name(state['source'])}\n"
+                f"To: "
+                f"{language_name(state['target'])}\n\n"
+                "📝 Send the text you want translated."
+            ),
+            reply_markup=markup,
         )
 
+    def show_history(
+        message
+    ):
+        rows = get_translation_history(
+            message.from_user.id,
+            limit=10,
+        )
 
-    # ==============================================
-    # TRANSLATE MENU BUTTON
-    # ==============================================
+        if not rows:
+            bot.send_message(
+                message.chat.id,
+                (
+                    "🕘 Your translation "
+                    "history is empty."
+                ),
+            )
+            return
+
+        parts = [
+            "🕘 Recent Translation History\n"
+        ]
+
+        for number, row in enumerate(
+            rows,
+            start=1,
+        ):
+            parts.append(
+                (
+                    f"\n{number}. "
+                    f"{language_name(row['source_language'])}"
+                    f" → "
+                    f"{language_name(row['target_language'])}"
+                    f" [{row.get('kind', 'text')}]\n"
+                    f"📝 "
+                    f"{short_preview(row['original_text'], 120)}\n"
+                    f"✅ "
+                    f"{short_preview(row['translated_text'], 160)}"
+                )
+            )
+
+        markup = types.ReplyKeyboardMarkup(
+            resize_keyboard=True,
+            row_width=2,
+        )
+
+        markup.add(
+            types.KeyboardButton(
+                "🗑 Clear Translation History"
+            ),
+            types.KeyboardButton(
+                "🔙 Translator Menu"
+            ),
+            types.KeyboardButton(
+                "🏠 Main Menu"
+            ),
+        )
+
+        bot.send_message(
+            message.chat.id,
+            "\n".join(parts),
+            reply_markup=markup,
+        )
 
     @bot.message_handler(
         func=lambda m:
@@ -792,49 +695,26 @@ the same language pair.
     def translator_button(
         message
     ):
-
         show_translation_menu(
             message.chat.id
         )
 
-
-    # ==============================================
-    # /translate
-    # ==============================================
-
     @bot.message_handler(
-        commands=[
-            "translate"
-        ]
+        commands=["translate"]
     )
     def translate_command(
         message
     ):
-
         show_translation_menu(
             message.chat.id
         )
 
-
-    # ==============================================
-    # /tr TARGET
-    #
-    # Reply to a Telegram message:
-    #
-    # /tr ta
-    # /tr en
-    # /tr ar
-    # ==============================================
-
     @bot.message_handler(
-        commands=[
-            "tr"
-        ]
+        commands=["tr"]
     )
     def quick_reply_translate(
         message
     ):
-
         chat_id = message.chat.id
 
         parts = (
@@ -844,27 +724,17 @@ the same language pair.
         )
 
         if len(parts) != 2:
-
             bot.send_message(
                 chat_id,
-                """
-❌ Usage:
-
-Reply to a message and send:
-
-/tr ta
-/tr en
-/tr ar
-/tr si
-
-Example:
-
-Reply to English text with:
-
-/tr ta
-"""
+                (
+                    "❌ Usage:\n\n"
+                    "Reply to a message and send:\n"
+                    "/tr ta\n"
+                    "/tr en\n"
+                    "/tr ar\n"
+                    "/tr si"
+                ),
             )
-
             return
 
         target = (
@@ -873,23 +743,22 @@ Reply to English text with:
             .lower()
         )
 
-        if target not in LANGUAGE_BY_CODE:
-
+        if (
+            target
+            not in LANGUAGE_BY_CODE
+        ):
             supported = ", ".join(
                 LANGUAGE_BY_CODE.keys()
             )
 
             bot.send_message(
                 chat_id,
-                f"""
-❌ Unsupported target language.
-
-Supported codes:
-
-{supported}
-"""
+                (
+                    "❌ Unsupported language.\n\n"
+                    f"Supported codes:\n"
+                    f"{supported}"
+                ),
             )
-
             return
 
         replied = (
@@ -897,18 +766,14 @@ Supported codes:
         )
 
         if not replied:
-
             bot.send_message(
                 chat_id,
-                """
-❌ Reply to a text message first.
-
-Then send, for example:
-
-/tr ta
-"""
+                (
+                    "❌ Reply to a text message first.\n\n"
+                    "Then send:\n"
+                    "/tr ta"
+                ),
             )
-
             return
 
         original_text = (
@@ -917,14 +782,13 @@ Then send, for example:
         )
 
         if not original_text:
-
             bot.send_message(
                 chat_id,
-                """
-❌ That message does not contain text.
-"""
+                (
+                    "❌ That message "
+                    "does not contain text."
+                ),
             )
-
             return
 
         status = bot.send_message(
@@ -933,91 +797,470 @@ Then send, for example:
         )
 
         try:
-
             result, provider = (
                 translate_complete_text(
                     "auto",
                     target,
-                    original_text
+                    original_text,
                 )
             )
 
             try:
-
                 bot.delete_message(
                     chat_id,
-                    status.message_id
+                    status.message_id,
                 )
-
             except Exception:
                 pass
 
             send_translation_result(
-                bot,
-                chat_id,
-                "auto",
-                target,
-                result,
-                provider
+                bot=bot,
+                message=message,
+                source="auto",
+                target=target,
+                original_text=original_text,
+                translated_text=result,
+                provider=provider,
+                kind="reply",
             )
 
         except Exception as error:
-
             print(
                 "Quick translation error:",
-                repr(error)
+                repr(error),
             )
-
-            try:
-
-                bot.delete_message(
-                    chat_id,
-                    status.message_id
-                )
-
-            except Exception:
-                pass
 
             bot.send_message(
                 chat_id,
-                """
-❌ Translation service is temporarily unavailable.
-
-Please try again shortly.
-"""
+                (
+                    "❌ Translation service "
+                    "is temporarily unavailable."
+                ),
             )
 
+    @bot.callback_query_handler(
+        func=lambda call:
+        bool(call.data)
+        and call.data.startswith(
+            "tts:"
+        )
+    )
+    def translation_tts_callback(
+        call
+    ):
+        try:
+            translation_id = int(
+                call.data.split(
+                    ":",
+                    1,
+                )[1]
+            )
 
-    # ==============================================
-    # TRANSLATOR STATE HANDLER
-    # ==============================================
+        except Exception:
+            bot.answer_callback_query(
+                call.id,
+                "Invalid translation."
+            )
+            return
+
+        row = get_translation_by_id(
+            call.from_user.id,
+            translation_id,
+        )
+
+        if not row:
+            bot.answer_callback_query(
+                call.id,
+                "Translation not found."
+            )
+            return
+
+        language = row.get(
+            "target_language"
+        )
+
+        if (
+            language
+            not in LANGUAGE_BY_CODE
+        ):
+            bot.answer_callback_query(
+                call.id,
+                (
+                    "Pronunciation unavailable "
+                    "for this language."
+                ),
+            )
+            return
+
+        bot.answer_callback_query(
+            call.id,
+            "Creating pronunciation…"
+        )
+
+        try:
+            audio, truncated = (
+                build_pronunciation_audio(
+                    row.get(
+                        "translated_text",
+                        ""
+                    ),
+                    language,
+                )
+            )
+
+            caption = (
+                "🔊 Pronunciation"
+            )
+
+            if truncated:
+                caption += (
+                    "\n\nℹ️ First 2,500 "
+                    "characters only."
+                )
+
+            bot.send_voice(
+                call.message.chat.id,
+                audio,
+                caption=caption,
+            )
+
+        except Exception as error:
+            print(
+                "TTS error:",
+                repr(error),
+            )
+
+            bot.send_message(
+                call.message.chat.id,
+                (
+                    "❌ Pronunciation is "
+                    "temporarily unavailable."
+                ),
+            )
+
+    @bot.message_handler(
+        content_types=["document"]
+    )
+    def translation_document_handler(
+        message
+    ):
+        state = translation_state.get(
+            message.chat.id
+        )
+
+        if not state:
+            return
+
+        if state.get("step") not in {
+            "waiting_document",
+            "waiting_ocr_image",
+        }:
+            return
+
+        filename = (
+            message.document.file_name
+            or "document"
+        )
+
+        status = bot.send_message(
+            message.chat.id,
+            "⏳ Reading file..."
+        )
+
+        try:
+            file_info = bot.get_file(
+                message.document.file_id
+            )
+
+            file_bytes = (
+                bot.download_file(
+                    file_info.file_path
+                )
+            )
+
+            if (
+                state.get("step")
+                == "waiting_ocr_image"
+            ):
+                extracted_text = (
+                    extract_text_with_ocr(
+                        file_bytes,
+                        filename,
+                    )
+                )
+
+                kind = "ocr"
+
+            else:
+                extension = (
+                    "."
+                    + filename.rsplit(
+                        ".",
+                        1,
+                    )[-1].lower()
+                    if "." in filename
+                    else ""
+                )
+
+                if (
+                    extension
+                    not in SUPPORTED_DOCUMENT_EXTENSIONS
+                ):
+                    raise ValueError(
+                        "Please send TXT, PDF, or DOCX."
+                    )
+
+                extracted_text = (
+                    extract_text_from_document(
+                        file_bytes,
+                        filename,
+                    )
+                )
+
+                if (
+                    not extracted_text
+                    and extension == ".pdf"
+                ):
+                    if not get_ocr_api_key():
+                        raise RuntimeError(
+                            "This PDF appears scanned. "
+                            "Configure OCR_SPACE_API_KEY."
+                        )
+
+                    extracted_text = (
+                        extract_text_with_ocr(
+                            file_bytes,
+                            filename,
+                        )
+                    )
+
+                kind = "document"
+
+            if not extracted_text.strip():
+                raise RuntimeError(
+                    "No readable text found."
+                )
+
+            if (
+                len(extracted_text)
+                > MAX_DOCUMENT_TEXT_LENGTH
+            ):
+                raise ValueError(
+                    (
+                        "Document too long. "
+                        f"Maximum extracted text: "
+                        f"{MAX_DOCUMENT_TEXT_LENGTH:,} "
+                        "characters."
+                    )
+                )
+
+            bot.edit_message_text(
+                (
+                    "✅ Text extracted.\n"
+                    f"📝 "
+                    f"{len(extracted_text):,} "
+                    "characters\n\n"
+                    "⏳ Translating..."
+                ),
+                message.chat.id,
+                status.message_id,
+            )
+
+            translated, provider = (
+                translate_complete_text(
+                    "auto",
+                    state["target"],
+                    extracted_text,
+                )
+            )
+
+            output, output_name = (
+                build_translated_text_file(
+                    translated,
+                    filename,
+                )
+            )
+
+            history_id = (
+                save_translation(
+                    user_id=(
+                        message.from_user.id
+                    ),
+                    chat_id=(
+                        message.chat.id
+                    ),
+                    source_language="auto",
+                    target_language=(
+                        state["target"]
+                    ),
+                    original_text=(
+                        extracted_text
+                    ),
+                    translated_text=(
+                        translated
+                    ),
+                    provider=provider,
+                    kind=kind,
+                )
+            )
+
+            markup = create_result_markup(
+                translated,
+                history_id,
+            )
+
+            bot.send_document(
+                message.chat.id,
+                output,
+                caption=(
+                    "✅ Document Translation Complete\n\n"
+                    f"To: "
+                    f"{language_name(state['target'])}\n"
+                    f"Output: {output_name}"
+                ),
+                reply_markup=markup,
+            )
+
+            try:
+                bot.delete_message(
+                    message.chat.id,
+                    status.message_id,
+                )
+            except Exception:
+                pass
+
+        except Exception as error:
+            print(
+                "Document translation error:",
+                repr(error),
+            )
+
+            bot.send_message(
+                message.chat.id,
+                f"❌ {str(error)}",
+            )
+
+    @bot.message_handler(
+        content_types=["photo"]
+    )
+    def translation_photo_handler(
+        message
+    ):
+        state = translation_state.get(
+            message.chat.id
+        )
+
+        if not state:
+            return
+
+        if (
+            state.get("step")
+            != "waiting_ocr_image"
+        ):
+            return
+
+        status = bot.send_message(
+            message.chat.id,
+            "🔎 Reading text from image..."
+        )
+
+        try:
+            photo = message.photo[-1]
+
+            file_info = bot.get_file(
+                photo.file_id
+            )
+
+            file_bytes = (
+                bot.download_file(
+                    file_info.file_path
+                )
+            )
+
+            extracted_text = (
+                extract_text_with_ocr(
+                    file_bytes,
+                    "telegram_photo.jpg",
+                )
+            )
+
+            if (
+                len(extracted_text)
+                > MAX_DOCUMENT_TEXT_LENGTH
+            ):
+                raise ValueError(
+                    "OCR text is too long."
+                )
+
+            bot.edit_message_text(
+                (
+                    "✅ OCR complete.\n"
+                    f"📝 "
+                    f"{len(extracted_text):,} "
+                    "characters\n\n"
+                    "⏳ Translating..."
+                ),
+                message.chat.id,
+                status.message_id,
+            )
+
+            translated, provider = (
+                translate_complete_text(
+                    "auto",
+                    state["target"],
+                    extracted_text,
+                )
+            )
+
+            try:
+                bot.delete_message(
+                    message.chat.id,
+                    status.message_id,
+                )
+            except Exception:
+                pass
+
+            send_translation_result(
+                bot=bot,
+                message=message,
+                source="auto",
+                target=state["target"],
+                original_text=(
+                    extracted_text
+                ),
+                translated_text=translated,
+                provider=provider,
+                kind="ocr",
+            )
+
+        except Exception as error:
+            print(
+                "OCR photo error:",
+                repr(error),
+            )
+
+            bot.send_message(
+                message.chat.id,
+                (
+                    f"❌ OCR failed: "
+                    f"{str(error)}"
+                ),
+            )
 
     @bot.message_handler(
         func=lambda m:
         m.chat.id
         in translation_state
     )
-    def translation_handler(
+    def translation_state_handler(
         message
     ):
-
-        chat_id = (
-            message.chat.id
-        )
+        chat_id = message.chat.id
 
         if not message.text:
-
-            bot.send_message(
-                chat_id,
-                "❌ Please send text."
-            )
-
             return
 
-        text = (
-            message.text
-            .strip()
-        )
+        text = message.text.strip()
 
         state = (
             translation_state
@@ -1025,136 +1268,108 @@ Please try again shortly.
         )
 
         if not state:
-
             return
 
-
-        # ==========================================
-        # MAIN MENU
-        # ==========================================
-
         if text == "🏠 Main Menu":
-
             translation_state.pop(
                 chat_id,
-                None
-            )
-
-            first_name = (
-                message
-                .from_user
-                .first_name
-                or "Friend"
+                None,
             )
 
             show_main_menu(
                 chat_id,
-                first_name
+                (
+                    message.from_user.first_name
+                    or "Friend"
+                ),
             )
-
             return
 
-
-        # ==========================================
-        # TRANSLATOR MENU
-        # ==========================================
-
         if text == "🔙 Translator Menu":
-
             show_translation_menu(
                 chat_id
             )
-
             return
 
-
-        # ==========================================
-        # CHANGE SOURCE
-        # ==========================================
-
-        if text == "🔙 Change Source":
-
-            show_source_menu(
-                chat_id
+        if text == "🕘 Translation History":
+            show_history(
+                message
             )
-
             return
 
-
-        # ==========================================
-        # CHANGE LANGUAGES
-        # ==========================================
-
-        if text == "🔁 Change Languages":
-
-            show_source_menu(
-                chat_id
-            )
-
-            return
-
-
-        # ==========================================
-        # SWAP
-        # ==========================================
-
-        if text == "🔄 Swap Languages":
-
-            source = state.get(
-                "source"
-            )
-
-            target = state.get(
-                "target"
-            )
-
-            if source == "auto":
-
+        if (
+            text
+            == "🗑 Clear Translation History"
+        ):
+            if clear_translation_history(
+                message.from_user.id
+            ):
                 bot.send_message(
                     chat_id,
-                    """
-❌ Auto Detect cannot be swapped.
-
-Choose a specific source language first.
-"""
+                    (
+                        "✅ Translation "
+                        "history cleared."
+                    ),
                 )
-
-                return
-
-            state[
-                "source"
-            ] = target
-
-            state[
-                "target"
-            ] = source
-
-            bot.send_message(
-                chat_id,
-                f"""
-🔄 Languages swapped!
-
-From:
-{language_name(state["source"])}
-
-To:
-{language_name(state["target"])}
-"""
-            )
-
-            show_ready_menu(
-                chat_id
-            )
-
+            else:
+                bot.send_message(
+                    chat_id,
+                    (
+                        "❌ Could not clear "
+                        "history."
+                    ),
+                )
             return
 
+        if text == "📄 Translate Document":
+            translation_state[
+                chat_id
+            ] = {
+                "step": "document_target"
+            }
 
-        # ==========================================
-        # QUICK LANGUAGE PAIRS
-        # ==========================================
+            show_target_menu(
+                chat_id,
+                step="document_target",
+                prompt=(
+                    "📄 Document Translation\n\n"
+                    "Choose target language:"
+                ),
+            )
+            return
+
+        if (
+            text
+            == "🖼 OCR Image → Translate"
+        ):
+            if not get_ocr_api_key():
+                bot.send_message(
+                    chat_id,
+                    (
+                        "❌ OCR is not configured.\n\n"
+                        "Add OCR_SPACE_API_KEY "
+                        "to Render Environment."
+                    ),
+                )
+                return
+
+            translation_state[
+                chat_id
+            ] = {
+                "step": "ocr_target"
+            }
+
+            show_target_menu(
+                chat_id,
+                step="ocr_target",
+                prompt=(
+                    "🖼 OCR Image → Translate\n\n"
+                    "Choose target language:"
+                ),
+            )
+            return
 
         if text in QUICK_PAIRS:
-
             source, target = (
                 QUICK_PAIRS[text]
             )
@@ -1164,147 +1379,196 @@ To:
             ] = {
                 "step": "text",
                 "source": source,
-                "target": target
+                "target": target,
             }
 
             show_ready_menu(
                 chat_id
             )
-
             return
 
-
-        # ==========================================
-        # CUSTOM LANGUAGES
-        # ==========================================
-
         if text == "⚙️ Choose Languages":
-
             show_source_menu(
                 chat_id
             )
-
             return
 
+        if text == "🔁 Change Languages":
+            show_source_menu(
+                chat_id
+            )
+            return
 
-        # ==========================================
-        # SOURCE
-        # ==========================================
+        if text == "🔄 Swap Languages":
+            source = state.get(
+                "source"
+            )
 
-        if state[
-            "step"
-        ] == "source":
+            target = state.get(
+                "target"
+            )
 
-            if text not in SOURCE_LANGUAGES:
-
+            if (
+                not source
+                or not target
+                or source == "auto"
+            ):
                 bot.send_message(
                     chat_id,
-                    """
-❌ Please choose a language using the buttons.
-"""
+                    (
+                        "❌ Auto Detect cannot "
+                        "be swapped."
+                    ),
                 )
-
                 return
 
-            state[
-                "source"
-            ] = SOURCE_LANGUAGES[
+            state["source"] = target
+            state["target"] = source
+
+            show_ready_menu(
+                chat_id
+            )
+            return
+
+        if (
+            state.get("step")
+            == "source"
+        ):
+            if (
                 text
-            ]
+                not in SOURCE_LANGUAGES
+            ):
+                bot.send_message(
+                    chat_id,
+                    (
+                        "❌ Choose a source "
+                        "language using buttons."
+                    ),
+                )
+                return
+
+            state["source"] = (
+                SOURCE_LANGUAGES[text]
+            )
 
             show_target_menu(
                 chat_id
             )
-
             return
 
-
-        # ==========================================
-        # TARGET
-        # ==========================================
-
-        if state[
-            "step"
-        ] == "target":
-
+        if state.get("step") in {
+            "target",
+            "document_target",
+            "ocr_target",
+        }:
             if text not in LANGUAGES:
-
                 bot.send_message(
                     chat_id,
-                    """
-❌ Please choose a target language using the buttons.
-"""
+                    (
+                        "❌ Choose target "
+                        "language using buttons."
+                    ),
                 )
-
                 return
 
             target = LANGUAGES[
                 text
             ]
 
-            source = state.get(
-                "source"
-            )
+            if (
+                state.get("step")
+                == "target"
+            ):
+                source = state.get(
+                    "source"
+                )
+
+                if (
+                    source != "auto"
+                    and source == target
+                ):
+                    bot.send_message(
+                        chat_id,
+                        (
+                            "❌ Source and target "
+                            "are the same."
+                        ),
+                    )
+                    return
+
+                state["target"] = target
+
+                show_ready_menu(
+                    chat_id
+                )
+                return
 
             if (
-                source != "auto"
-                and source == target
+                state.get("step")
+                == "document_target"
             ):
+                translation_state[
+                    chat_id
+                ] = {
+                    "step": "waiting_document",
+                    "target": target,
+                }
 
                 bot.send_message(
                     chat_id,
-                    """
-❌ Source and target languages are the same.
-
-Choose another target language.
-"""
+                    (
+                        "📄 Send document now.\n\n"
+                        "Supported:\n"
+                        "• TXT\n"
+                        "• PDF\n"
+                        "• DOCX\n\n"
+                        "Scanned PDFs use OCR "
+                        "when OCR is configured."
+                    ),
                 )
-
                 return
 
-            state[
-                "target"
-            ] = target
-
-            show_ready_menu(
-                chat_id
-            )
-
-            return
-
-
-        # ==========================================
-        # TRANSLATE TEXT
-        # ==========================================
-
-        if state[
-            "step"
-        ] == "text":
-
-            # --------------------------------------
-            # SIZE CHECK
-            # --------------------------------------
-
-            if len(text) > MAX_INPUT_LENGTH:
+            if (
+                state.get("step")
+                == "ocr_target"
+            ):
+                translation_state[
+                    chat_id
+                ] = {
+                    "step": "waiting_ocr_image",
+                    "target": target,
+                }
 
                 bot.send_message(
                     chat_id,
-                    f"""
-❌ Text is too long.
-
-Maximum:
-{MAX_INPUT_LENGTH:,} characters
-
-Please divide it into smaller parts.
-"""
+                    (
+                        "🖼 Send image now.\n\n"
+                        "You can send:\n"
+                        "• Telegram photo\n"
+                        "• JPG / PNG file\n"
+                        "• PDF for OCR"
+                    ),
                 )
-
                 return
 
-
-            # --------------------------------------
-            # RATE LIMIT
-            # --------------------------------------
+        if (
+            state.get("step")
+            == "text"
+        ):
+            if (
+                len(text)
+                > MAX_TEXT_INPUT_LENGTH
+            ):
+                bot.send_message(
+                    chat_id,
+                    (
+                        "❌ Text too long.\n\n"
+                        f"Maximum: "
+                        f"{MAX_TEXT_INPUT_LENGTH:,} "
+                        "characters"
+                    ),
+                )
+                return
 
             now = time.time()
 
@@ -1312,7 +1576,7 @@ Please divide it into smaller parts.
                 last_translation_time
                 .get(
                     chat_id,
-                    0
+                    0,
                 )
             )
 
@@ -1320,94 +1584,90 @@ Please divide it into smaller parts.
                 now - last_time
                 < USER_COOLDOWN
             ):
-
                 bot.send_message(
                     chat_id,
-                    """
-⏳ Please wait a moment before sending another translation.
-"""
+                    (
+                        "⏳ Please wait a moment "
+                        "before another translation."
+                    ),
                 )
-
                 return
 
             last_translation_time[
                 chat_id
             ] = now
 
-
             status = bot.send_message(
                 chat_id,
                 "⏳ Translating..."
             )
 
-
             try:
-
                 result, provider = (
                     translate_complete_text(
-                        state[
-                            "source"
-                        ],
-
-                        state[
-                            "target"
-                        ],
-
-                        text
+                        state["source"],
+                        state["target"],
+                        text,
                     )
                 )
 
-
                 try:
-
                     bot.delete_message(
                         chat_id,
-                        status.message_id
+                        status.message_id,
                     )
-
                 except Exception:
                     pass
-
 
                 send_translation_result(
-                    bot,
-                    chat_id,
-                    state[
-                        "source"
-                    ],
-                    state[
-                        "target"
-                    ],
-                    result,
-                    provider
+                    bot=bot,
+                    message=message,
+                    source=state["source"],
+                    target=state["target"],
+                    original_text=text,
+                    translated_text=result,
+                    provider=provider,
+                    kind="text",
                 )
-
 
             except Exception as error:
-
                 print(
                     "Translation error:",
-                    repr(error)
+                    repr(error),
                 )
-
-                try:
-
-                    bot.delete_message(
-                        chat_id,
-                        status.message_id
-                    )
-
-                except Exception:
-                    pass
-
 
                 bot.send_message(
                     chat_id,
-                    """
-❌ Translation failed.
-
-Google and backup translation services are temporarily unavailable.
-
-Please try again shortly.
-"""
+                    (
+                        "❌ Translation failed. "
+                        "Please try again shortly."
+                    ),
                 )
+
+            return
+
+        if (
+            state.get("step")
+            == "waiting_document"
+        ):
+            bot.send_message(
+                chat_id,
+                (
+                    "📄 Upload TXT, PDF, "
+                    "or DOCX."
+                ),
+            )
+            return
+
+        if (
+            state.get("step")
+            == "waiting_ocr_image"
+        ):
+            bot.send_message(
+                chat_id,
+                (
+                    "🖼 Send an image "
+                    "or PDF."
+                ),
+            )
+            return
