@@ -1,0 +1,136 @@
+STUDENT ASSISTANT BOT V4.9
+REVISION PLANNER + STUDY STREAK + DAILY TARGET
+==============================================
+
+1) Copy into your project root:
+
+study_preferences.py
+study_streak.py
+revision_planner.py
+
+
+2) Run this SQL in Supabase SQL Editor:
+
+v4_9_revision_streaks.sql
+
+
+3) Add imports to main.py:
+
+from revision_planner import register_revision_planner_handlers
+from study_streak import register_study_streak_handlers
+
+
+4) Add main-menu buttons:
+
+types.KeyboardButton("📚 Revision Planner"),
+types.KeyboardButton("🔥 Study Streak"),
+
+
+Recommended lower section:
+
+types.KeyboardButton("☀️ Today Hub"),
+types.KeyboardButton("🔎 Global Search"),
+
+types.KeyboardButton("📚 Revision Planner"),
+types.KeyboardButton("🔥 Study Streak"),
+
+types.KeyboardButton("📦 Export My Data"),
+types.KeyboardButton("📊 Dashboard"),
+
+types.KeyboardButton("📈 Progress"),
+types.KeyboardButton("ℹ️ Help"),
+
+
+5) Register:
+
+register_revision_planner_handlers(
+    bot,
+    show_main_menu
+)
+
+register_study_streak_handlers(
+    bot,
+    show_main_menu
+)
+
+
+6) Commands:
+
+/revision
+/streak
+
+
+7) Syntax check:
+
+python -m py_compile main.py study_preferences.py study_streak.py revision_planner.py
+
+
+8) Run:
+
+python main.py
+
+
+9) REVISION PLANNER TEST
+
+First make sure at least one upcoming exam exists.
+
+Then:
+
+📚 Revision Planner
+→ ➕ Create Revision Plan
+→ select exam
+→ enter one topic per line
+
+Example:
+
+Introduction
+Chapter 1
+Chapter 2
+Important definitions
+Past paper questions
+
+The bot distributes the topics from today until
+the day before the exam.
+
+
+10) TODAY'S REVISION
+
+📚 Revision Planner
+→ 📅 Today's Revision
+
+Then:
+
+✅ Complete Revision Task
+→ send task number
+
+
+11) STUDY STREAK TEST
+
+🔥 Study Streak
+→ 🎯 Set Daily Target
+→ 60
+
+Then complete study sessions through:
+
+⏱ Study Planner
+
+After enough completed minutes:
+
+🔥 Study Streak
+→ 🔥 View My Streak
+
+
+12) STREAK RULE
+
+A day counts when completed study-session minutes
+are greater than or equal to the configured daily target.
+
+If today's target is not complete yet, the bot does not
+immediately break yesterday's existing streak.
+
+
+13) Push:
+
+git add .
+git commit -m "Add V4.9 revision planner study streak and daily target"
+git push

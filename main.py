@@ -66,12 +66,20 @@ from grades_gpa import register_grade_handlers
 
 
 # ==================================================
-# V4.8 MODULES
+# TODAY HUB + SEARCH + EXPORT
 # ==================================================
 
 from today_hub import register_today_hub_handlers
 from global_search import register_global_search_handlers
 from data_export import register_data_export_handlers
+
+
+# ==================================================
+# REVISION + STUDY STREAK
+# ==================================================
+
+from revision_planner import register_revision_planner_handlers
+from study_streak import register_study_streak_handlers
 
 
 # ==================================================
@@ -106,18 +114,15 @@ def show_main_menu(
     chat_id,
     first_name="Friend",
 ):
-
     markup = types.ReplyKeyboardMarkup(
         resize_keyboard=True,
         row_width=2,
     )
 
     markup.add(
-
         types.KeyboardButton(
             "📄 PDF Tools"
         ),
-
         types.KeyboardButton(
             "📝 Notes"
         ),
@@ -125,7 +130,6 @@ def show_main_menu(
         types.KeyboardButton(
             "🌐 Translate"
         ),
-
         types.KeyboardButton(
             "⏰ Study Reminder"
         ),
@@ -133,7 +137,6 @@ def show_main_menu(
         types.KeyboardButton(
             "📚 Subjects"
         ),
-
         types.KeyboardButton(
             "📅 Assignments"
         ),
@@ -141,7 +144,6 @@ def show_main_menu(
         types.KeyboardButton(
             "📚 Study Materials"
         ),
-
         types.KeyboardButton(
             "🗓 Timetable"
         ),
@@ -149,7 +151,6 @@ def show_main_menu(
         types.KeyboardButton(
             "⏱ Study Planner"
         ),
-
         types.KeyboardButton(
             "🎙 Voice Notes"
         ),
@@ -157,7 +158,6 @@ def show_main_menu(
         types.KeyboardButton(
             "🌍 Language Tools"
         ),
-
         types.KeyboardButton(
             "🧠 Flashcards"
         ),
@@ -165,7 +165,6 @@ def show_main_menu(
         types.KeyboardButton(
             "❓ Quiz"
         ),
-
         types.KeyboardButton(
             "📝 Exams"
         ),
@@ -173,7 +172,6 @@ def show_main_menu(
         types.KeyboardButton(
             "✅ Attendance"
         ),
-
         types.KeyboardButton(
             "🎯 Study Goals"
         ),
@@ -181,7 +179,6 @@ def show_main_menu(
         types.KeyboardButton(
             "🎓 Semesters"
         ),
-
         types.KeyboardButton(
             "📊 Grades & GPA"
         ),
@@ -189,15 +186,20 @@ def show_main_menu(
         types.KeyboardButton(
             "☀️ Today Hub"
         ),
-
         types.KeyboardButton(
             "🔎 Global Search"
         ),
 
         types.KeyboardButton(
-            "📦 Export My Data"
+            "📚 Revision Planner"
+        ),
+        types.KeyboardButton(
+            "🔥 Study Streak"
         ),
 
+        types.KeyboardButton(
+            "📦 Export My Data"
+        ),
         types.KeyboardButton(
             "📊 Dashboard"
         ),
@@ -205,7 +207,6 @@ def show_main_menu(
         types.KeyboardButton(
             "📈 Progress"
         ),
-
         types.KeyboardButton(
             "ℹ️ Help"
         ),
@@ -216,7 +217,7 @@ def show_main_menu(
         (
             f"👋 Hello {first_name}!\n\n"
 
-            "🎓 Student Assistant Bot V4.8\n\n"
+            "🎓 Student Assistant Bot V4.9\n\n"
 
             "Choose what you want to do:\n\n"
 
@@ -245,9 +246,12 @@ def show_main_menu(
             "📊 Grades & GPA\n\n"
 
             "☀️ Today Hub\n"
-            "🔎 Global Search\n"
-            "📦 Export My Data\n\n"
+            "🔎 Global Search\n\n"
 
+            "📚 Revision Planner\n"
+            "🔥 Study Streak\n\n"
+
+            "📦 Export My Data\n"
             "📊 Dashboard\n"
             "📈 Progress\n"
             "ℹ️ Help"
@@ -264,7 +268,6 @@ def show_main_menu(
     commands=["start"]
 )
 def start(message):
-
     first_name = (
         message.from_user.first_name
         or "Friend"
@@ -289,11 +292,10 @@ def start(message):
     commands=["help"]
 )
 def help_command(message):
-
     bot.send_message(
         message.chat.id,
         (
-            "🎓 STUDENT ASSISTANT BOT V4.8\n\n"
+            "🎓 STUDENT ASSISTANT BOT V4.9\n\n"
 
             "━━━━━━━━━━━━━━━━━━\n"
             "📄 PDF TOOLS\n"
@@ -315,7 +317,6 @@ def help_command(message):
             "━━━━━━━━━━━━━━━━━━\n"
             "🌐 TRANSLATOR\n"
             "━━━━━━━━━━━━━━━━━━\n"
-            "• Text translation\n"
             "• Tamil\n"
             "• English\n"
             "• Sinhala\n"
@@ -351,9 +352,9 @@ def help_command(message):
             "• Subject linking\n"
             "• Due today\n"
             "• Due this week\n"
-            "• Complete assignments\n"
+            "• Mark completed\n"
             "• Delete assignments\n"
-            "• Automatic deadline alerts\n\n"
+            "• Deadline alerts\n\n"
 
             "━━━━━━━━━━━━━━━━━━\n"
             "📚 STUDY MATERIALS\n"
@@ -370,9 +371,9 @@ def help_command(message):
             "🗓 TIMETABLE\n"
             "━━━━━━━━━━━━━━━━━━\n"
             "• Weekly classes\n"
+            "• Start/end times\n"
             "• Subject linking\n"
-            "• Start/end time\n"
-            "• Location\n"
+            "• Locations\n"
             "• Today's timetable\n"
             "• Weekly timetable\n\n"
 
@@ -381,10 +382,10 @@ def help_command(message):
             "━━━━━━━━━━━━━━━━━━\n"
             "• 25-minute focus\n"
             "• 50-minute focus\n"
-            "• Custom study sessions\n"
+            "• Custom sessions\n"
             "• Subject linking\n"
             "• Automatic completion alerts\n"
-            "• Weekly study analytics\n\n"
+            "• Weekly analytics\n\n"
 
             "━━━━━━━━━━━━━━━━━━\n"
             "🎙 VOICE NOTES\n"
@@ -404,7 +405,7 @@ def help_command(message):
             "🇸🇦 Arabic\n\n"
             "• Vocabulary\n"
             "• Meanings\n"
-            "• Example sentences\n"
+            "• Examples\n"
             "• Practice\n"
             "• Pronunciation\n"
             "• Mastery tracking\n"
@@ -435,7 +436,7 @@ def help_command(message):
             "• Location\n"
             "• Notes\n"
             "• Upcoming exams\n"
-            "• Automatic alerts\n\n"
+            "• Automatic exam alerts\n\n"
 
             "━━━━━━━━━━━━━━━━━━\n"
             "✅ ATTENDANCE\n"
@@ -444,7 +445,7 @@ def help_command(message):
             "• Absent\n"
             "• Late\n"
             "• Excused\n"
-            "• Subject history\n"
+            "• Attendance history\n"
             "• Attendance percentage\n\n"
 
             "━━━━━━━━━━━━━━━━━━\n"
@@ -501,10 +502,29 @@ def help_command(message):
             "• Flashcards\n\n"
 
             "━━━━━━━━━━━━━━━━━━\n"
+            "📚 REVISION PLANNER\n"
+            "━━━━━━━━━━━━━━━━━━\n"
+            "• Create revision plan from an exam\n"
+            "• Enter topics one per line\n"
+            "• Auto-distribute topics by day\n"
+            "• Today's revision tasks\n"
+            "• Complete revision tasks\n"
+            "• Revision progress\n\n"
+
+            "━━━━━━━━━━━━━━━━━━\n"
+            "🔥 STUDY STREAK\n"
+            "━━━━━━━━━━━━━━━━━━\n"
+            "• Daily study target\n"
+            "• Today's study minutes\n"
+            "• Current streak\n"
+            "• Best streak\n"
+            "• Last 7 days activity\n\n"
+
+            "━━━━━━━━━━━━━━━━━━\n"
             "📦 DATA EXPORT\n"
             "━━━━━━━━━━━━━━━━━━\n"
-            "• Download your academic data\n"
-            "• Compressed JSON backup\n"
+            "• Personal academic backup\n"
+            "• Compressed JSON\n"
             "• Excludes bot/API secrets\n\n"
 
             "━━━━━━━━━━━━━━━━━━\n"
@@ -549,6 +569,8 @@ def help_command(message):
             "/gpa\n"
             "/todayhub\n"
             "/search\n"
+            "/revision\n"
+            "/streak\n"
             "/export\n"
             "/dashboard\n"
             "/progress\n"
@@ -566,7 +588,6 @@ def help_command(message):
     message.text == "ℹ️ Help"
 )
 def help_button(message):
-
     help_command(
         message
     )
@@ -580,7 +601,6 @@ def help_button(message):
     commands=["id"]
 )
 def user_id(message):
-
     bot.send_message(
         message.chat.id,
         (
@@ -664,7 +684,7 @@ register_language_tool_handlers(
 
 
 # ==================================================
-# REGISTER LEARNING
+# REGISTER LEARNING MODULES
 # ==================================================
 
 register_flashcard_handlers(
@@ -679,7 +699,7 @@ register_quiz_handlers(
 
 
 # ==================================================
-# REGISTER EXAMS / ATTENDANCE / GOALS
+# REGISTER EXAM / ATTENDANCE / GOALS
 # ==================================================
 
 register_exam_handlers(
@@ -699,7 +719,7 @@ register_study_goal_handlers(
 
 
 # ==================================================
-# REGISTER SEMESTERS / GPA
+# REGISTER SEMESTER / GPA
 # ==================================================
 
 register_semester_handlers(
@@ -714,7 +734,7 @@ register_grade_handlers(
 
 
 # ==================================================
-# REGISTER V4.8
+# REGISTER TODAY HUB / SEARCH / EXPORT
 # ==================================================
 
 register_today_hub_handlers(
@@ -728,6 +748,21 @@ register_global_search_handlers(
 )
 
 register_data_export_handlers(
+    bot,
+    show_main_menu,
+)
+
+
+# ==================================================
+# REGISTER REVISION / STREAK
+# ==================================================
+
+register_revision_planner_handlers(
+    bot,
+    show_main_menu,
+)
+
+register_study_streak_handlers(
     bot,
     show_main_menu,
 )
@@ -760,11 +795,10 @@ register_progress_handlers(
     ],
 )
 def home():
-
     return {
         "status": "ok",
         "bot": "Student Assistant Bot",
-        "version": "4.8",
+        "version": "4.9",
         "database": "Supabase",
         "deployment": "Render",
 
@@ -796,6 +830,8 @@ def home():
             "grades_gpa": True,
             "today_hub": True,
             "global_search": True,
+            "revision_planner": True,
+            "study_streak": True,
             "data_export": True,
             "dashboard": True,
             "progress": True,
@@ -812,7 +848,6 @@ def home():
     methods=["POST"],
 )
 def telegram_webhook():
-
     received_secret = (
         request.headers.get(
             "X-Telegram-Bot-Api-Secret-Token"
@@ -820,7 +855,6 @@ def telegram_webhook():
     )
 
     if received_secret != WEBHOOK_SECRET:
-
         print(
             "❌ Invalid Telegram webhook secret"
         )
@@ -831,7 +865,6 @@ def telegram_webhook():
         )
 
     try:
-
         json_string = (
             request
             .get_data()
@@ -867,7 +900,6 @@ def telegram_webhook():
         )
 
     except Exception as error:
-
         print(
             "❌ Webhook processing error:"
         )
@@ -887,17 +919,14 @@ def telegram_webhook():
 # ==================================================
 
 def setup_render_webhook():
-
     render_url = os.getenv(
         "RENDER_EXTERNAL_URL"
     )
 
     if not render_url:
-
         print(
             "ℹ️ RENDER_EXTERNAL_URL not found."
         )
-
         return
 
     webhook_url = (
@@ -906,16 +935,11 @@ def setup_render_webhook():
     )
 
     try:
-
-        # Remove old webhook first.
         bot.remove_webhook()
 
         result = bot.set_webhook(
-
             url=webhook_url,
-
             secret_token=WEBHOOK_SECRET,
-
             allowed_updates=[
                 "message",
                 "callback_query",
@@ -949,14 +973,12 @@ def setup_render_webhook():
         )
 
         if info.last_error_message:
-
             print(
                 "⚠️ Last webhook error:",
                 info.last_error_message,
             )
 
     except Exception as error:
-
         print(
             "❌ Webhook setup failed:"
         )
@@ -973,7 +995,6 @@ def setup_render_webhook():
 if os.getenv(
     "RENDER_EXTERNAL_URL"
 ):
-
     setup_render_webhook()
 
 
@@ -986,7 +1007,6 @@ if __name__ == "__main__":
     if not os.getenv(
         "RENDER_EXTERNAL_URL"
     ):
-
         print(
             "✅ Student Assistant Bot running locally..."
         )
@@ -1000,7 +1020,7 @@ if __name__ == "__main__":
         )
 
         print(
-            "🎓 Student Assistant Bot V4.8 enabled."
+            "🎓 Student Assistant Bot V4.9 enabled."
         )
 
         print(
@@ -1084,6 +1104,14 @@ if __name__ == "__main__":
         )
 
         print(
+            "📚 Revision Planner enabled."
+        )
+
+        print(
+            "🔥 Study Streak enabled."
+        )
+
+        print(
             "📦 Data Export enabled."
         )
 
@@ -1096,29 +1124,23 @@ if __name__ == "__main__":
         )
 
         try:
-
-            # Local mode uses polling.
-            # Remove Render webhook before polling.
+            # Local mode uses Telegram polling.
+            # Remove the Render webhook before polling.
 
             bot.remove_webhook()
 
             bot.infinity_polling(
-
                 skip_pending=True,
-
                 timeout=30,
-
                 long_polling_timeout=30,
             )
 
         except KeyboardInterrupt:
-
             print(
                 "🛑 Bot stopped."
             )
 
         except Exception as error:
-
             print(
                 "❌ Polling error:"
             )
@@ -1128,8 +1150,7 @@ if __name__ == "__main__":
             )
 
     else:
-
-        # Render normally starts:
+        # Render normally starts using:
         #
         # gunicorn main:app --bind 0.0.0.0:$PORT
 
@@ -1145,8 +1166,6 @@ if __name__ == "__main__":
         )
 
         app.run(
-
             host="0.0.0.0",
-
             port=port,
         )
