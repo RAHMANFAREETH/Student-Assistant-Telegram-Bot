@@ -1,0 +1,121 @@
+STUDENT ASSISTANT BOT V5.0
+SMART STUDY INSIGHTS
+====================
+
+V5.0 is a milestone release.
+
+It adds:
+- Smart Study Insights
+- Subject Health Score
+- What Should I Study?
+- Weekly Study Review
+
+
+1) Copy into project root:
+
+smart_insights.py
+
+
+2) NO SQL REQUIRED.
+
+V5.0 reads your existing tables:
+- subjects
+- assignments
+- quiz_attempts
+- flashcards
+- attendance_records
+- study_sessions
+- revision_plans
+- revision_tasks
+- course_results
+- exams
+
+
+3) Add import to main.py:
+
+from smart_insights import register_smart_insight_handlers
+
+
+4) Add button:
+
+types.KeyboardButton("🧠 Smart Insights"),
+
+
+Recommended lower menu:
+
+types.KeyboardButton("📚 Revision Planner"),
+types.KeyboardButton("🔥 Study Streak"),
+
+types.KeyboardButton("🧠 Smart Insights"),
+types.KeyboardButton("📦 Export My Data"),
+
+types.KeyboardButton("📊 Dashboard"),
+types.KeyboardButton("📈 Progress"),
+
+types.KeyboardButton("ℹ️ Help"),
+
+
+5) Register:
+
+register_smart_insight_handlers(
+    bot,
+    show_main_menu
+)
+
+
+6) Command:
+
+/insights
+
+
+7) Syntax check:
+
+python -m py_compile main.py smart_insights.py
+
+
+8) Run:
+
+python main.py
+
+
+9) TEST:
+
+🧠 Smart Insights
+→ 🧠 Smart Study Insights
+
+Then test:
+
+🚦 Subject Health
+🎯 What Should I Study?
+📅 Weekly Review
+
+
+10) HEALTH SCORE
+
+Starts from 100.
+
+Possible deductions include:
+- overdue assignments
+- assignments due soon
+- low quiz average
+- low flashcard mastery
+- low attendance
+- little/no study time
+- exam approaching
+
+This is a rule-based study score.
+It is not a university grade and not a medical/psychological assessment.
+
+
+11) NO PAID AI API
+
+V5.0 uses only:
+- existing Supabase data
+- Python rules/calculations
+
+
+12) Push:
+
+git add .
+git commit -m "Add V5.0 smart study insights and subject health"
+git push

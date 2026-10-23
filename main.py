@@ -83,6 +83,13 @@ from study_streak import register_study_streak_handlers
 
 
 # ==================================================
+# SMART STUDY INSIGHTS
+# ==================================================
+
+from smart_insights import register_smart_insight_handlers
+
+
+# ==================================================
 # DASHBOARD
 # ==================================================
 
@@ -198,15 +205,19 @@ def show_main_menu(
         ),
 
         types.KeyboardButton(
-            "📦 Export My Data"
+            "🧠 Smart Insights"
         ),
         types.KeyboardButton(
-            "📊 Dashboard"
+            "📦 Export My Data"
         ),
 
         types.KeyboardButton(
+            "📊 Dashboard"
+        ),
+        types.KeyboardButton(
             "📈 Progress"
         ),
+
         types.KeyboardButton(
             "ℹ️ Help"
         ),
@@ -217,7 +228,7 @@ def show_main_menu(
         (
             f"👋 Hello {first_name}!\n\n"
 
-            "🎓 Student Assistant Bot V4.9\n\n"
+            "🎓 Student Assistant Bot V5.0\n\n"
 
             "Choose what you want to do:\n\n"
 
@@ -251,7 +262,9 @@ def show_main_menu(
             "📚 Revision Planner\n"
             "🔥 Study Streak\n\n"
 
-            "📦 Export My Data\n"
+            "🧠 Smart Insights\n"
+            "📦 Export My Data\n\n"
+
             "📊 Dashboard\n"
             "📈 Progress\n"
             "ℹ️ Help"
@@ -295,7 +308,7 @@ def help_command(message):
     bot.send_message(
         message.chat.id,
         (
-            "🎓 STUDENT ASSISTANT BOT V4.9\n\n"
+            "🎓 STUDENT ASSISTANT BOT V5.0\n\n"
 
             "━━━━━━━━━━━━━━━━━━\n"
             "📄 PDF TOOLS\n"
@@ -504,7 +517,7 @@ def help_command(message):
             "━━━━━━━━━━━━━━━━━━\n"
             "📚 REVISION PLANNER\n"
             "━━━━━━━━━━━━━━━━━━\n"
-            "• Create revision plan from an exam\n"
+            "• Create revision plan from exam\n"
             "• Enter topics one per line\n"
             "• Auto-distribute topics by day\n"
             "• Today's revision tasks\n"
@@ -519,6 +532,15 @@ def help_command(message):
             "• Current streak\n"
             "• Best streak\n"
             "• Last 7 days activity\n\n"
+
+            "━━━━━━━━━━━━━━━━━━\n"
+            "🧠 SMART INSIGHTS\n"
+            "━━━━━━━━━━━━━━━━━━\n"
+            "• Smart Study Insights\n"
+            "• Subject Health scores\n"
+            "• Study priority ranking\n"
+            "• Weekly study review\n"
+            "• Rule-based recommendations\n\n"
 
             "━━━━━━━━━━━━━━━━━━\n"
             "📦 DATA EXPORT\n"
@@ -571,6 +593,7 @@ def help_command(message):
             "/search\n"
             "/revision\n"
             "/streak\n"
+            "/insights\n"
             "/export\n"
             "/dashboard\n"
             "/progress\n"
@@ -606,7 +629,6 @@ def user_id(message):
         (
             "👤 User ID:\n"
             f"{message.from_user.id}\n\n"
-
             "💬 Chat ID:\n"
             f"{message.chat.id}"
         ),
@@ -669,7 +691,7 @@ register_study_planner_handlers(
 
 
 # ==================================================
-# REGISTER VOICE / LANGUAGE
+# REGISTER VOICE + LANGUAGE MODULES
 # ==================================================
 
 register_voice_note_handlers(
@@ -699,7 +721,7 @@ register_quiz_handlers(
 
 
 # ==================================================
-# REGISTER EXAM / ATTENDANCE / GOALS
+# REGISTER EXAMS + ATTENDANCE + GOALS
 # ==================================================
 
 register_exam_handlers(
@@ -719,7 +741,7 @@ register_study_goal_handlers(
 
 
 # ==================================================
-# REGISTER SEMESTER / GPA
+# REGISTER SEMESTER + GPA
 # ==================================================
 
 register_semester_handlers(
@@ -734,7 +756,7 @@ register_grade_handlers(
 
 
 # ==================================================
-# REGISTER TODAY HUB / SEARCH / EXPORT
+# REGISTER TODAY HUB + SEARCH + EXPORT
 # ==================================================
 
 register_today_hub_handlers(
@@ -754,7 +776,7 @@ register_data_export_handlers(
 
 
 # ==================================================
-# REGISTER REVISION / STREAK
+# REGISTER REVISION + STREAK
 # ==================================================
 
 register_revision_planner_handlers(
@@ -769,7 +791,17 @@ register_study_streak_handlers(
 
 
 # ==================================================
-# REGISTER DASHBOARD / PROGRESS
+# REGISTER SMART INSIGHTS
+# ==================================================
+
+register_smart_insight_handlers(
+    bot,
+    show_main_menu,
+)
+
+
+# ==================================================
+# REGISTER DASHBOARD + PROGRESS
 # ==================================================
 
 register_dashboard_handlers(
@@ -798,7 +830,7 @@ def home():
     return {
         "status": "ok",
         "bot": "Student Assistant Bot",
-        "version": "4.9",
+        "version": "5.0",
         "database": "Supabase",
         "deployment": "Render",
 
@@ -832,6 +864,7 @@ def home():
             "global_search": True,
             "revision_planner": True,
             "study_streak": True,
+            "smart_insights": True,
             "data_export": True,
             "dashboard": True,
             "progress": True,
@@ -1020,7 +1053,7 @@ if __name__ == "__main__":
         )
 
         print(
-            "🎓 Student Assistant Bot V4.9 enabled."
+            "🎓 Student Assistant Bot V5.0 enabled."
         )
 
         print(
@@ -1112,6 +1145,10 @@ if __name__ == "__main__":
         )
 
         print(
+            "🧠 Smart Study Insights enabled."
+        )
+
+        print(
             "📦 Data Export enabled."
         )
 
@@ -1124,7 +1161,7 @@ if __name__ == "__main__":
         )
 
         try:
-            # Local mode uses Telegram polling.
+            # Local development uses Telegram polling.
             # Remove the Render webhook before polling.
 
             bot.remove_webhook()
