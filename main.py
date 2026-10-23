@@ -1,13 +1,7 @@
 import os
-import threading
 
 import telebot
-
-from flask import (
-    Flask,
-    request
-)
-
+from flask import Flask, request
 from telebot import types
 
 from config import (
@@ -15,39 +9,27 @@ from config import (
     WEBHOOK_SECRET
 )
 
-from pdf_tools import (
-    register_pdf_handlers
-)
-
-from notes import (
-    register_note_handlers
-)
-
-from translate import (
-    register_translation_handlers
-)
-
-from reminders import (
-    register_reminder_handlers
-)
+from pdf_tools import register_pdf_handlers
+from notes import register_note_handlers
+from translate import register_translation_handlers
+from reminders import register_reminder_handlers
 
 
 # ==================================================
-# TELEGRAM
+# TELEGRAM BOT
 # ==================================================
 
 bot = telebot.TeleBot(
-    BOT_TOKEN
+    BOT_TOKEN,
+    threaded=False
 )
 
 
 # ==================================================
-# FLASK
+# FLASK APP
 # ==================================================
 
-app = Flask(
-    __name__
-)
+app = Flask(__name__)
 
 
 # ==================================================
@@ -105,7 +87,7 @@ Choose what you want to do:
 
 
 # ==================================================
-# START
+# /START
 # ==================================================
 
 @bot.message_handler(
@@ -113,19 +95,24 @@ Choose what you want to do:
 )
 def start(message):
 
-    name = (
+    first_name = (
         message.from_user.first_name
         or "Friend"
     )
 
+    print(
+        f"▶️ /start received from "
+        f"{message.from_user.id}"
+    )
+
     show_main_menu(
         message.chat.id,
-        name
+        first_name
     )
 
 
 # ==================================================
-# HELP
+# /HELP
 # ==================================================
 
 @bot.message_handler(
@@ -146,21 +133,22 @@ def help_command(message):
 • Protect PDF
 
 📝 Notes
-• Add
-• View
-• Search
-• Delete
+• Add Note
+• View Notes
+• Search Notes
+• Delete Note
 
 🌐 Translation
 • English
 • Tamil
 • Arabic
 • Sinhala
+• Auto Detect
 
 ⏰ Study Reminders
-• Add
-• View
-• Delete
+• Add Reminder
+• View Reminders
+• Delete Reminder
 
 Commands:
 
@@ -171,19 +159,21 @@ Commands:
     )
 
 
+# ==================================================
+# HELP BUTTON
+# ==================================================
+
 @bot.message_handler(
-    func=lambda m:
-    m.text == "ℹ️ Help"
+    func=lambda message:
+    message.text == "ℹ️ Help"
 )
 def help_button(message):
 
-    help_command(
-        message
-    )
+    help_command(message)
 
 
 # ==================================================
-# ID
+# /ID
 # ==================================================
 
 @bot.message_handler(
@@ -204,7 +194,7 @@ def user_id(message):
 
 
 # ==================================================
-# REGISTER MODULES
+# REGISTER PDF TOOLS
 # ==================================================
 
 register_pdf_handlers(
@@ -212,15 +202,30 @@ register_pdf_handlers(
     show_main_menu
 )
 
+
+# ==================================================
+# REGISTER NOTES
+# ==================================================
+
 register_note_handlers(
     bot,
     show_main_menu
 )
 
+
+# ==================================================
+# REGISTER TRANSLATOR
+# ==================================================
+
 register_translation_handlers(
     bot,
     show_main_menu
 )
+
+
+# ==================================================
+# REGISTER REMINDERS
+# ==================================================
 
 register_reminder_handlers(
     bot,
@@ -234,7 +239,7 @@ register_reminder_handlers(
 
 @app.route(
     "/",
-    methods=["GET"]
+    methods=["GET", "HEAD"]
 )
 def home():
 
@@ -242,26 +247,6 @@ def home():
         "status": "ok",
         "bot": "Student Assistant Bot"
     }, 200
-
-
-# ==================================================
-# PROCESS TELEGRAM UPDATE
-# ==================================================
-
-def process_update(update):
-
-    try:
-
-        bot.process_new_updates(
-            [update]
-        )
-
-    except Exception as e:
-
-        print(
-            "Update processing error:",
-            e
-        )
 
 
 # ==================================================
@@ -274,6 +259,10 @@ def process_update(update):
 )
 def telegram_webhook():
 
+    # ----------------------------------------------
+    # Verify Telegram webhook secret
+    # ----------------------------------------------
+
     received_secret = (
         request.headers.get(
             "X-Telegram-Bot-Api-Secret-Token"
@@ -282,40 +271,65 @@ def telegram_webhook():
 
     if received_secret != WEBHOOK_SECRET:
 
+        print(
+            "❌ Invalid Telegram webhook secret"
+        )
+
         return (
             "Forbidden",
             403
         )
 
+
+    # ----------------------------------------------
+    # Process Telegram update
+    # ----------------------------------------------
+
     try:
 
+        json_string = (
+            request
+            .get_data()
+            .decode("utf-8")
+        )
+
         update = (
-            telebot.types.Update
+            telebot
+            .types
+            .Update
             .de_json(
-                request.get_data(
-                    as_text=True
-                )
+                json_string
             )
         )
 
-        thread = threading.Thread(
-            target=process_update,
-            args=(update,),
-            daemon=True
+        print(
+            "📩 Telegram update received:",
+            update.update_id
         )
 
-        thread.start()
+        bot.process_new_updates(
+            [update]
+        )
+
+        print(
+            "✅ Telegram update processed:",
+            update.update_id
+        )
 
         return (
             "OK",
             200
         )
 
-    except Exception as e:
+
+    except Exception as error:
 
         print(
-            "Webhook error:",
-            e
+            "❌ Webhook processing error:"
+        )
+
+        print(
+            repr(error)
         )
 
         return (
@@ -325,7 +339,7 @@ def telegram_webhook():
 
 
 # ==================================================
-# SET RENDER WEBHOOK
+# SET TELEGRAM WEBHOOK ON RENDER
 # ==================================================
 
 def setup_render_webhook():
@@ -336,19 +350,33 @@ def setup_render_webhook():
 
     if not render_url:
 
+        print(
+            "ℹ️ RENDER_EXTERNAL_URL not found."
+        )
+
         return
+
 
     webhook_url = (
         render_url.rstrip("/")
         + "/telegram-webhook"
     )
 
+
     try:
+
+        # Remove old webhook first
+        bot.remove_webhook()
 
         result = bot.set_webhook(
             url=webhook_url,
-            secret_token=WEBHOOK_SECRET
+            secret_token=WEBHOOK_SECRET,
+            allowed_updates=[
+                "message",
+                "callback_query"
+            ]
         )
+
 
         print(
             "🌐 Webhook URL:",
@@ -360,16 +388,50 @@ def setup_render_webhook():
             result
         )
 
-    except Exception as e:
+
+        # Show Telegram webhook information
+        info = bot.get_webhook_info()
 
         print(
-            "❌ Webhook setup failed:",
-            e
+            "📡 Telegram webhook info:"
+        )
+
+        print(
+            "URL:",
+            info.url
+        )
+
+        print(
+            "Pending updates:",
+            info.pending_update_count
+        )
+
+        if info.last_error_message:
+
+            print(
+                "⚠️ Last webhook error:",
+                info.last_error_message
+            )
+
+
+    except Exception as error:
+
+        print(
+            "❌ Webhook setup failed:"
+        )
+
+        print(
+            repr(error)
         )
 
 
-# Configure only when hosted on Render
-if os.getenv("RENDER"):
+# ==================================================
+# RENDER SETUP
+# ==================================================
+
+if os.getenv(
+    "RENDER_EXTERNAL_URL"
+):
 
     setup_render_webhook()
 
@@ -380,21 +442,13 @@ if os.getenv("RENDER"):
 
 if __name__ == "__main__":
 
-    if os.getenv("RENDER"):
+    # ----------------------------------------------
+    # LOCAL VS CODE MODE
+    # ----------------------------------------------
 
-        port = int(
-            os.getenv(
-                "PORT",
-                "10000"
-            )
-        )
-
-        app.run(
-            host="0.0.0.0",
-            port=port
-        )
-
-    else:
+    if not os.getenv(
+        "RENDER_EXTERNAL_URL"
+    ):
 
         print(
             "✅ Student Assistant Bot "
@@ -405,8 +459,58 @@ if __name__ == "__main__":
             "🌐 Supabase database enabled."
         )
 
-        bot.remove_webhook()
+        print(
+            "📡 Telegram polling enabled."
+        )
 
-        bot.infinity_polling(
-            skip_pending=True
+
+        try:
+
+            bot.remove_webhook()
+
+            bot.infinity_polling(
+                skip_pending=True,
+                timeout=30,
+                long_polling_timeout=30
+            )
+
+        except KeyboardInterrupt:
+
+            print(
+                "🛑 Bot stopped."
+            )
+
+
+        except Exception as error:
+
+            print(
+                "❌ Polling error:"
+            )
+
+            print(
+                repr(error)
+            )
+
+
+    # ----------------------------------------------
+    # OPTIONAL DIRECT RENDER RUN
+    # Gunicorn normally handles Render instead.
+    # ----------------------------------------------
+
+    else:
+
+        port = int(
+            os.getenv(
+                "PORT",
+                "10000"
+            )
+        )
+
+        print(
+            "☁️ Starting Render web server..."
+        )
+
+        app.run(
+            host="0.0.0.0",
+            port=port
         )
