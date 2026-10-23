@@ -2,11 +2,32 @@ import os
 
 import telebot
 from flask import Flask, request
-from telebot import types
 
 from config import (
     BOT_TOKEN,
     WEBHOOK_SECRET,
+)
+
+
+# ==================================================
+# CENTRAL NAVIGATION
+# ==================================================
+
+from navigation import (
+    build_main_menu_markup,
+)
+
+from navigation_handlers import (
+    register_navigation_handlers,
+)
+
+
+# ==================================================
+# SYSTEM HEALTH
+# ==================================================
+
+from system_health import (
+    register_system_health_handlers,
 )
 
 
@@ -139,121 +160,14 @@ def show_main_menu(
     chat_id,
     first_name="Friend",
 ):
-    markup = types.ReplyKeyboardMarkup(
-        resize_keyboard=True,
-        row_width=2,
-    )
-
-    markup.add(
-        types.KeyboardButton(
-            "📄 PDF Tools"
-        ),
-        types.KeyboardButton(
-            "📝 Notes"
-        ),
-
-        types.KeyboardButton(
-            "🌐 Translate"
-        ),
-        types.KeyboardButton(
-            "⏰ Study Reminder"
-        ),
-
-        types.KeyboardButton(
-            "📚 Subjects"
-        ),
-        types.KeyboardButton(
-            "📅 Assignments"
-        ),
-
-        types.KeyboardButton(
-            "📚 Study Materials"
-        ),
-        types.KeyboardButton(
-            "🗓 Timetable"
-        ),
-
-        types.KeyboardButton(
-            "⏱ Study Planner"
-        ),
-        types.KeyboardButton(
-            "🎙 Voice Notes"
-        ),
-
-        types.KeyboardButton(
-            "🌍 Language Tools"
-        ),
-        types.KeyboardButton(
-            "🧠 Flashcards"
-        ),
-
-        types.KeyboardButton(
-            "❓ Quiz"
-        ),
-        types.KeyboardButton(
-            "📝 Exams"
-        ),
-
-        types.KeyboardButton(
-            "✅ Attendance"
-        ),
-        types.KeyboardButton(
-            "🎯 Study Goals"
-        ),
-
-        types.KeyboardButton(
-            "🎓 Semesters"
-        ),
-        types.KeyboardButton(
-            "📊 Grades & GPA"
-        ),
-
-        types.KeyboardButton(
-            "☀️ Today Hub"
-        ),
-        types.KeyboardButton(
-            "🔎 Global Search"
-        ),
-
-        types.KeyboardButton(
-            "📚 Revision Planner"
-        ),
-        types.KeyboardButton(
-            "🔥 Study Streak"
-        ),
-
-        types.KeyboardButton(
-            "🧠 Smart Insights"
-        ),
-        types.KeyboardButton(
-            "🔔 Smart Notifications"
-        ),
-
-        types.KeyboardButton(
-            "📢 Student Resources"
-        ),
-        types.KeyboardButton(
-            "📦 Export My Data"
-        ),
-
-        types.KeyboardButton(
-            "📊 Dashboard"
-        ),
-        types.KeyboardButton(
-            "📈 Progress"
-        ),
-
-        types.KeyboardButton(
-            "ℹ️ Help"
-        ),
-    )
+    markup = build_main_menu_markup()
 
     bot.send_message(
         chat_id,
         (
             f"👋 Hello {first_name}!\n\n"
 
-            "🎓 Student Assistant Bot V5.2\n\n"
+            "🎓 Student Assistant Bot V5.3\n\n"
 
             "Choose what you want to do:\n\n"
 
@@ -336,7 +250,16 @@ def help_command(message):
     bot.send_message(
         message.chat.id,
         (
-            "🎓 STUDENT ASSISTANT BOT V5.2\n\n"
+            "🎓 STUDENT ASSISTANT BOT V5.3\n\n"
+
+            "━━━━━━━━━━━━━━━━━━\n"
+            "🧩 CORE STABILITY\n"
+            "━━━━━━━━━━━━━━━━━━\n"
+            "• Central navigation system\n"
+            "• Shared global menu buttons\n"
+            "• Universal Main Menu / Cancel\n"
+            "• Safer state handling\n"
+            "• System health checker\n\n"
 
             "━━━━━━━━━━━━━━━━━━\n"
             "📄 PDF TOOLS\n"
@@ -614,6 +537,14 @@ def help_command(message):
             "• Assignment progress\n\n"
 
             "━━━━━━━━━━━━━━━━━━\n"
+            "🛠 SYSTEM HEALTH\n"
+            "━━━━━━━━━━━━━━━━━━\n"
+            "• Required environment variables\n"
+            "• Optional integration keys\n"
+            "• Expected Supabase tables\n"
+            "• Does not display secret values\n\n"
+
+            "━━━━━━━━━━━━━━━━━━\n"
             "⌨️ COMMANDS\n"
             "━━━━━━━━━━━━━━━━━━\n"
             "/start\n"
@@ -644,7 +575,9 @@ def help_command(message):
             "/export\n"
             "/dashboard\n"
             "/progress\n"
-            "/translate"
+            "/translate\n"
+            "/healthcheck\n"
+            "/systemhealth"
         ),
     )
 
@@ -676,6 +609,7 @@ def user_id(message):
         (
             "👤 User ID:\n"
             f"{message.from_user.id}\n\n"
+
             "💬 Chat ID:\n"
             f"{message.chat.id}"
         ),
@@ -883,6 +817,27 @@ register_progress_handlers(
 
 
 # ==================================================
+# REGISTER SYSTEM HEALTH
+# ==================================================
+
+register_system_health_handlers(
+    bot
+)
+
+
+# ==================================================
+# REGISTER UNIVERSAL NAVIGATION
+# Keep this near the end so module-specific handlers
+# are registered first.
+# ==================================================
+
+register_navigation_handlers(
+    bot,
+    show_main_menu,
+)
+
+
+# ==================================================
 # HEALTH CHECK
 # ==================================================
 
@@ -897,9 +852,16 @@ def home():
     return {
         "status": "ok",
         "bot": "Student Assistant Bot",
-        "version": "5.2",
+        "version": "5.3",
         "database": "Supabase",
         "deployment": "Render",
+
+        "architecture": {
+            "central_navigation": True,
+            "universal_main_menu": True,
+            "universal_cancel": True,
+            "system_health": True,
+        },
 
         "languages": [
             "Tamil",
@@ -1134,7 +1096,15 @@ if __name__ == "__main__":
         )
 
         print(
-            "🎓 Student Assistant Bot V5.2 enabled."
+            "🎓 Student Assistant Bot V5.3 enabled."
+        )
+
+        print(
+            "🧩 Central Navigation enabled."
+        )
+
+        print(
+            "🛠 System Health enabled."
         )
 
         print(

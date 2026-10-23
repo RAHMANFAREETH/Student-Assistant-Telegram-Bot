@@ -1,0 +1,189 @@
+STUDENT ASSISTANT BOT V5.3
+CORE STABILITY + CENTRAL NAVIGATION
+===================================
+
+GOAL
+----
+V5.3 does not add another large student feature.
+
+It makes the existing V5.2 project safer and easier
+to maintain before future versions are added.
+
+
+NEW FILES
+---------
+navigation.py
+navigation_handlers.py
+safe_utils.py
+system_health.py
+migrate_global_buttons.py
+
+
+1) COPY ALL FIVE FILES
+----------------------
+
+Copy them into the project root beside main.py.
+
+
+2) CENTRAL MAIN MENU
+--------------------
+
+In main.py add:
+
+from navigation import build_main_menu_markup
+
+Then replace the long ReplyKeyboardMarkup section inside
+show_main_menu() with:
+
+markup = build_main_menu_markup()
+
+Do NOT manually maintain the full main-menu button list
+inside main.py after this migration.
+
+
+3) UNIVERSAL MAIN MENU / CANCEL
+-------------------------------
+
+Add:
+
+from navigation_handlers import (
+    register_navigation_handlers
+)
+
+Register it near the end:
+
+register_navigation_handlers(
+    bot,
+    show_main_menu
+)
+
+
+4) SYSTEM HEALTH
+----------------
+
+Add:
+
+from system_health import (
+    register_system_health_handlers
+)
+
+Register:
+
+register_system_health_handlers(
+    bot
+)
+
+Commands:
+
+/healthcheck
+/systemhealth
+
+
+5) MIGRATE DUPLICATED GLOBAL_BUTTONS
+------------------------------------
+
+IMPORTANT:
+Many older modules contain their own copy of:
+
+GLOBAL_BUTTONS = {...}
+
+That is the source of future button-conflict problems.
+
+V5.3 includes an automatic helper.
+
+FIRST COMMIT OR BACK UP YOUR PROJECT.
+
+Then from the project folder:
+
+python migrate_global_buttons.py
+
+The helper:
+- modifies only files that contain a top-level
+  GLOBAL_BUTTONS assignment
+- creates filename.py.bak_v5_3 before editing
+- replaces the duplicated set with:
+
+from navigation import GLOBAL_BUTTONS
+
+
+6) RECOMMENDED STATE-HANDLER PATTERN
+------------------------------------
+
+For new modules use:
+
+from telebot.handler_backends import ContinueHandling
+from navigation import should_yield_to_navigation
+
+Then inside the state handler:
+
+text = (message.text or "").strip()
+
+if should_yield_to_navigation(text):
+    state.pop(message.chat.id, None)
+    return ContinueHandling()
+
+
+7) SAFE UTILS
+-------------
+
+Optional helpers:
+
+from safe_utils import (
+    split_telegram_text,
+    safe_delete_message,
+    clear_state,
+    parse_int,
+)
+
+
+8) NO SQL
+---------
+
+V5.3 requires no new Supabase table.
+
+
+9) NO NEW PIP PACKAGE
+---------------------
+
+V5.3 requires no new dependency.
+
+
+10) SYNTAX TEST
+---------------
+
+After migration:
+
+python -m py_compile navigation.py navigation_handlers.py safe_utils.py system_health.py migrate_global_buttons.py
+
+Then test all project Python files with your usual
+py_compile command.
+
+
+11) TELEGRAM TEST
+-----------------
+
+/start
+
+Open several modules and while one is waiting for input,
+press a DIFFERENT main-menu button.
+
+Example:
+
+📝 Notes
+→ start Add Note
+→ instead press 📝 Exams
+
+Expected:
+Notes should release its state and Exams should open.
+
+Also test:
+
+/healthcheck
+
+
+12) DEPLOY
+----------
+
+git add .
+git commit -m "Add V5.3 central navigation and system health"
+git push
