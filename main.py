@@ -6,13 +6,16 @@ from telebot import types
 
 from config import (
     BOT_TOKEN,
-    WEBHOOK_SECRET
+    WEBHOOK_SECRET,
 )
 
 from pdf_tools import register_pdf_handlers
 from notes import register_note_handlers
 from translate import register_translation_handlers
 from reminders import register_reminder_handlers
+
+from subjects import register_subject_handlers
+from assignments import register_assignment_handlers
 
 
 # ==================================================
@@ -21,7 +24,7 @@ from reminders import register_reminder_handlers
 
 bot = telebot.TeleBot(
     BOT_TOKEN,
-    threaded=False
+    threaded=False,
 )
 
 
@@ -38,15 +41,16 @@ app = Flask(__name__)
 
 def show_main_menu(
     chat_id,
-    first_name="Friend"
+    first_name="Friend",
 ):
 
     markup = types.ReplyKeyboardMarkup(
         resize_keyboard=True,
-        row_width=2
+        row_width=2,
     )
 
     markup.add(
+
         types.KeyboardButton(
             "📄 PDF Tools"
         ),
@@ -64,25 +68,32 @@ def show_main_menu(
         ),
 
         types.KeyboardButton(
+            "📚 Subjects"
+        ),
+
+        types.KeyboardButton(
+            "📅 Assignments"
+        ),
+
+        types.KeyboardButton(
             "ℹ️ Help"
-        )
+        ),
     )
 
     bot.send_message(
         chat_id,
-        f"""
-👋 Hello {first_name}!
-
-🎓 Welcome to Student Assistant Bot.
-
-Choose what you want to do:
-
-📄 PDF Tools
-📝 Notes
-🌐 Translation
-⏰ Study Reminders
-""",
-        reply_markup=markup
+        (
+            f"👋 Hello {first_name}!\n\n"
+            "🎓 Welcome to Student Assistant Bot.\n\n"
+            "Choose what you want to do:\n\n"
+            "📄 PDF & Document Tools\n"
+            "📝 Notes\n"
+            "🌐 Translation\n"
+            "⏰ Study Reminders\n"
+            "📚 Subjects\n"
+            "📅 Assignments"
+        ),
+        reply_markup=markup,
     )
 
 
@@ -101,13 +112,13 @@ def start(message):
     )
 
     print(
-        f"▶️ /start received from "
-        f"{message.from_user.id}"
+        "▶️ /start received from:",
+        message.from_user.id,
     )
 
     show_main_menu(
         message.chat.id,
-        first_name
+        first_name,
     )
 
 
@@ -122,40 +133,59 @@ def help_command(message):
 
     bot.send_message(
         message.chat.id,
-        """
-🎓 Student Assistant Bot
+        (
+            "🎓 Student Assistant Bot\n\n"
 
-📄 PDF Tools
-• Merge PDF
-• Extract Pages
-• Images → PDF
-• Rotate PDF
-• Protect PDF
+            "📄 PDF Tools\n"
+            "• Merge PDFs\n"
+            "• Extract pages\n"
+            "• Images → PDF\n"
+            "• Rotate PDF\n"
+            "• Protect PDF\n\n"
 
-📝 Notes
-• Add Note
-• View Notes
-• Search Notes
-• Delete Note
+            "📝 Notes\n"
+            "• Add notes\n"
+            "• View notes\n"
+            "• Search notes\n"
+            "• Delete notes\n\n"
 
-🌐 Translation
-• English
-• Tamil
-• Arabic
-• Sinhala
-• Auto Detect
+            "🌐 Translator\n"
+            "• Text translation\n"
+            "• English / Tamil / Sinhala / Arabic\n"
+            "• Translation history\n"
+            "• Pronunciation\n"
+            "• Document translation\n"
+            "• OCR image translation\n\n"
 
-⏰ Study Reminders
-• Add Reminder
-• View Reminders
-• Delete Reminder
+            "⏰ Study Reminders\n"
+            "• Add reminder\n"
+            "• View reminders\n"
+            "• Delete reminder\n\n"
 
-Commands:
+            "📚 Subjects\n"
+            "• Add subjects\n"
+            "• View subjects\n"
+            "• Delete subjects\n"
+            "• Optional subject codes\n\n"
 
-/start
-/help
-/id
-"""
+            "📅 Assignments\n"
+            "• Add assignments\n"
+            "• Set deadlines\n"
+            "• Set priorities\n"
+            "• Link subject\n"
+            "• Due today\n"
+            "• Due this week\n"
+            "• Mark completed\n\n"
+
+            "Commands:\n\n"
+            "/start\n"
+            "/help\n"
+            "/id\n"
+            "/subjects\n"
+            "/assignments\n"
+            "/today\n"
+            "/translate"
+        ),
     )
 
 
@@ -183,53 +213,52 @@ def user_id(message):
 
     bot.send_message(
         message.chat.id,
-        f"""
-👤 User ID:
-{message.from_user.id}
-
-💬 Chat ID:
-{message.chat.id}
-"""
+        (
+            "👤 User ID:\n"
+            f"{message.from_user.id}\n\n"
+            "💬 Chat ID:\n"
+            f"{message.chat.id}"
+        ),
     )
 
 
 # ==================================================
-# REGISTER PDF TOOLS
+# REGISTER EXISTING MODULES
 # ==================================================
 
 register_pdf_handlers(
     bot,
-    show_main_menu
+    show_main_menu,
 )
-
-
-# ==================================================
-# REGISTER NOTES
-# ==================================================
 
 register_note_handlers(
     bot,
-    show_main_menu
+    show_main_menu,
 )
-
-
-# ==================================================
-# REGISTER TRANSLATOR
-# ==================================================
 
 register_translation_handlers(
     bot,
-    show_main_menu
+    show_main_menu,
+)
+
+register_reminder_handlers(
+    bot,
+    show_main_menu,
 )
 
 
 # ==================================================
-# REGISTER REMINDERS
+# REGISTER V4 MODULES
 # ==================================================
 
-register_reminder_handlers(
+register_subject_handlers(
     bot,
-    show_main_menu
+    show_main_menu,
+)
+
+register_assignment_handlers(
+    bot,
+    show_main_menu,
 )
 
 
@@ -239,13 +268,17 @@ register_reminder_handlers(
 
 @app.route(
     "/",
-    methods=["GET", "HEAD"]
+    methods=[
+        "GET",
+        "HEAD",
+    ],
 )
 def home():
 
     return {
         "status": "ok",
-        "bot": "Student Assistant Bot"
+        "bot": "Student Assistant Bot",
+        "version": "4.0",
     }, 200
 
 
@@ -255,12 +288,12 @@ def home():
 
 @app.route(
     "/telegram-webhook",
-    methods=["POST"]
+    methods=["POST"],
 )
 def telegram_webhook():
 
     # ----------------------------------------------
-    # Verify Telegram webhook secret
+    # VERIFY WEBHOOK SECRET
     # ----------------------------------------------
 
     received_secret = (
@@ -277,12 +310,12 @@ def telegram_webhook():
 
         return (
             "Forbidden",
-            403
+            403,
         )
 
 
     # ----------------------------------------------
-    # Process Telegram update
+    # PROCESS TELEGRAM UPDATE
     # ----------------------------------------------
 
     try:
@@ -304,7 +337,7 @@ def telegram_webhook():
 
         print(
             "📩 Telegram update received:",
-            update.update_id
+            update.update_id,
         )
 
         bot.process_new_updates(
@@ -313,12 +346,12 @@ def telegram_webhook():
 
         print(
             "✅ Telegram update processed:",
-            update.update_id
+            update.update_id,
         )
 
         return (
             "OK",
-            200
+            200,
         )
 
 
@@ -334,7 +367,7 @@ def telegram_webhook():
 
         return (
             "Bad Request",
-            400
+            400,
         )
 
 
@@ -365,52 +398,60 @@ def setup_render_webhook():
 
     try:
 
-        # Remove old webhook first
+        # Remove previous webhook configuration
         bot.remove_webhook()
 
+
         result = bot.set_webhook(
+
             url=webhook_url,
+
             secret_token=WEBHOOK_SECRET,
+
             allowed_updates=[
                 "message",
-                "callback_query"
-            ]
+                "callback_query",
+            ],
         )
 
 
         print(
             "🌐 Webhook URL:",
-            webhook_url
+            webhook_url,
         )
 
         print(
             "✅ Webhook configured:",
-            result
+            result,
         )
 
 
-        # Show Telegram webhook information
+        # ------------------------------------------
+        # TELEGRAM WEBHOOK INFORMATION
+        # ------------------------------------------
+
         info = bot.get_webhook_info()
 
         print(
-            "📡 Telegram webhook info:"
+            "📡 Telegram webhook information:"
         )
 
         print(
             "URL:",
-            info.url
+            info.url,
         )
 
         print(
             "Pending updates:",
-            info.pending_update_count
+            info.pending_update_count,
         )
+
 
         if info.last_error_message:
 
             print(
                 "⚠️ Last webhook error:",
-                info.last_error_message
+                info.last_error_message,
             )
 
 
@@ -426,7 +467,7 @@ def setup_render_webhook():
 
 
 # ==================================================
-# RENDER SETUP
+# RENDER INITIALIZATION
 # ==================================================
 
 if os.getenv(
@@ -442,17 +483,16 @@ if os.getenv(
 
 if __name__ == "__main__":
 
-    # ----------------------------------------------
-    # LOCAL VS CODE MODE
-    # ----------------------------------------------
+    # ==============================================
+    # LOCAL WINDOWS / VS CODE MODE
+    # ==============================================
 
     if not os.getenv(
         "RENDER_EXTERNAL_URL"
     ):
 
         print(
-            "✅ Student Assistant Bot "
-            "running locally..."
+            "✅ Student Assistant Bot running locally..."
         )
 
         print(
@@ -463,16 +503,26 @@ if __name__ == "__main__":
             "📡 Telegram polling enabled."
         )
 
+        print(
+            "🎓 Student Assistant Bot V4 enabled."
+        )
+
 
         try:
 
+            # Polling and webhook cannot run together.
             bot.remove_webhook()
 
+
             bot.infinity_polling(
+
                 skip_pending=True,
+
                 timeout=30,
-                long_polling_timeout=30
+
+                long_polling_timeout=30,
             )
+
 
         except KeyboardInterrupt:
 
@@ -492,25 +542,29 @@ if __name__ == "__main__":
             )
 
 
-    # ----------------------------------------------
-    # OPTIONAL DIRECT RENDER RUN
-    # Gunicorn normally handles Render instead.
-    # ----------------------------------------------
+    # ==============================================
+    # DIRECT WEB SERVER MODE
+    # Normally Render uses Gunicorn instead.
+    # ==============================================
 
     else:
 
         port = int(
             os.getenv(
                 "PORT",
-                "10000"
+                "10000",
             )
         )
+
 
         print(
             "☁️ Starting Render web server..."
         )
 
+
         app.run(
+
             host="0.0.0.0",
-            port=port
+
+            port=port,
         )

@@ -1,0 +1,80 @@
+STUDENT ASSISTANT V4 - MAIN.PY INTEGRATION
+
+1. Add these imports near your other module imports:
+
+from subjects import register_subject_handlers
+from assignments import register_assignment_handlers
+
+
+2. In show_main_menu(), add these two buttons:
+
+types.KeyboardButton("📚 Subjects"),
+types.KeyboardButton("📅 Assignments"),
+
+
+Example main menu:
+
+markup.add(
+    types.KeyboardButton("📄 PDF Tools"),
+    types.KeyboardButton("📝 Notes"),
+    types.KeyboardButton("🌐 Translate"),
+    types.KeyboardButton("⏰ Study Reminder"),
+    types.KeyboardButton("📚 Subjects"),
+    types.KeyboardButton("📅 Assignments"),
+    types.KeyboardButton("ℹ️ Help"),
+)
+
+
+3. Register both modules AFTER your existing modules:
+
+register_pdf_handlers(bot, show_main_menu)
+register_note_handlers(bot, show_main_menu)
+register_translation_handlers(bot, show_main_menu)
+register_reminder_handlers(bot, show_main_menu)
+
+register_subject_handlers(bot, show_main_menu)
+register_assignment_handlers(bot, show_main_menu)
+
+
+4. No new pip package is needed.
+Python's zoneinfo is built in and your existing requirements already include tzdata.
+
+
+5. Run v4_academic_core.sql in Supabase SQL Editor.
+
+
+6. Test locally:
+
+python main.py
+
+
+7. Telegram test order:
+
+/start
+
+📚 Subjects
+→ ➕ Add Subject
+→ Data Analysis | ICT 1203
+→ 📚 My Subjects
+
+📅 Assignments
+→ ➕ Add Assignment
+→ Assignment title
+→ Description or Skip
+→ 30-10-2026 18:30
+→ Priority
+→ Subject
+
+Then test:
+📌 Upcoming
+📅 Due Today
+🗓 Due This Week
+☑️ Mark Complete
+✅ Completed
+
+
+8. Push:
+
+git add .
+git commit -m "Add V4 subjects and assignments"
+git push
