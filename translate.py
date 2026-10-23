@@ -94,6 +94,44 @@ def translate_mymemory(source, target, text):
     return MyMemoryTranslator(source=src, target=dst).translate(text)
 
 
+
+def translate_mymemory_api(source, target, text):
+    """Fallback using MyMemory's documented REST API with ISO language codes.
+
+    This bypasses deep-translator's regional-code validation; it does NOT
+    bypass MyMemory service-level limits. The API enforces a 500-byte maximum.
+    """
+    if source == "auto":
+        raise ValueError("MyMemory direct API requires an explicit source language")
+    if source not in LANGUAGE_BY_CODE or target not in LANGUAGE_BY_CODE:
+        raise ValueError("Unsupported language pair")
+    if len(text.encode("utf-8")) > 450:
+        raise ValueError("Text too long for MyMemory direct API")
+
+    response = requests.get(
+        "https://api.mymemory.translated.net/get",
+        params={"q": text, "langpair": f"{source}|{target}"},
+        timeout=(5, 12),
+        headers={"User-Agent": "StudentAssistantBot/5.4"},
+    )
+    response.raise_for_status()
+    data = response.json()
+    if not isinstance(data, dict):
+        raise ValueError("Unexpected MyMemory response")
+
+    status = data.get("responseStatus")
+    if str(status) != "200":
+        raise RuntimeError(f"MyMemory service declined translation (status {status})")
+    record = data.get("responseData")
+    result = record.get("translatedText") if isinstance(record, dict) else None
+    if not isinstance(result, str) or not result.strip():
+        raise ValueError("MyMemory returned an empty translation")
+    result = result.strip()
+    if result.upper().startswith("MYMEMORY WARNING") or "YOU USED ALL AVAILABLE FREE TRANSLATIONS" in result.upper():
+        raise RuntimeError("MyMemory daily allowance exhausted")
+    return result
+
+
 QUICK_PAIRS = {
     "⚡ English → Tamil": ("en", "ta"),
     "⚡ Tamil → English": ("ta", "en"),
@@ -279,6 +317,15 @@ def translate_chunk(source, target, text):
         if result:
             return result
 
+    # Try the documented MyMemory REST API directly with short ISO codes.
+    # This can help when the deep-translator locale validation fails, but it
+    # still shares MyMemory's service-level quota and availability.
+    result = attempt(
+        "MyMemory Direct API", lambda: translate_mymemory_api(source, target, text)
+    )
+    if result:
+        return result
+
     # Free best-effort fallback, not an official Google API.
     result = attempt(
         "Google Public Endpoint", lambda: translate_google_endpoint(source, target, text)
@@ -415,16 +462,21 @@ def send_translation_result(
     provider,
     kind="text",
 ):
-    history_id = save_translation(
-        user_id=message.from_user.id,
-        chat_id=message.chat.id,
-        source_language=source,
-        target_language=target,
-        original_text=original_text,
-        translated_text=translated_text,
-        provider=provider,
-        kind=kind,
-    )
+    # Translation delivery matters more than optional history persistence.
+    try:
+        history_id = save_translation(
+            user_id=message.from_user.id,
+            chat_id=message.chat.id,
+            source_language=source,
+            target_language=target,
+            original_text=original_text,
+            translated_text=translated_text,
+            provider=provider,
+            kind=kind,
+        )
+    except Exception as error:
+        history_id = None
+        print("Translation history save failure:", type(error).__name__)
 
     header = (
         "✅ Translation Complete\n\n"
