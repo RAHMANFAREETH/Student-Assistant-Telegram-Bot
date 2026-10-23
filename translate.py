@@ -62,6 +62,38 @@ LANGUAGE_BY_CODE = {
     for name, code in LANGUAGES.items()
 }
 
+# deep_translator.MyMemoryTranslator validates regional language identifiers.
+# The abbreviated codes used by GoogleTranslator (en, ta, si...) can be rejected.
+# Keep the main bot language codes unchanged, and normalize ONLY for MyMemory.
+MYMEMORY_LOCALES = {
+    "en": "en-GB",
+    "ta": "ta-LK",
+    "si": "si-LK",
+    "ar": "ar-SA",
+    "hi": "hi-IN",
+    "ur": "ur-PK",
+    "ml": "ml-IN",
+    "ms": "ms-MY",
+    "id": "id-ID",
+    "fr": "fr-FR",
+    "de": "de-DE",
+    "tr": "tr-TR",
+}
+
+
+def translate_mymemory(source, target, text):
+    """Use regional codes supported by this provider; Google still uses short codes."""
+    src = "auto" if source == "auto" else MYMEMORY_LOCALES.get(source)
+    dst = MYMEMORY_LOCALES.get(target)
+    if not src or not dst:
+        raise ValueError("This language combination has no MyMemory locale mapping")
+    # The MyMemory endpoint restricts text to 500 UTF-8 bytes per request.
+    # Larger texts go to other providers instead of repeatedly failing here.
+    if len(text.encode("utf-8")) > 450:
+        raise ValueError("Text too long for MyMemory single request")
+    return MyMemoryTranslator(source=src, target=dst).translate(text)
+
+
 QUICK_PAIRS = {
     "⚡ English → Tamil": ("en", "ta"),
     "⚡ Tamil → English": ("ta", "en"),
@@ -221,17 +253,20 @@ def translate_chunk(source, target, text):
             return value.strip(), label
         except Exception as error:
             # Keep detailed diagnostics in Render logs, not public Telegram chat.
-            errors.append(f"{label}: {type(error).__name__}: {error}")
+            errors.append(f"{label}: {type(error).__name__}: {str(error)[:250]}")
             return None
 
+    # Prefer MyMemory for short text: it avoids Google's shared-host 429 rate
+    # limits, but uses regional language identifiers instead of short codes.
     result = attempt(
-        "Google", lambda: GoogleTranslator(source=source, target=target).translate(text)
+        "MyMemory", lambda: translate_mymemory(source, target, text)
     )
     if result:
         return result
 
+    # Keep Google as a best-effort fallback using its own short language codes.
     result = attempt(
-        "MyMemory", lambda: MyMemoryTranslator(source=source, target=target).translate(text)
+        "Google", lambda: GoogleTranslator(source=source, target=target).translate(text)
     )
     if result:
         return result
