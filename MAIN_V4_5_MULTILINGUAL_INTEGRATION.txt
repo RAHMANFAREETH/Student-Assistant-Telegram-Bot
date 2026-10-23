@@ -1,0 +1,141 @@
+STUDENT ASSISTANT BOT V4.5 MULTILINGUAL
+======================================
+
+IMPORTANT:
+Do NOT install the older student_assistant_v4_5_voice_arabic.zip.
+
+This package replaces it.
+
+SUPPORTED LANGUAGE STUDY TOOLS:
+- Tamil
+- English
+- Sinhala
+- Arabic
+
+
+1) Copy into project root:
+
+speech_to_text.py
+voice_notes.py
+language_tools.py
+
+
+2) Run this SQL in Supabase SQL Editor:
+
+v4_5_multilingual_voice.sql
+
+
+3) Add imports to main.py:
+
+from voice_notes import register_voice_note_handlers
+from language_tools import register_language_tool_handlers
+
+
+4) Add these main-menu buttons:
+
+types.KeyboardButton("🎙 Voice Notes"),
+types.KeyboardButton("🌍 Language Tools"),
+
+
+Recommended main menu:
+
+markup.add(
+    types.KeyboardButton("📄 PDF Tools"),
+    types.KeyboardButton("📝 Notes"),
+
+    types.KeyboardButton("🌐 Translate"),
+    types.KeyboardButton("⏰ Study Reminder"),
+
+    types.KeyboardButton("📚 Subjects"),
+    types.KeyboardButton("📅 Assignments"),
+
+    types.KeyboardButton("📚 Study Materials"),
+    types.KeyboardButton("🗓 Timetable"),
+
+    types.KeyboardButton("⏱ Study Planner"),
+    types.KeyboardButton("🎙 Voice Notes"),
+
+    types.KeyboardButton("🌍 Language Tools"),
+    types.KeyboardButton("🧠 Flashcards"),
+
+    types.KeyboardButton("❓ Quiz"),
+    types.KeyboardButton("📊 Dashboard"),
+
+    types.KeyboardButton("📈 Progress"),
+    types.KeyboardButton("ℹ️ Help"),
+)
+
+
+5) Register:
+
+register_voice_note_handlers(
+    bot,
+    show_main_menu
+)
+
+register_language_tool_handlers(
+    bot,
+    show_main_menu
+)
+
+
+6) No new required Python package.
+
+Already used:
+- requests
+- gTTS
+
+
+7) OPTIONAL SPEECH-TO-TEXT
+
+The bot works without speech-to-text.
+
+To optionally enable transcription, add:
+
+ASSEMBLYAI_API_KEY=YOUR_KEY
+
+to:
+- .env locally
+- Render Environment
+
+Never commit the real API key to GitHub.
+
+
+8) Syntax check:
+
+python -m py_compile main.py speech_to_text.py voice_notes.py language_tools.py
+
+
+9) Test voice notes:
+
+🎙 Voice Notes
+→ ➕ Add Voice Note
+→ choose subject
+→ title
+→ send voice message
+→ ▶️ Play Voice Note
+
+
+10) Test language tools:
+
+🌍 Language Tools
+→ ➕ Add Vocabulary
+→ Choose language:
+   தமிழ் / English / සිංහල / العربية
+→ choose subject
+→ term
+→ meaning
+→ example
+
+Then test:
+📚 My Vocabulary
+🎯 Practice Vocabulary
+🔊 Pronunciation
+🔤 Text Tools
+
+
+11) Push:
+
+git add .
+git commit -m "Add V4.5 multilingual language tools and voice notes"
+git push

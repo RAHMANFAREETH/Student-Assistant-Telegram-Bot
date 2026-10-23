@@ -1,0 +1,143 @@
+STUDENT ASSISTANT BOT V4.6
+EXAMS + ATTENDANCE + STUDY GOALS
+================================
+
+1) Copy these files into project root:
+
+exam_planner.py
+attendance.py
+study_goals.py
+
+
+2) Run:
+
+v4_6_exams_attendance_goals.sql
+
+inside Supabase SQL Editor.
+
+
+3) Add imports to main.py:
+
+from exam_planner import register_exam_handlers
+from attendance import register_attendance_handlers
+from study_goals import register_study_goal_handlers
+
+
+4) Add these main-menu buttons:
+
+types.KeyboardButton("📝 Exams"),
+types.KeyboardButton("✅ Attendance"),
+types.KeyboardButton("🎯 Study Goals"),
+
+
+Recommended new lower section:
+
+types.KeyboardButton("📝 Exams"),
+types.KeyboardButton("✅ Attendance"),
+
+types.KeyboardButton("🎯 Study Goals"),
+types.KeyboardButton("📊 Dashboard"),
+
+types.KeyboardButton("📈 Progress"),
+types.KeyboardButton("ℹ️ Help"),
+
+
+5) Register:
+
+register_exam_handlers(
+    bot,
+    show_main_menu
+)
+
+register_attendance_handlers(
+    bot,
+    show_main_menu
+)
+
+register_study_goal_handlers(
+    bot,
+    show_main_menu
+)
+
+
+6) Exam alerts use your existing Supabase Vault secret:
+
+telegram_bot_token
+
+Alerts:
+- within 7 days
+- within 24 hours
+- within 1 hour
+
+
+7) No new Python package is required.
+
+
+8) Syntax check:
+
+python -m py_compile main.py exam_planner.py attendance.py study_goals.py
+
+
+9) Run:
+
+python main.py
+
+
+10) TEST EXAMS:
+
+📝 Exams
+→ ➕ Add Exam
+→ choose subject
+→ title
+→ exam date/time
+→ location
+→ notes
+
+Then:
+📅 Upcoming Exams
+
+
+11) TEST ATTENDANCE:
+
+✅ Attendance
+→ ➕ Mark Attendance
+→ subject
+→ date
+→ Present / Absent / Late / Excused
+
+Then:
+📊 Attendance Summary
+
+
+12) TEST STUDY GOALS:
+
+🎯 Study Goals
+→ ➕ Add Goal
+→ subject
+→ goal
+→ description
+→ target date
+
+Then:
+🎯 Active Goals
+✅ Complete Goal
+🏆 Completed Goals
+
+
+13) Verify exam Cron:
+
+select
+    jobid,
+    jobname,
+    schedule,
+    command,
+    active
+from cron.job
+where jobname = 'student-exam-alerts';
+
+
+14) Push:
+
+git add .
+git commit -m "Add V4.6 exams attendance and study goals"
+git push
