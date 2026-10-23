@@ -1,0 +1,91 @@
+STUDENT ASSISTANT BOT V5.2
+STUDENT RESOURCES
+=========================
+
+1) Copy into project root:
+
+student_resources.py
+
+
+2) NO SQL REQUIRED.
+
+3) NO NEW PIP PACKAGE REQUIRED.
+
+
+4) Add import to main.py:
+
+from student_resources import (
+    register_student_resource_handlers
+)
+
+
+5) Add main-menu button:
+
+types.KeyboardButton("📢 Student Resources"),
+
+
+Recommended lower section:
+
+types.KeyboardButton("🧠 Smart Insights"),
+types.KeyboardButton("🔔 Smart Notifications"),
+
+types.KeyboardButton("📢 Student Resources"),
+types.KeyboardButton("📦 Export My Data"),
+
+types.KeyboardButton("📊 Dashboard"),
+types.KeyboardButton("📈 Progress"),
+
+types.KeyboardButton("ℹ️ Help"),
+
+
+6) Register:
+
+register_student_resource_handlers(
+    bot,
+    show_main_menu
+)
+
+
+7) Command:
+
+/resources
+
+
+8) Official Telegram resources used:
+
+Courses:
+https://t.me/tamil_courses_foryou
+
+Past Papers:
+https://t.me/PastpaperTamilmediumALOL
+
+Admin:
+https://t.me/Bestfriendlanka
+
+
+9) Syntax check:
+
+python -m py_compile main.py student_resources.py
+
+
+10) Run:
+
+python main.py
+
+
+11) Telegram test:
+
+📢 Student Resources
+
+Then test all three inline buttons:
+
+📚 Tamil Medium Courses
+📄 A/L O/L Past Papers
+👤 Contact Admin
+
+
+12) Push:
+
+git add .
+git commit -m "Add V5.2 student resources links"
+git push

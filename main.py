@@ -99,6 +99,15 @@ from notification_preferences import (
 
 
 # ==================================================
+# STUDENT RESOURCES
+# ==================================================
+
+from student_resources import (
+    register_student_resource_handlers,
+)
+
+
+# ==================================================
 # DASHBOARD
 # ==================================================
 
@@ -221,15 +230,19 @@ def show_main_menu(
         ),
 
         types.KeyboardButton(
-            "📦 Export My Data"
+            "📢 Student Resources"
         ),
         types.KeyboardButton(
-            "📊 Dashboard"
+            "📦 Export My Data"
         ),
 
         types.KeyboardButton(
+            "📊 Dashboard"
+        ),
+        types.KeyboardButton(
             "📈 Progress"
         ),
+
         types.KeyboardButton(
             "ℹ️ Help"
         ),
@@ -240,7 +253,7 @@ def show_main_menu(
         (
             f"👋 Hello {first_name}!\n\n"
 
-            "🎓 Student Assistant Bot V5.1\n\n"
+            "🎓 Student Assistant Bot V5.2\n\n"
 
             "Choose what you want to do:\n\n"
 
@@ -277,7 +290,9 @@ def show_main_menu(
             "🧠 Smart Insights\n"
             "🔔 Smart Notifications\n\n"
 
-            "📦 Export My Data\n"
+            "📢 Student Resources\n"
+            "📦 Export My Data\n\n"
+
             "📊 Dashboard\n"
             "📈 Progress\n"
             "ℹ️ Help"
@@ -321,7 +336,7 @@ def help_command(message):
     bot.send_message(
         message.chat.id,
         (
-            "🎓 STUDENT ASSISTANT BOT V5.1\n\n"
+            "🎓 STUDENT ASSISTANT BOT V5.2\n\n"
 
             "━━━━━━━━━━━━━━━━━━\n"
             "📄 PDF TOOLS\n"
@@ -563,7 +578,14 @@ def help_command(message):
             "• Custom notification time\n"
             "• Custom weekly day\n"
             "• Timezone support\n"
-            "• Works through Supabase Cron\n\n"
+            "• Supabase Cron delivery\n\n"
+
+            "━━━━━━━━━━━━━━━━━━\n"
+            "📢 STUDENT RESOURCES\n"
+            "━━━━━━━━━━━━━━━━━━\n"
+            "• Tamil-medium courses group\n"
+            "• Tamil-medium A/L & O/L past papers\n"
+            "• Contact Admin on Telegram\n\n"
 
             "━━━━━━━━━━━━━━━━━━\n"
             "📦 DATA EXPORT\n"
@@ -618,6 +640,7 @@ def help_command(message):
             "/streak\n"
             "/insights\n"
             "/notifications\n"
+            "/resources\n"
             "/export\n"
             "/dashboard\n"
             "/progress\n"
@@ -835,6 +858,16 @@ register_notification_preference_handlers(
 
 
 # ==================================================
+# REGISTER STUDENT RESOURCES
+# ==================================================
+
+register_student_resource_handlers(
+    bot,
+    show_main_menu,
+)
+
+
+# ==================================================
 # REGISTER DASHBOARD + PROGRESS
 # ==================================================
 
@@ -864,7 +897,7 @@ def home():
     return {
         "status": "ok",
         "bot": "Student Assistant Bot",
-        "version": "5.1",
+        "version": "5.2",
         "database": "Supabase",
         "deployment": "Render",
 
@@ -900,9 +933,22 @@ def home():
             "study_streak": True,
             "smart_insights": True,
             "smart_notifications": True,
+            "student_resources": True,
             "data_export": True,
             "dashboard": True,
             "progress": True,
+        },
+
+        "resources": {
+            "courses": (
+                "https://t.me/tamil_courses_foryou"
+            ),
+            "past_papers": (
+                "https://t.me/PastpaperTamilmediumALOL"
+            ),
+            "admin": (
+                "https://t.me/Bestfriendlanka"
+            ),
         },
     }, 200
 
@@ -1088,7 +1134,7 @@ if __name__ == "__main__":
         )
 
         print(
-            "🎓 Student Assistant Bot V5.1 enabled."
+            "🎓 Student Assistant Bot V5.2 enabled."
         )
 
         print(
@@ -1185,6 +1231,10 @@ if __name__ == "__main__":
 
         print(
             "🔔 Smart Notifications enabled."
+        )
+
+        print(
+            "📢 Student Resources enabled."
         )
 
         print(
