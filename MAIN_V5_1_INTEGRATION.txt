@@ -1,0 +1,154 @@
+STUDENT ASSISTANT BOT V5.1
+SMART NOTIFICATIONS CENTER
+==========================
+
+1) Copy into project root:
+
+notification_preferences.py
+
+
+2) Run this SQL:
+
+v5_1_smart_notifications.sql
+
+inside Supabase SQL Editor.
+
+
+3) IMPORTANT
+
+The SQL expects your existing Supabase Vault secret:
+
+telegram_bot_token
+
+Do NOT paste your Telegram token into SQL.
+
+
+4) Add import to main.py:
+
+from notification_preferences import (
+    register_notification_preference_handlers
+)
+
+
+5) Add main-menu button:
+
+types.KeyboardButton("🔔 Smart Notifications"),
+
+
+Recommended lower menu section:
+
+types.KeyboardButton("📚 Revision Planner"),
+types.KeyboardButton("🔥 Study Streak"),
+
+types.KeyboardButton("🧠 Smart Insights"),
+types.KeyboardButton("🔔 Smart Notifications"),
+
+types.KeyboardButton("📦 Export My Data"),
+types.KeyboardButton("📊 Dashboard"),
+
+types.KeyboardButton("📈 Progress"),
+types.KeyboardButton("ℹ️ Help"),
+
+
+6) Register:
+
+register_notification_preference_handlers(
+    bot,
+    show_main_menu
+)
+
+
+7) Command:
+
+/notifications
+
+
+8) Syntax check:
+
+python -m py_compile main.py notification_preferences.py
+
+
+9) Run:
+
+python main.py
+
+
+10) FIRST TEST
+
+🔔 Smart Notifications
+
+Default settings:
+
+Timezone:
+Asia/Colombo
+
+Daily Brief:
+ON at 07:00
+
+Weekly Review:
+ON Sunday at 18:00
+
+
+11) CONFIGURATION
+
+☀️ Toggle Daily Brief
+
+🕒 Set Brief Time
+
+📅 Toggle Weekly Review
+
+📆 Set Weekly Schedule
+
+🌍 Set Timezone
+
+⚙️ View Notification Settings
+
+
+12) DAILY BRIEF INCLUDES
+
+- classes today
+- assignments due today
+- overdue assignments
+- exams in next 7 days
+- active study goals
+
+
+13) WEEKLY REVIEW INCLUDES
+
+- completed study minutes over last 7 days
+- assignments completed over last 7 days
+- quiz average over last 7 days
+- current overdue assignments
+- exams in next 7 days
+
+
+14) CRON
+
+The SQL creates:
+
+student-smart-notifications
+
+Schedule:
+every 15 minutes
+
+It checks each student's timezone and only sends
+once during the chosen local hour.
+
+
+15) VERIFY CRON
+
+select
+    jobid,
+    jobname,
+    schedule,
+    command,
+    active
+from cron.job
+where jobname = 'student-smart-notifications';
+
+
+16) Push:
+
+git add .
+git commit -m "Add V5.1 smart notification center"
+git push

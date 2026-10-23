@@ -90,6 +90,15 @@ from smart_insights import register_smart_insight_handlers
 
 
 # ==================================================
+# SMART NOTIFICATIONS
+# ==================================================
+
+from notification_preferences import (
+    register_notification_preference_handlers,
+)
+
+
+# ==================================================
 # DASHBOARD
 # ==================================================
 
@@ -208,16 +217,19 @@ def show_main_menu(
             "🧠 Smart Insights"
         ),
         types.KeyboardButton(
-            "📦 Export My Data"
+            "🔔 Smart Notifications"
         ),
 
+        types.KeyboardButton(
+            "📦 Export My Data"
+        ),
         types.KeyboardButton(
             "📊 Dashboard"
         ),
+
         types.KeyboardButton(
             "📈 Progress"
         ),
-
         types.KeyboardButton(
             "ℹ️ Help"
         ),
@@ -228,7 +240,7 @@ def show_main_menu(
         (
             f"👋 Hello {first_name}!\n\n"
 
-            "🎓 Student Assistant Bot V5.0\n\n"
+            "🎓 Student Assistant Bot V5.1\n\n"
 
             "Choose what you want to do:\n\n"
 
@@ -263,8 +275,9 @@ def show_main_menu(
             "🔥 Study Streak\n\n"
 
             "🧠 Smart Insights\n"
-            "📦 Export My Data\n\n"
+            "🔔 Smart Notifications\n\n"
 
+            "📦 Export My Data\n"
             "📊 Dashboard\n"
             "📈 Progress\n"
             "ℹ️ Help"
@@ -308,7 +321,7 @@ def help_command(message):
     bot.send_message(
         message.chat.id,
         (
-            "🎓 STUDENT ASSISTANT BOT V5.0\n\n"
+            "🎓 STUDENT ASSISTANT BOT V5.1\n\n"
 
             "━━━━━━━━━━━━━━━━━━\n"
             "📄 PDF TOOLS\n"
@@ -543,6 +556,16 @@ def help_command(message):
             "• Rule-based recommendations\n\n"
 
             "━━━━━━━━━━━━━━━━━━\n"
+            "🔔 SMART NOTIFICATIONS\n"
+            "━━━━━━━━━━━━━━━━━━\n"
+            "• Daily morning study brief\n"
+            "• Weekly study review\n"
+            "• Custom notification time\n"
+            "• Custom weekly day\n"
+            "• Timezone support\n"
+            "• Works through Supabase Cron\n\n"
+
+            "━━━━━━━━━━━━━━━━━━\n"
             "📦 DATA EXPORT\n"
             "━━━━━━━━━━━━━━━━━━\n"
             "• Personal academic backup\n"
@@ -594,6 +617,7 @@ def help_command(message):
             "/revision\n"
             "/streak\n"
             "/insights\n"
+            "/notifications\n"
             "/export\n"
             "/dashboard\n"
             "/progress\n"
@@ -776,7 +800,7 @@ register_data_export_handlers(
 
 
 # ==================================================
-# REGISTER REVISION + STREAK
+# REGISTER REVISION + STUDY STREAK
 # ==================================================
 
 register_revision_planner_handlers(
@@ -795,6 +819,16 @@ register_study_streak_handlers(
 # ==================================================
 
 register_smart_insight_handlers(
+    bot,
+    show_main_menu,
+)
+
+
+# ==================================================
+# REGISTER SMART NOTIFICATIONS
+# ==================================================
+
+register_notification_preference_handlers(
     bot,
     show_main_menu,
 )
@@ -830,7 +864,7 @@ def home():
     return {
         "status": "ok",
         "bot": "Student Assistant Bot",
-        "version": "5.0",
+        "version": "5.1",
         "database": "Supabase",
         "deployment": "Render",
 
@@ -865,6 +899,7 @@ def home():
             "revision_planner": True,
             "study_streak": True,
             "smart_insights": True,
+            "smart_notifications": True,
             "data_export": True,
             "dashboard": True,
             "progress": True,
@@ -1053,7 +1088,7 @@ if __name__ == "__main__":
         )
 
         print(
-            "🎓 Student Assistant Bot V5.0 enabled."
+            "🎓 Student Assistant Bot V5.1 enabled."
         )
 
         print(
@@ -1146,6 +1181,10 @@ if __name__ == "__main__":
 
         print(
             "🧠 Smart Study Insights enabled."
+        )
+
+        print(
+            "🔔 Smart Notifications enabled."
         )
 
         print(
