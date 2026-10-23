@@ -1,0 +1,88 @@
+STUDENT ASSISTANT BOT V4.3 INTEGRATION
+======================================
+
+1) Copy into project root:
+
+study_materials.py
+
+2) Replace your current dashboard.py with the included dashboard.py.
+
+3) Run v4_3_study_materials.sql in Supabase SQL Editor.
+
+4) Add this import to main.py:
+
+from study_materials import register_study_material_handlers
+
+5) Add this main menu button:
+
+types.KeyboardButton("📚 Study Materials"),
+
+Recommended menu order:
+
+markup.add(
+    types.KeyboardButton("📄 PDF Tools"),
+    types.KeyboardButton("📝 Notes"),
+
+    types.KeyboardButton("🌐 Translate"),
+    types.KeyboardButton("⏰ Study Reminder"),
+
+    types.KeyboardButton("📚 Subjects"),
+    types.KeyboardButton("📅 Assignments"),
+
+    types.KeyboardButton("📚 Study Materials"),
+    types.KeyboardButton("🧠 Flashcards"),
+
+    types.KeyboardButton("❓ Quiz"),
+    types.KeyboardButton("📊 Dashboard"),
+
+    types.KeyboardButton("📈 Progress"),
+    types.KeyboardButton("ℹ️ Help"),
+)
+
+6) Register:
+
+register_study_material_handlers(
+    bot,
+    show_main_menu
+)
+
+Register it after Translation/PDF handlers and before or after academic modules.
+Its document handler only activates while Add Material is waiting for a file.
+
+7) No new pip package is required.
+
+It reuses:
+- translation_documents.py
+- translation_ocr.py
+- PyPDF2
+- python-docx
+- OCR_SPACE_API_KEY when scanned PDF OCR is needed
+
+8) Syntax check:
+
+python -m py_compile main.py study_materials.py dashboard.py
+
+9) Run:
+
+python main.py
+
+10) Test:
+
+📚 Study Materials
+→ ➕ Add Material
+→ Choose subject
+→ Upload PDF/DOCX/TXT
+
+Then test:
+📂 My Materials
+📖 Read Material
+🔎 Search Materials
+🧾 Summarize Material
+✨ Key Points
+🗑 Delete Material
+
+11) Push:
+
+git add .
+git commit -m "Add V4.3 study materials and smart document study"
+git push

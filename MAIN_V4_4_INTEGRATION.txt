@@ -1,0 +1,131 @@
+STUDENT ASSISTANT BOT V4.4 INTEGRATION
+======================================
+
+1) Copy these files into the project root:
+
+timetable.py
+study_planner.py
+study_analytics.py
+
+
+2) Run v4_4_planner_timetable.sql inside Supabase SQL Editor.
+
+IMPORTANT:
+The SQL uses your existing Supabase Vault secret:
+
+telegram_bot_token
+
+The study session Cron checks every minute.
+
+
+3) Add imports to main.py:
+
+from timetable import register_timetable_handlers
+from study_planner import register_study_planner_handlers
+
+
+4) Add these two buttons to show_main_menu():
+
+types.KeyboardButton("🗓 Timetable"),
+types.KeyboardButton("⏱ Study Planner"),
+
+
+Recommended main menu:
+
+markup.add(
+    types.KeyboardButton("📄 PDF Tools"),
+    types.KeyboardButton("📝 Notes"),
+
+    types.KeyboardButton("🌐 Translate"),
+    types.KeyboardButton("⏰ Study Reminder"),
+
+    types.KeyboardButton("📚 Subjects"),
+    types.KeyboardButton("📅 Assignments"),
+
+    types.KeyboardButton("📚 Study Materials"),
+    types.KeyboardButton("🗓 Timetable"),
+
+    types.KeyboardButton("⏱ Study Planner"),
+    types.KeyboardButton("🧠 Flashcards"),
+
+    types.KeyboardButton("❓ Quiz"),
+    types.KeyboardButton("📊 Dashboard"),
+
+    types.KeyboardButton("📈 Progress"),
+    types.KeyboardButton("ℹ️ Help"),
+)
+
+
+5) Register:
+
+register_timetable_handlers(
+    bot,
+    show_main_menu
+)
+
+register_study_planner_handlers(
+    bot,
+    show_main_menu
+)
+
+
+6) No additional pip packages are required.
+
+
+7) Syntax check:
+
+python -m py_compile main.py timetable.py study_planner.py study_analytics.py
+
+
+8) Run:
+
+python main.py
+
+
+9) TIMETABLE TEST:
+
+🗓 Timetable
+→ ➕ Add Class
+→ Choose subject
+→ Enter title
+→ Choose day
+→ Start time
+→ End time
+→ Location
+
+Then:
+📅 Today's Timetable
+🗓 Weekly Timetable
+
+
+10) STUDY PLANNER TEST:
+
+⏱ Study Planner
+→ 🍅 25 Min Focus
+
+For a fast test:
+→ ⏱ Custom Session
+→ 2
+→ Choose subject
+
+Supabase Cron should send a Telegram completion message
+after the session ends.
+
+
+11) Verify Cron:
+
+select
+    jobid,
+    jobname,
+    schedule,
+    command,
+    active
+from cron.job
+where jobname = 'student-study-session-check';
+
+
+12) Push:
+
+git add .
+git commit -m "Add V4.4 timetable study planner and analytics"
+git push

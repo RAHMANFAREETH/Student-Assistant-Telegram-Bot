@@ -9,13 +9,42 @@ from config import (
     WEBHOOK_SECRET,
 )
 
+
+# ==================================================
+# CORE MODULES
+# ==================================================
+
 from pdf_tools import register_pdf_handlers
 from notes import register_note_handlers
 from translate import register_translation_handlers
 from reminders import register_reminder_handlers
 
+
+# ==================================================
+# ACADEMIC MODULES
+# ==================================================
+
 from subjects import register_subject_handlers
 from assignments import register_assignment_handlers
+from study_materials import register_study_material_handlers
+from timetable import register_timetable_handlers
+from study_planner import register_study_planner_handlers
+
+
+# ==================================================
+# LEARNING MODULES
+# ==================================================
+
+from flashcards import register_flashcard_handlers
+from quiz import register_quiz_handlers
+from progress import register_progress_handlers
+
+
+# ==================================================
+# DASHBOARD
+# ==================================================
+
+from dashboard import register_dashboard_handlers
 
 
 # ==================================================
@@ -76,6 +105,34 @@ def show_main_menu(
         ),
 
         types.KeyboardButton(
+            "📚 Study Materials"
+        ),
+
+        types.KeyboardButton(
+            "🗓 Timetable"
+        ),
+
+        types.KeyboardButton(
+            "⏱ Study Planner"
+        ),
+
+        types.KeyboardButton(
+            "🧠 Flashcards"
+        ),
+
+        types.KeyboardButton(
+            "❓ Quiz"
+        ),
+
+        types.KeyboardButton(
+            "📊 Dashboard"
+        ),
+
+        types.KeyboardButton(
+            "📈 Progress"
+        ),
+
+        types.KeyboardButton(
             "ℹ️ Help"
         ),
     )
@@ -84,14 +141,28 @@ def show_main_menu(
         chat_id,
         (
             f"👋 Hello {first_name}!\n\n"
-            "🎓 Welcome to Student Assistant Bot.\n\n"
+
+            "🎓 Student Assistant Bot V4.4\n\n"
+
             "Choose what you want to do:\n\n"
+
             "📄 PDF & Document Tools\n"
             "📝 Notes\n"
             "🌐 Translation\n"
-            "⏰ Study Reminders\n"
+            "⏰ Study Reminders\n\n"
+
             "📚 Subjects\n"
-            "📅 Assignments"
+            "📅 Assignments\n"
+            "📚 Study Materials\n"
+            "🗓 Timetable\n\n"
+
+            "⏱ Study Planner\n"
+            "🧠 Flashcards\n"
+            "❓ Quiz\n\n"
+
+            "📊 Dashboard\n"
+            "📈 Study Progress\n"
+            "ℹ️ Help"
         ),
         reply_markup=markup,
     )
@@ -134,56 +205,166 @@ def help_command(message):
     bot.send_message(
         message.chat.id,
         (
-            "🎓 Student Assistant Bot\n\n"
+            "🎓 STUDENT ASSISTANT BOT V4.4\n\n"
 
-            "📄 PDF Tools\n"
+            "━━━━━━━━━━━━━━━━━━\n"
+            "📄 PDF TOOLS\n"
+            "━━━━━━━━━━━━━━━━━━\n"
             "• Merge PDFs\n"
             "• Extract pages\n"
             "• Images → PDF\n"
             "• Rotate PDF\n"
             "• Protect PDF\n\n"
 
-            "📝 Notes\n"
+            "━━━━━━━━━━━━━━━━━━\n"
+            "📝 NOTES\n"
+            "━━━━━━━━━━━━━━━━━━\n"
             "• Add notes\n"
             "• View notes\n"
             "• Search notes\n"
             "• Delete notes\n\n"
 
-            "🌐 Translator\n"
+            "━━━━━━━━━━━━━━━━━━\n"
+            "🌐 TRANSLATOR\n"
+            "━━━━━━━━━━━━━━━━━━\n"
             "• Text translation\n"
-            "• English / Tamil / Sinhala / Arabic\n"
+            "• English / Tamil\n"
+            "• Sinhala / Arabic\n"
             "• Translation history\n"
             "• Pronunciation\n"
             "• Document translation\n"
             "• OCR image translation\n\n"
 
-            "⏰ Study Reminders\n"
+            "━━━━━━━━━━━━━━━━━━\n"
+            "⏰ STUDY REMINDERS\n"
+            "━━━━━━━━━━━━━━━━━━\n"
             "• Add reminder\n"
             "• View reminders\n"
-            "• Delete reminder\n\n"
+            "• Delete reminder\n"
+            "• Automatic Telegram alerts\n\n"
 
-            "📚 Subjects\n"
-            "• Add subjects\n"
+            "━━━━━━━━━━━━━━━━━━\n"
+            "📚 SUBJECTS\n"
+            "━━━━━━━━━━━━━━━━━━\n"
+            "• Add subject\n"
+            "• Subject code\n"
             "• View subjects\n"
-            "• Delete subjects\n"
-            "• Optional subject codes\n\n"
+            "• Delete subjects\n\n"
 
-            "📅 Assignments\n"
-            "• Add assignments\n"
-            "• Set deadlines\n"
-            "• Set priorities\n"
-            "• Link subject\n"
+            "━━━━━━━━━━━━━━━━━━\n"
+            "📅 ASSIGNMENTS\n"
+            "━━━━━━━━━━━━━━━━━━\n"
+            "• Add assignment\n"
+            "• Description\n"
+            "• Deadline\n"
+            "• Priority\n"
+            "• Link to subject\n"
+            "• Upcoming assignments\n"
             "• Due today\n"
             "• Due this week\n"
-            "• Mark completed\n\n"
+            "• Mark completed\n"
+            "• Delete assignment\n"
+            "• Automatic deadline alerts\n\n"
 
-            "Commands:\n\n"
+            "━━━━━━━━━━━━━━━━━━\n"
+            "📚 STUDY MATERIALS\n"
+            "━━━━━━━━━━━━━━━━━━\n"
+            "• Upload PDF\n"
+            "• Upload DOCX\n"
+            "• Upload TXT\n"
+            "• Link to subject\n"
+            "• OCR scanned PDFs\n"
+            "• Read material\n"
+            "• Search materials\n"
+            "• Summarize material\n"
+            "• Extract key points\n"
+            "• Delete material\n\n"
+
+            "━━━━━━━━━━━━━━━━━━\n"
+            "🗓 TIMETABLE\n"
+            "━━━━━━━━━━━━━━━━━━\n"
+            "• Add weekly classes\n"
+            "• Link class to subject\n"
+            "• Start and end time\n"
+            "• Classroom/location\n"
+            "• Today's timetable\n"
+            "• Weekly timetable\n"
+            "• Delete class\n\n"
+
+            "━━━━━━━━━━━━━━━━━━\n"
+            "⏱ STUDY PLANNER\n"
+            "━━━━━━━━━━━━━━━━━━\n"
+            "• 25-minute focus session\n"
+            "• 50-minute focus session\n"
+            "• Custom focus session\n"
+            "• Link session to subject\n"
+            "• View active session\n"
+            "• End session early\n"
+            "• Automatic completion alert\n"
+            "• Weekly study analytics\n\n"
+
+            "━━━━━━━━━━━━━━━━━━\n"
+            "🧠 FLASHCARDS\n"
+            "━━━━━━━━━━━━━━━━━━\n"
+            "• Create flashcards\n"
+            "• Organize by subject\n"
+            "• Study flashcards\n"
+            "• Show answers\n"
+            "• I knew it\n"
+            "• Practice again\n"
+            "• Mastery tracking\n\n"
+
+            "━━━━━━━━━━━━━━━━━━\n"
+            "❓ QUIZ ENGINE\n"
+            "━━━━━━━━━━━━━━━━━━\n"
+            "• MCQ quiz\n"
+            "• Quiz by subject\n"
+            "• Questions from flashcards\n"
+            "• Immediate feedback\n"
+            "• Quiz score\n"
+            "• Quiz history\n\n"
+
+            "━━━━━━━━━━━━━━━━━━\n"
+            "📊 DASHBOARD\n"
+            "━━━━━━━━━━━━━━━━━━\n"
+            "• Subjects\n"
+            "• Materials\n"
+            "• Notes\n"
+            "• Reminders\n"
+            "• Flashcards\n"
+            "• Assignments\n"
+            "• Due today\n"
+            "• Completion percentage\n"
+            "• Next assignment\n\n"
+
+            "━━━━━━━━━━━━━━━━━━\n"
+            "📈 PROGRESS\n"
+            "━━━━━━━━━━━━━━━━━━\n"
+            "• Total flashcards\n"
+            "• Mastered flashcards\n"
+            "• Learning flashcards\n"
+            "• Mastery percentage\n"
+            "• Quiz attempts\n"
+            "• Average quiz score\n"
+            "• Best quiz score\n"
+            "• Assignment progress\n\n"
+
+            "━━━━━━━━━━━━━━━━━━\n"
+            "⌨️ COMMANDS\n"
+            "━━━━━━━━━━━━━━━━━━\n"
             "/start\n"
             "/help\n"
             "/id\n"
             "/subjects\n"
             "/assignments\n"
             "/today\n"
+            "/materials\n"
+            "/timetable\n"
+            "/planner\n"
+            "/flashcards\n"
+            "/quiz\n"
+            "/dashboard\n"
+            "/progress\n"
             "/translate"
         ),
     )
@@ -216,6 +397,7 @@ def user_id(message):
         (
             "👤 User ID:\n"
             f"{message.from_user.id}\n\n"
+
             "💬 Chat ID:\n"
             f"{message.chat.id}"
         ),
@@ -223,7 +405,7 @@ def user_id(message):
 
 
 # ==================================================
-# REGISTER EXISTING MODULES
+# REGISTER PDF TOOLS
 # ==================================================
 
 register_pdf_handlers(
@@ -231,15 +413,30 @@ register_pdf_handlers(
     show_main_menu,
 )
 
+
+# ==================================================
+# REGISTER NOTES
+# ==================================================
+
 register_note_handlers(
     bot,
     show_main_menu,
 )
 
+
+# ==================================================
+# REGISTER TRANSLATOR
+# ==================================================
+
 register_translation_handlers(
     bot,
     show_main_menu,
 )
+
+
+# ==================================================
+# REGISTER REMINDERS
+# ==================================================
 
 register_reminder_handlers(
     bot,
@@ -248,7 +445,7 @@ register_reminder_handlers(
 
 
 # ==================================================
-# REGISTER V4 MODULES
+# REGISTER SUBJECTS
 # ==================================================
 
 register_subject_handlers(
@@ -256,7 +453,82 @@ register_subject_handlers(
     show_main_menu,
 )
 
+
+# ==================================================
+# REGISTER ASSIGNMENTS
+# ==================================================
+
 register_assignment_handlers(
+    bot,
+    show_main_menu,
+)
+
+
+# ==================================================
+# REGISTER STUDY MATERIALS
+# ==================================================
+
+register_study_material_handlers(
+    bot,
+    show_main_menu,
+)
+
+
+# ==================================================
+# REGISTER TIMETABLE
+# ==================================================
+
+register_timetable_handlers(
+    bot,
+    show_main_menu,
+)
+
+
+# ==================================================
+# REGISTER STUDY PLANNER
+# ==================================================
+
+register_study_planner_handlers(
+    bot,
+    show_main_menu,
+)
+
+
+# ==================================================
+# REGISTER FLASHCARDS
+# ==================================================
+
+register_flashcard_handlers(
+    bot,
+    show_main_menu,
+)
+
+
+# ==================================================
+# REGISTER QUIZ
+# ==================================================
+
+register_quiz_handlers(
+    bot,
+    show_main_menu,
+)
+
+
+# ==================================================
+# REGISTER DASHBOARD
+# ==================================================
+
+register_dashboard_handlers(
+    bot,
+    show_main_menu,
+)
+
+
+# ==================================================
+# REGISTER PROGRESS
+# ==================================================
+
+register_progress_handlers(
     bot,
     show_main_menu,
 )
@@ -278,7 +550,9 @@ def home():
     return {
         "status": "ok",
         "bot": "Student Assistant Bot",
-        "version": "4.0",
+        "version": "4.4",
+        "database": "Supabase",
+        "deployment": "Render",
     }, 200
 
 
@@ -292,9 +566,9 @@ def home():
 )
 def telegram_webhook():
 
-    # ----------------------------------------------
-    # VERIFY WEBHOOK SECRET
-    # ----------------------------------------------
+    # ==============================================
+    # VERIFY TELEGRAM SECRET
+    # ==============================================
 
     received_secret = (
         request.headers.get(
@@ -314,9 +588,9 @@ def telegram_webhook():
         )
 
 
-    # ----------------------------------------------
+    # ==============================================
     # PROCESS TELEGRAM UPDATE
-    # ----------------------------------------------
+    # ==============================================
 
     try:
 
@@ -372,7 +646,7 @@ def telegram_webhook():
 
 
 # ==================================================
-# SET TELEGRAM WEBHOOK ON RENDER
+# RENDER WEBHOOK SETUP
 # ==================================================
 
 def setup_render_webhook():
@@ -398,10 +672,11 @@ def setup_render_webhook():
 
     try:
 
-        # Remove previous webhook configuration
+        # Remove previous webhook
         bot.remove_webhook()
 
 
+        # Set webhook
         result = bot.set_webhook(
 
             url=webhook_url,
@@ -420,26 +695,27 @@ def setup_render_webhook():
             webhook_url,
         )
 
+
         print(
             "✅ Webhook configured:",
             result,
         )
 
 
-        # ------------------------------------------
-        # TELEGRAM WEBHOOK INFORMATION
-        # ------------------------------------------
-
+        # Webhook information
         info = bot.get_webhook_info()
+
 
         print(
             "📡 Telegram webhook information:"
         )
 
+
         print(
             "URL:",
             info.url,
         )
+
 
         print(
             "Pending updates:",
@@ -484,7 +760,7 @@ if os.getenv(
 if __name__ == "__main__":
 
     # ==============================================
-    # LOCAL WINDOWS / VS CODE MODE
+    # WINDOWS / VS CODE LOCAL MODE
     # ==============================================
 
     if not os.getenv(
@@ -504,13 +780,66 @@ if __name__ == "__main__":
         )
 
         print(
-            "🎓 Student Assistant Bot V4 enabled."
+            "🎓 Student Assistant Bot V4.4 enabled."
+        )
+
+        print(
+            "📄 PDF Tools enabled."
+        )
+
+        print(
+            "📝 Notes enabled."
+        )
+
+        print(
+            "🌐 Translator enabled."
+        )
+
+        print(
+            "⏰ Study Reminders enabled."
+        )
+
+        print(
+            "📚 Subjects enabled."
+        )
+
+        print(
+            "📅 Assignments enabled."
+        )
+
+        print(
+            "📚 Study Materials enabled."
+        )
+
+        print(
+            "🗓 Timetable enabled."
+        )
+
+        print(
+            "⏱ Study Planner enabled."
+        )
+
+        print(
+            "🧠 Flashcards enabled."
+        )
+
+        print(
+            "❓ Quiz Engine enabled."
+        )
+
+        print(
+            "📊 Dashboard enabled."
+        )
+
+        print(
+            "📈 Study Progress enabled."
         )
 
 
         try:
 
-            # Polling and webhook cannot run together.
+            # Local mode must use polling.
+            # Remove Render webhook first.
             bot.remove_webhook()
 
 
@@ -543,8 +872,11 @@ if __name__ == "__main__":
 
 
     # ==============================================
-    # DIRECT WEB SERVER MODE
-    # Normally Render uses Gunicorn instead.
+    # DIRECT RENDER SERVER MODE
+    #
+    # Render normally starts using:
+    #
+    # gunicorn main:app --bind 0.0.0.0:$PORT
     # ==============================================
 
     else:

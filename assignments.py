@@ -112,6 +112,7 @@ def parse_due_datetime(text):
 
 def create_assignment(
     user_id,
+    chat_id,
     title,
     description,
     due_at,
@@ -120,6 +121,7 @@ def create_assignment(
 ):
     payload = {
         "user_id": int(user_id),
+        "chat_id": int(chat_id),
         "subject_id": subject_id,
         "title": title.strip(),
         "description": (
@@ -408,7 +410,9 @@ def register_assignment_handlers(
             (
                 "📅 Assignments\n\n"
                 "Track coursework, deadlines "
-                "and completed work."
+                "and completed work.\n\n"
+                "🔔 New assignments can receive "
+                "automatic deadline alerts."
             ),
             reply_markup=markup,
         )
@@ -600,8 +604,6 @@ def register_assignment_handlers(
                 SRI_LANKA_TZ
             )
 
-            start_local = now_local
-
             end_local = (
                 now_local
                 + timedelta(days=7)
@@ -611,7 +613,7 @@ def register_assignment_handlers(
                 message.from_user.id,
                 status="pending",
                 start_iso=local_to_utc_iso(
-                    start_local
+                    now_local
                 ),
                 end_iso=local_to_utc_iso(
                     end_local
@@ -744,7 +746,6 @@ def register_assignment_handlers(
             )
             return
 
-        # Do not trap another module's buttons/commands.
         if (
             text.startswith("/")
             or text in GLOBAL_BUTTONS
@@ -826,12 +827,11 @@ def register_assignment_handlers(
                 (
                     "🕒 Send the deadline.\n\n"
                     "Recommended:\n"
-                    "23-10-2026 18:30\n\n"
+                    "30-10-2026 18:30\n\n"
                     "Also accepted:\n"
-                    "23-10-2026 06:30 PM\n"
-                    "23-10-2026\n\n"
-                    "If you send only a date, "
-                    "11:59 PM will be used."
+                    "30-10-2026 06:30 PM\n"
+                    "30-10-2026\n\n"
+                    "Date only uses 11:59 PM."
                 ),
             )
             return
@@ -847,7 +847,7 @@ def register_assignment_handlers(
                     (
                         "❌ I could not understand that date.\n\n"
                         "Use:\n"
-                        "23-10-2026 18:30"
+                        "30-10-2026 18:30"
                     ),
                 )
                 return
@@ -914,11 +914,10 @@ def register_assignment_handlers(
             )
 
             if not subjects:
-                state["subject_id"] = None
-
                 try:
                     create_assignment(
                         user_id=message.from_user.id,
+                        chat_id=message.chat.id,
                         title=state["title"],
                         description=state.get(
                             "description"
@@ -935,7 +934,10 @@ def register_assignment_handlers(
 
                     bot.send_message(
                         chat_id,
-                        "✅ Assignment added successfully!",
+                        (
+                            "✅ Assignment added successfully!\n\n"
+                            "🔔 Deadline alerts are enabled."
+                        ),
                     )
 
                     show_assignment_menu(
@@ -992,10 +994,8 @@ def register_assignment_handlers(
             subject_id = None
 
             if text != "⏭ No Subject":
-                if not (
-                    text.startswith(
-                        "📚 #"
-                    )
+                if not text.startswith(
+                    "📚 #"
                 ):
                     bot.send_message(
                         chat_id,
@@ -1038,6 +1038,7 @@ def register_assignment_handlers(
             try:
                 create_assignment(
                     user_id=message.from_user.id,
+                    chat_id=message.chat.id,
                     title=state["title"],
                     description=state.get(
                         "description"
@@ -1060,7 +1061,11 @@ def register_assignment_handlers(
                         f"🕒 "
                         f"{state['due_at'].strftime('%d-%m-%Y %I:%M %p')}\n"
                         f"{priority_icon(state['priority'])} "
-                        f"{state['priority'].title()}"
+                        f"{state['priority'].title()}\n\n"
+                        "🔔 Deadline alerts enabled:\n"
+                        "• Within 24 hours\n"
+                        "• Within 3 hours\n"
+                        "• Deadline reached"
                     ),
                 )
 

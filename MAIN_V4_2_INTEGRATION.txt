@@ -1,0 +1,110 @@
+STUDENT ASSISTANT BOT V4.2 INTEGRATION
+======================================
+
+1) Copy these files into the project root:
+
+flashcards.py
+quiz.py
+progress.py
+
+
+2) Run:
+
+v4_2_flashcards_quiz.sql
+
+inside Supabase SQL Editor.
+
+
+3) Add imports to main.py:
+
+from flashcards import register_flashcard_handlers
+from quiz import register_quiz_handlers
+from progress import register_progress_handlers
+
+
+4) Add these buttons to show_main_menu():
+
+types.KeyboardButton("🧠 Flashcards"),
+types.KeyboardButton("❓ Quiz"),
+types.KeyboardButton("📈 Progress"),
+
+
+Recommended menu:
+
+markup.add(
+    types.KeyboardButton("📄 PDF Tools"),
+    types.KeyboardButton("📝 Notes"),
+
+    types.KeyboardButton("🌐 Translate"),
+    types.KeyboardButton("⏰ Study Reminder"),
+
+    types.KeyboardButton("📚 Subjects"),
+    types.KeyboardButton("📅 Assignments"),
+
+    types.KeyboardButton("🧠 Flashcards"),
+    types.KeyboardButton("❓ Quiz"),
+
+    types.KeyboardButton("📊 Dashboard"),
+    types.KeyboardButton("📈 Progress"),
+
+    types.KeyboardButton("ℹ️ Help"),
+)
+
+
+5) Register after your existing modules:
+
+register_flashcard_handlers(
+    bot,
+    show_main_menu
+)
+
+register_quiz_handlers(
+    bot,
+    show_main_menu
+)
+
+register_progress_handlers(
+    bot,
+    show_main_menu
+)
+
+
+6) No new pip packages are required.
+
+
+7) Syntax check:
+
+python -m py_compile main.py flashcards.py quiz.py progress.py
+
+
+8) Run:
+
+python main.py
+
+
+9) Test order:
+
+📚 Subjects
+→ Create a subject
+
+🧠 Flashcards
+→ Add at least 4 flashcards with different answers
+
+🎯 Study Flashcards
+→ Show Answer
+→ I knew it / Practice again
+
+❓ Quiz
+→ Start Quiz
+→ Select the subject
+→ Complete 5 questions
+
+📈 Progress
+→ Check mastery and quiz score
+
+
+10) Push:
+
+git add .
+git commit -m "Add V4.2 flashcards quiz and progress"
+git push

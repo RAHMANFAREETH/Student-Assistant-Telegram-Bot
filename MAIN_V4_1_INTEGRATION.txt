@@ -1,0 +1,85 @@
+STUDENT ASSISTANT V4.1 INTEGRATION
+
+1) Replace your existing assignments.py with the new assignments.py.
+
+2) Add dashboard.py to the project root.
+
+3) In main.py add:
+
+from dashboard import register_dashboard_handlers
+
+
+4) Add this button inside show_main_menu():
+
+types.KeyboardButton("📊 Dashboard"),
+
+
+Recommended main menu:
+
+markup.add(
+    types.KeyboardButton("📄 PDF Tools"),
+    types.KeyboardButton("📝 Notes"),
+    types.KeyboardButton("🌐 Translate"),
+    types.KeyboardButton("⏰ Study Reminder"),
+    types.KeyboardButton("📚 Subjects"),
+    types.KeyboardButton("📅 Assignments"),
+    types.KeyboardButton("📊 Dashboard"),
+    types.KeyboardButton("ℹ️ Help"),
+)
+
+
+5) Register dashboard after the other modules:
+
+register_dashboard_handlers(
+    bot,
+    show_main_menu
+)
+
+
+6) Run v4_1_assignment_alerts.sql inside Supabase SQL Editor.
+
+IMPORTANT:
+The SQL expects the Telegram bot token to already exist in Supabase Vault
+under this name:
+
+telegram_bot_token
+
+You created that during the reminder setup.
+
+
+7) Verify Cron:
+
+select
+    jobid,
+    jobname,
+    schedule,
+    command,
+    active
+from cron.job
+where jobname = 'student-assignment-alerts';
+
+
+8) Syntax check:
+
+python -m py_compile main.py assignments.py dashboard.py subjects.py
+
+
+9) Run:
+
+python main.py
+
+
+10) Test:
+
+/start
+📊 Dashboard
+
+Then create a test assignment due less than 3 hours from now.
+The Supabase Cron checks every 5 minutes.
+
+
+11) Push:
+
+git add .
+git commit -m "Add V4.1 dashboard and assignment alerts"
+git push
