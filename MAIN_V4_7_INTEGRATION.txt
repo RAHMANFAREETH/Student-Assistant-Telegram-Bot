@@ -1,0 +1,115 @@
+STUDENT ASSISTANT BOT V4.7
+SEMESTER MANAGER + GPA TRACKER
+================================
+
+1) Copy into project root:
+
+semesters.py
+grades_gpa.py
+
+
+2) Run this SQL in Supabase SQL Editor:
+
+v4_7_semester_gpa.sql
+
+
+3) Add imports to main.py:
+
+from semesters import register_semester_handlers
+from grades_gpa import register_grade_handlers
+
+
+4) Add these menu buttons:
+
+types.KeyboardButton("🎓 Semesters"),
+types.KeyboardButton("📊 Grades & GPA"),
+
+
+Recommended lower menu:
+
+types.KeyboardButton("📝 Exams"),
+types.KeyboardButton("✅ Attendance"),
+
+types.KeyboardButton("🎯 Study Goals"),
+types.KeyboardButton("🎓 Semesters"),
+
+types.KeyboardButton("📊 Grades & GPA"),
+types.KeyboardButton("📊 Dashboard"),
+
+types.KeyboardButton("📈 Progress"),
+types.KeyboardButton("ℹ️ Help"),
+
+
+5) Register:
+
+register_semester_handlers(
+    bot,
+    show_main_menu
+)
+
+register_grade_handlers(
+    bot,
+    show_main_menu
+)
+
+
+6) No new Python package is required.
+
+
+7) Syntax test:
+
+python -m py_compile main.py semesters.py grades_gpa.py
+
+
+8) Run:
+
+python main.py
+
+
+9) FIRST TEST
+
+🎓 Semesters
+→ ➕ Add Semester
+→ Semester name
+→ start date
+→ end date
+→ GPA scale
+
+Example GPA scale:
+4.0
+
+The new semester becomes active.
+
+
+10) ADD RESULT
+
+📊 Grades & GPA
+→ ➕ Add / Update Result
+→ semester
+→ subject
+→ credits
+→ grade label
+→ grade point
+→ optional percentage
+
+
+11) GPA TEST
+
+📊 Grades & GPA
+→ 📊 GPA Summary
+
+
+12) TARGET GPA TEST
+
+📊 Grades & GPA
+→ 🧮 Target GPA
+→ semester
+→ target GPA
+→ remaining credits
+
+
+13) Push:
+
+git add .
+git commit -m "Add V4.7 semester and GPA tracker"
+git push
