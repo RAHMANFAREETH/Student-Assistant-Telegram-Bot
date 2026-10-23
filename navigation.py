@@ -20,6 +20,8 @@ STUDY_PLANNER = "⏱ Study Planner"
 VOICE_NOTES = "🎙 Voice Notes"
 LANGUAGE_TOOLS = "🌍 Language Tools"
 FLASHCARDS = "🧠 Flashcards"
+DUE_REVIEWS = "🧠 Due Reviews"
+REVIEW_STATS = "📊 Review Stats"
 
 QUIZ = "❓ Quiz"
 EXAMS = "📝 Exams"
@@ -65,6 +67,7 @@ MAIN_MENU_ROWS = [
     (MATERIALS, TIMETABLE),
     (STUDY_PLANNER, VOICE_NOTES),
     (LANGUAGE_TOOLS, FLASHCARDS),
+    (DUE_REVIEWS,),
     (QUIZ, EXAMS),
     (ATTENDANCE, STUDY_GOALS),
     (SEMESTERS, GRADES_GPA),
@@ -82,6 +85,9 @@ GLOBAL_BUTTONS = {
     for row in MAIN_MENU_ROWS
     for button in row
 }
+# Review statistics is available in the Flashcards submenu. Treat it as
+# a global action so other modules do not consume its text as form data.
+GLOBAL_BUTTONS.add(REVIEW_STATS)
 
 
 NAVIGATION_BUTTONS = {

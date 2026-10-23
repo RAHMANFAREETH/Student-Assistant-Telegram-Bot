@@ -33,6 +33,7 @@ EXPECTED_TABLES = [
     "timetable_entries",
     "study_sessions",
     "flashcards",
+    "flashcard_reviews",
     "quiz_attempts",
     "voice_notes",
     "language_vocabulary",
@@ -158,7 +159,7 @@ def build_health_report():
     )
 
     lines = [
-        "🛠 SYSTEM HEALTH — V5.3",
+        "🛠 SYSTEM HEALTH — V5.4",
         "━━━━━━━━━━━━━━━━━━",
         "",
         (

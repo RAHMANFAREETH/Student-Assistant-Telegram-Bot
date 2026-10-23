@@ -224,6 +224,12 @@ def register_flashcard_handlers(
                 "🎯 Study Flashcards"
             ),
             types.KeyboardButton(
+                "🧠 Due Reviews"
+            ),
+            types.KeyboardButton(
+                "📊 Review Stats"
+            ),
+            types.KeyboardButton(
                 "🗑 Delete Flashcard"
             ),
             types.KeyboardButton(
@@ -236,7 +242,9 @@ def register_flashcard_handlers(
             (
                 "🧠 Flashcards\n\n"
                 "Create cards by subject and "
-                "review them until they are mastered."
+                "review them until they are mastered.\n\n"
+                "🧠 Due Reviews schedules cards automatically; "
+                "🎯 Study Flashcards keeps the original practice mode."
             ),
             reply_markup=markup,
         )

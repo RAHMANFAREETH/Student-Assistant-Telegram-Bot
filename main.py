@@ -69,6 +69,7 @@ from language_tools import register_language_tool_handlers
 # ==================================================
 
 from flashcards import register_flashcard_handlers
+from spaced_repetition import register_spaced_repetition_handlers
 from quiz import register_quiz_handlers
 from progress import register_progress_handlers
 
@@ -171,7 +172,7 @@ def show_main_menu(
         (
             f"👋 Hello {first_name}!\n\n"
 
-            "🎓 Student Assistant Bot V5.3\n\n"
+            "🎓 Student Assistant Bot V5.4\n\n"
 
             "Choose what you want to do:\n\n"
 
@@ -252,7 +253,7 @@ def start(message):
 )
 def help_command(message):
     help_text = (
-            "🎓 STUDENT ASSISTANT BOT V5.3\n\n"
+            "🎓 STUDENT ASSISTANT BOT V5.4\n\n"
 
             "━━━━━━━━━━━━━━━━━━\n"
             "🧩 CORE STABILITY\n"
@@ -383,7 +384,9 @@ def help_command(message):
             "• Add flashcards\n"
             "• Subject-based cards\n"
             "• Study mode\n"
-            "• Mastery tracking\n\n"
+            "• Mastery tracking\n"
+            "• V5.4: Due reviews & adaptive scheduling\n"
+            "• Again / Hard / Good / Easy\n\n"
 
             "━━━━━━━━━━━━━━━━━━\n"
             "❓ QUIZ\n"
@@ -561,6 +564,8 @@ def help_command(message):
             "/voice\n"
             "/languages\n"
             "/flashcards\n"
+            "/reviews\n"
+            "/reviewstats\n"
             "/quiz\n"
             "/exams\n"
             "/attendance\n"
@@ -623,6 +628,17 @@ def user_id(message):
             f"{message.chat.id}"
         ),
     )
+
+
+# ==================================================
+# V5.4 REVIEW HANDLERS — register before legacy module handlers
+# so the new main-menu button and /reviews are handled first.
+# ==================================================
+
+register_spaced_repetition_handlers(
+    bot,
+    show_main_menu,
+)
 
 
 # ==================================================
@@ -861,7 +877,7 @@ def home():
     return {
         "status": "ok",
         "bot": "Student Assistant Bot",
-        "version": "5.3",
+        "version": "5.4",
         "database": "Supabase",
         "deployment": "Render",
 
@@ -892,6 +908,7 @@ def home():
             "voice_notes": True,
             "language_tools": True,
             "flashcards": True,
+            "spaced_repetition": True,
             "quiz": True,
             "exams": True,
             "attendance": True,
@@ -1105,7 +1122,7 @@ if __name__ == "__main__":
         )
 
         print(
-            "🎓 Student Assistant Bot V5.3 enabled."
+            "🎓 Student Assistant Bot V5.4 enabled."
         )
 
         print(
