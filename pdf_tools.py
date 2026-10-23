@@ -1,1379 +1,1018 @@
-import os
-import io
+from io import BytesIO
+from pathlib import Path
 
+from PIL import Image
+from PyPDF2 import PdfReader, PdfWriter
 from telebot import types
-from PyPDF2 import PdfMerger, PdfReader, PdfWriter
-from PIL import Image, ImageOps
+
+
+# Per-chat PDF tool state.
+pdf_state = {}
+
+
+PDF_TOOL_MODES = {
+    "merge",
+    "extract_wait_pdf",
+    "rotate_wait_pdf",
+    "protect_wait_pdf",
+    "images",
+}
+
+
+IMAGE_EXTENSIONS = {
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".webp",
+}
 
 
 # ==================================================
-# USER DATA
+# HELPERS
 # ==================================================
 
-user_mode = {}
 
-merge_files = {}
-extract_files = {}
-image_files = {}
-rotate_files = {}
-protect_files = {}
+def _download_telegram_file(bot, file_id):
+    file_info = bot.get_file(file_id)
+    return bot.download_file(file_info.file_path)
 
 
-# ==================================================
-# PAGE PARSER
-# ==================================================
+def _pdf_tools_menu(bot, chat_id):
+    pdf_state[chat_id] = {
+        "mode": "menu"
+    }
 
-def parse_pages(text, total_pages):
+    markup = types.ReplyKeyboardMarkup(
+        resize_keyboard=True,
+        row_width=2,
+    )
 
+    markup.add(
+        types.KeyboardButton("🔗 Merge PDFs"),
+        types.KeyboardButton("✂️ Extract Pages"),
+        types.KeyboardButton("🖼 Images → PDF"),
+        types.KeyboardButton("🔄 Rotate PDF"),
+        types.KeyboardButton("🔐 Protect PDF"),
+        types.KeyboardButton("🏠 Main Menu"),
+    )
+
+    bot.send_message(
+        chat_id,
+        (
+            "📄 PDF Tools\n\n"
+            "Choose a tool:\n\n"
+            "🔗 Merge PDFs\n"
+            "✂️ Extract Pages\n"
+            "🖼 Images → PDF\n"
+            "🔄 Rotate PDF\n"
+            "🔐 Protect PDF"
+        ),
+        reply_markup=markup,
+    )
+
+
+def _mode_keyboard(*buttons):
+    markup = types.ReplyKeyboardMarkup(
+        resize_keyboard=True,
+        row_width=2,
+    )
+
+    for row in buttons:
+        if isinstance(row, (list, tuple)):
+            markup.row(
+                *[
+                    types.KeyboardButton(text)
+                    for text in row
+                ]
+            )
+        else:
+            markup.add(
+                types.KeyboardButton(row)
+            )
+
+    return markup
+
+
+def _safe_stem(filename, default="document"):
+    if not filename:
+        return default
+
+    stem = Path(filename).stem.strip()
+    return stem or default
+
+
+def _parse_page_selection(text, total_pages):
+    """
+    Accepts examples such as:
+    1
+    1,3,5
+    2-6
+    1,3-5,8
+    Returns zero-based unique page indexes in user order.
+    """
     selected = []
+    seen = set()
 
-    text = text.replace(" ", "")
-
-    for part in text.split(","):
+    for raw_part in text.split(","):
+        part = raw_part.strip()
 
         if not part:
             continue
 
         if "-" in part:
-
-            pieces = part.split("-")
+            pieces = part.split("-", 1)
 
             if len(pieces) != 2:
                 raise ValueError("Invalid page range.")
 
-            start = int(pieces[0])
-            end = int(pieces[1])
+            start = int(pieces[0].strip())
+            end = int(pieces[1].strip())
 
             if start > end:
                 raise ValueError(
-                    f"Invalid range: {part}"
+                    "Page range must go from smaller to larger number."
                 )
 
-            for page in range(start, end + 1):
-
-                if page < 1 or page > total_pages:
-                    raise ValueError(
-                        f"Page {page} does not exist."
-                    )
-
-                selected.append(page)
+            page_numbers = range(start, end + 1)
 
         else:
+            page_numbers = [int(part)]
 
-            page = int(part)
-
-            if page < 1 or page > total_pages:
+        for page_number in page_numbers:
+            if page_number < 1 or page_number > total_pages:
                 raise ValueError(
-                    f"Page {page} does not exist."
+                    f"Page {page_number} is outside this PDF. "
+                    f"Valid pages: 1-{total_pages}."
                 )
 
-            selected.append(page)
+            page_index = page_number - 1
+
+            if page_index not in seen:
+                seen.add(page_index)
+                selected.append(page_index)
 
     if not selected:
-        raise ValueError(
-            "No pages selected."
-        )
+        raise ValueError("Choose at least one page.")
 
     return selected
 
 
+def _images_to_pdf(image_items):
+    converted = []
+
+    try:
+        for item in image_items:
+            image = Image.open(BytesIO(item))
+
+            # Flatten transparent images onto white before PDF conversion.
+            if image.mode in ("RGBA", "LA"):
+                background = Image.new(
+                    "RGB",
+                    image.size,
+                    "white",
+                )
+                alpha = image.getchannel("A")
+                background.paste(
+                    image.convert("RGB"),
+                    mask=alpha,
+                )
+                image = background
+            elif image.mode != "RGB":
+                image = image.convert("RGB")
+
+            converted.append(image)
+
+        if not converted:
+            raise ValueError("No images were added.")
+
+        output = BytesIO()
+        output.name = "images_to_pdf.pdf"
+
+        first = converted[0]
+        rest = converted[1:]
+
+        first.save(
+            output,
+            format="PDF",
+            save_all=True,
+            append_images=rest,
+        )
+
+        output.seek(0)
+        return output
+
+    finally:
+        for image in converted:
+            try:
+                image.close()
+            except Exception:
+                pass
+
+
 # ==================================================
-# REGISTER ALL PDF HANDLERS
+# REGISTER PDF HANDLERS
 # ==================================================
+
 
 def register_pdf_handlers(bot, show_main_menu):
 
-
-    # ==============================================
-    # PDF TOOLS MENU
-    # ==============================================
-
-    @bot.message_handler(
-        func=lambda m: m.text == "📄 PDF Tools"
-    )
-    def pdf_tools(message):
-
-        chat_id = message.chat.id
-
-        user_mode.pop(chat_id, None)
-
-        markup = types.ReplyKeyboardMarkup(
-            resize_keyboard=True,
-            row_width=2
-        )
-
-        markup.add(
-            types.KeyboardButton("🔗 Merge PDF"),
-            types.KeyboardButton("✂️ Extract Pages"),
-
-            types.KeyboardButton("🖼 Images → PDF"),
-            types.KeyboardButton("🔄 Rotate PDF"),
-
-            types.KeyboardButton("🔒 Protect PDF"),
-            types.KeyboardButton("🗑 Clear Files"),
-
-            types.KeyboardButton("⬅️ Main Menu")
-        )
-
-        bot.send_message(
-            chat_id,
-            """
-📄 PDF Tools
-
-Choose an option:
-""",
-            reply_markup=markup
-        )
-
-
-    # ==============================================
-    # BACK TO PDF MENU
-    # ==============================================
+    # ----------------------------------------------
+    # OPEN PDF TOOLS
+    # ----------------------------------------------
 
     @bot.message_handler(
-        func=lambda m: m.text == "⬅️ PDF Tools"
+        func=lambda message:
+        message.text == "📄 PDF Tools"
     )
-    def back_pdf(message):
+    def open_pdf_tools(message):
+        _pdf_tools_menu(
+            bot,
+            message.chat.id,
+        )
 
-        pdf_tools(message)
-
-
-    # ==============================================
-    # BACK TO MAIN
-    # ==============================================
+    # ----------------------------------------------
+    # MAIN MENU - ONLY WHEN PDF TOOLS IS ACTIVE
+    # ----------------------------------------------
 
     @bot.message_handler(
-        func=lambda m: m.text == "⬅️ Main Menu"
+        func=lambda message:
+        message.text == "🏠 Main Menu"
+        and message.chat.id in pdf_state
     )
-    def back_main(message):
-
-        chat_id = message.chat.id
-
-        user_mode.pop(chat_id, None)
-
-        name = (
-            message.from_user.first_name
-            or "Friend"
+    def pdf_main_menu(message):
+        pdf_state.pop(
+            message.chat.id,
+            None,
         )
 
         show_main_menu(
-            chat_id,
-            name
+            message.chat.id,
+            message.from_user.first_name or "Friend",
         )
-
-
-    # ==============================================
-    # MERGE PDF
-    # ==============================================
 
     @bot.message_handler(
-        func=lambda m: m.text == "🔗 Merge PDF"
+        func=lambda message:
+        message.text == "🔙 PDF Tools"
+        and message.chat.id in pdf_state
     )
-    def merge_menu(message):
-
-        chat_id = message.chat.id
-
-        user_mode[chat_id] = "merge"
-        merge_files[chat_id] = []
-
-        markup = types.ReplyKeyboardMarkup(
-            resize_keyboard=True,
-            row_width=2
+    def back_to_pdf_tools(message):
+        _pdf_tools_menu(
+            bot,
+            message.chat.id,
         )
 
-        markup.add(
-            types.KeyboardButton("✅ Merge Now"),
-            types.KeyboardButton("🗑 Clear Files"),
-            types.KeyboardButton("⬅️ PDF Tools")
-        )
+    # ----------------------------------------------
+    # MERGE
+    # ----------------------------------------------
+
+    @bot.message_handler(
+        func=lambda message:
+        message.text == "🔗 Merge PDFs"
+    )
+    def start_merge(message):
+        pdf_state[
+            message.chat.id
+        ] = {
+            "mode": "merge",
+            "files": [],
+        }
 
         bot.send_message(
-            chat_id,
-            """
-🔗 PDF Merger
-
-Send your PDFs one by one.
-
-⚠️ Send them in the order you want.
-
-When finished press:
-
-✅ Merge Now
-""",
-            reply_markup=markup
+            message.chat.id,
+            (
+                "🔗 Merge PDFs\n\n"
+                "Upload your PDF files one by one, in the order "
+                "you want them merged.\n\n"
+                "When finished, press ✅ Finish Merge."
+            ),
+            reply_markup=_mode_keyboard(
+                ["✅ Finish Merge", "🔙 PDF Tools"],
+                "🏠 Main Menu",
+            ),
         )
-
-
-    # ==============================================
-    # EXTRACT
-    # ==============================================
 
     @bot.message_handler(
-        func=lambda m: m.text == "✂️ Extract Pages"
+        func=lambda message:
+        message.text == "✅ Finish Merge"
+        and pdf_state.get(
+            message.chat.id,
+            {}
+        ).get("mode") == "merge"
     )
-    def extract_menu(message):
-
-        chat_id = message.chat.id
-
-        user_mode[chat_id] = "extract"
-
-        extract_files.pop(
-            chat_id,
-            None
+    def finish_merge(message):
+        state = pdf_state.get(
+            message.chat.id,
+            {}
         )
 
-        markup = types.ReplyKeyboardMarkup(
-            resize_keyboard=True,
-            row_width=2
-        )
-
-        markup.add(
-            types.KeyboardButton("🗑 Clear Files"),
-            types.KeyboardButton("⬅️ PDF Tools")
-        )
-
-        bot.send_message(
-            chat_id,
-            """
-✂️ Extract PDF Pages
-
-Send ONE PDF.
-
-After that send pages like:
-
-1-3
-
-2,5,8
-
-1-3,7,10-12
-""",
-            reply_markup=markup
-        )
-
-
-    # ==============================================
-    # IMAGE TO PDF
-    # ==============================================
-
-    @bot.message_handler(
-        func=lambda m: m.text == "🖼 Images → PDF"
-    )
-    def image_menu(message):
-
-        chat_id = message.chat.id
-
-        user_mode[chat_id] = "images"
-
-        image_files[chat_id] = []
-
-        markup = types.ReplyKeyboardMarkup(
-            resize_keyboard=True,
-            row_width=2
-        )
-
-        markup.add(
-            types.KeyboardButton("✅ Create PDF"),
-            types.KeyboardButton("🗑 Clear Files"),
-            types.KeyboardButton("⬅️ PDF Tools")
-        )
-
-        bot.send_message(
-            chat_id,
-            """
-🖼 Images → PDF
-
-Send your images one by one.
-
-Supported:
-
-✅ JPG
-✅ JPEG
-✅ PNG
-✅ Telegram Photos
-
-When finished press:
-
-✅ Create PDF
-""",
-            reply_markup=markup
-        )
-
-
-    # ==============================================
-    # ROTATE
-    # ==============================================
-
-    @bot.message_handler(
-        func=lambda m: m.text == "🔄 Rotate PDF"
-    )
-    def rotate_menu(message):
-
-        chat_id = message.chat.id
-
-        user_mode[chat_id] = "rotate"
-
-        rotate_files.pop(
-            chat_id,
-            None
-        )
-
-        markup = types.ReplyKeyboardMarkup(
-            resize_keyboard=True,
-            row_width=2
-        )
-
-        markup.add(
-            types.KeyboardButton("🗑 Clear Files"),
-            types.KeyboardButton("⬅️ PDF Tools")
-        )
-
-        bot.send_message(
-            chat_id,
-            """
-🔄 Rotate PDF
-
-Send ONE PDF.
-
-After uploading, choose:
-
-↻ 90°
-↻ 180°
-↻ 270°
-
-This version rotates all pages.
-""",
-            reply_markup=markup
-        )
-
-
-    # ==============================================
-    # PROTECT
-    # ==============================================
-
-    @bot.message_handler(
-        func=lambda m: m.text == "🔒 Protect PDF"
-    )
-    def protect_menu(message):
-
-        chat_id = message.chat.id
-
-        user_mode[chat_id] = "protect"
-
-        protect_files.pop(
-            chat_id,
-            None
-        )
-
-        markup = types.ReplyKeyboardMarkup(
-            resize_keyboard=True,
-            row_width=2
-        )
-
-        markup.add(
-            types.KeyboardButton("🗑 Clear Files"),
-            types.KeyboardButton("⬅️ PDF Tools")
-        )
-
-        bot.send_message(
-            chat_id,
-            """
-🔒 Password Protect PDF
-
-Send ONE PDF file.
-
-After uploading it,
-I will ask you for a password.
-""",
-            reply_markup=markup
-        )
-
-
-    # ==============================================
-    # CLEAR
-    # ==============================================
-
-    @bot.message_handler(
-        func=lambda m: m.text == "🗑 Clear Files"
-    )
-    def clear_files(message):
-
-        chat_id = message.chat.id
-
-        merge_files.pop(chat_id, None)
-        extract_files.pop(chat_id, None)
-        image_files.pop(chat_id, None)
-        rotate_files.pop(chat_id, None)
-        protect_files.pop(chat_id, None)
-
-        mode = user_mode.get(chat_id)
-
-        if mode == "merge":
-            merge_files[chat_id] = []
-
-        elif mode == "images":
-            image_files[chat_id] = []
-
-        bot.send_message(
-            chat_id,
-            "🗑 Uploaded files cleared."
-        )
-
-
-    # ==============================================
-    # RECEIVE TELEGRAM PHOTO
-    # ==============================================
-
-    @bot.message_handler(
-        content_types=["photo"]
-    )
-    def receive_photo(message):
-
-        chat_id = message.chat.id
-
-        if user_mode.get(chat_id) != "images":
-
-            bot.reply_to(
-                message,
-                """
-❌ Select:
-
-📄 PDF Tools
-→ 🖼 Images → PDF
-
-before sending photos.
-"""
-            )
-
-            return
-
-        try:
-
-            photo = message.photo[-1]
-
-            file_info = bot.get_file(
-                photo.file_id
-            )
-
-            data = bot.download_file(
-                file_info.file_path
-            )
-
-            if chat_id not in image_files:
-                image_files[chat_id] = []
-
-            image_files[chat_id].append(
-                data
-            )
-
-            count = len(
-                image_files[chat_id]
-            )
-
-            bot.reply_to(
-                message,
-                f"""
-✅ Image #{count} received
-
-Total images: {count}
-
-Send another or press:
-
-✅ Create PDF
-"""
-            )
-
-        except Exception as e:
-
-            bot.reply_to(
-                message,
-                f"❌ Image error:\n{e}"
-            )
-
-
-    # ==============================================
-    # RECEIVE DOCUMENT
-    # ==============================================
-
-    @bot.message_handler(
-        content_types=["document"]
-    )
-    def receive_document(message):
-
-        chat_id = message.chat.id
-
-        mode = user_mode.get(chat_id)
-
-        file_name = (
-            message.document.file_name
-            or "file"
-        )
-
-        try:
-
-            file_info = bot.get_file(
-                message.document.file_id
-            )
-
-            data = bot.download_file(
-                file_info.file_path
-            )
-
-
-            # ======================================
-            # MERGE
-            # ======================================
-
-            if mode == "merge":
-
-                if not file_name.lower().endswith(".pdf"):
-
-                    bot.reply_to(
-                        message,
-                        "❌ Send PDF files only."
-                    )
-
-                    return
-
-                merge_files.setdefault(
-                    chat_id,
-                    []
-                )
-
-                merge_files[chat_id].append(
-                    {
-                        "name": file_name,
-                        "data": data
-                    }
-                )
-
-                count = len(
-                    merge_files[chat_id]
-                )
-
-                bot.reply_to(
-                    message,
-                    f"""
-✅ PDF #{count} received
-
-📄 {file_name}
-
-Total PDFs: {count}
-"""
-                )
-
-
-            # ======================================
-            # EXTRACT
-            # ======================================
-
-            elif mode == "extract":
-
-                if not file_name.lower().endswith(".pdf"):
-
-                    bot.reply_to(
-                        message,
-                        "❌ Send a PDF file."
-                    )
-
-                    return
-
-                reader = PdfReader(
-                    io.BytesIO(data)
-                )
-
-                pages = len(
-                    reader.pages
-                )
-
-                extract_files[chat_id] = {
-                    "name": file_name,
-                    "data": data,
-                    "pages": pages
-                }
-
-                bot.reply_to(
-                    message,
-                    f"""
-✅ PDF received
-
-📄 {file_name}
-
-📚 Total pages: {pages}
-
-Now send page numbers.
-
-Example:
-
-1-3,6,10-12
-"""
-                )
-
-
-            # ======================================
-            # IMAGE DOCUMENT
-            # ======================================
-
-            elif mode == "images":
-
-                ext = os.path.splitext(
-                    file_name
-                )[1].lower()
-
-                if ext not in [
-                    ".jpg",
-                    ".jpeg",
-                    ".png"
-                ]:
-
-                    bot.reply_to(
-                        message,
-                        """
-❌ Supported:
-
-JPG
-JPEG
-PNG
-"""
-                    )
-
-                    return
-
-                test_image = Image.open(
-                    io.BytesIO(data)
-                )
-
-                test_image.verify()
-                test_image.close()
-
-                image_files.setdefault(
-                    chat_id,
-                    []
-                )
-
-                image_files[chat_id].append(
-                    data
-                )
-
-                count = len(
-                    image_files[chat_id]
-                )
-
-                bot.reply_to(
-                    message,
-                    f"""
-✅ Image #{count} received
-
-🖼 {file_name}
-
-Total: {count}
-"""
-                )
-
-
-            # ======================================
-            # ROTATE
-            # ======================================
-
-            elif mode == "rotate":
-
-                if not file_name.lower().endswith(".pdf"):
-
-                    bot.reply_to(
-                        message,
-                        "❌ Send a PDF file."
-                    )
-
-                    return
-
-                reader = PdfReader(
-                    io.BytesIO(data)
-                )
-
-                pages = len(
-                    reader.pages
-                )
-
-                rotate_files[chat_id] = {
-                    "name": file_name,
-                    "data": data
-                }
-
-                markup = types.ReplyKeyboardMarkup(
-                    resize_keyboard=True,
-                    row_width=3
-                )
-
-                markup.add(
-                    types.KeyboardButton("↻ 90°"),
-                    types.KeyboardButton("↻ 180°"),
-                    types.KeyboardButton("↻ 270°"),
-                    types.KeyboardButton("⬅️ PDF Tools")
-                )
-
-                bot.reply_to(
-                    message,
-                    f"""
-✅ PDF received
-
-📄 {file_name}
-
-📚 Pages: {pages}
-
-Choose rotation:
-""",
-                    reply_markup=markup
-                )
-
-
-            # ======================================
-            # PROTECT
-            # ======================================
-
-            elif mode == "protect":
-
-                if not file_name.lower().endswith(".pdf"):
-
-                    bot.reply_to(
-                        message,
-                        "❌ Send a PDF file."
-                    )
-
-                    return
-
-                reader = PdfReader(
-                    io.BytesIO(data)
-                )
-
-                pages = len(
-                    reader.pages
-                )
-
-                protect_files[chat_id] = {
-                    "name": file_name,
-                    "data": data
-                }
-
-                bot.reply_to(
-                    message,
-                    f"""
-✅ PDF received
-
-📄 {file_name}
-
-📚 Pages: {pages}
-
-🔑 Now send the password you want to use.
-
-Example:
-
-MyPDF123
-"""
-                )
-
-
-            else:
-
-                bot.reply_to(
-                    message,
-                    """
-❌ Choose a tool first.
-
-📄 PDF Tools
-"""
-                )
-
-
-        except Exception as e:
-
-            bot.reply_to(
-                message,
-                f"""
-❌ Failed to process file.
-
-Error:
-{e}
-"""
-            )
-
-
-    # ==============================================
-    # MERGE NOW
-    # ==============================================
-
-    @bot.message_handler(
-        func=lambda m: m.text == "✅ Merge Now"
-    )
-    def merge_now(message):
-
-        chat_id = message.chat.id
-
-        files = merge_files.get(
-            chat_id,
-            []
+        files = state.get(
+            "files",
+            [],
         )
 
         if len(files) < 2:
-
             bot.send_message(
-                chat_id,
-                "❌ Send at least 2 PDFs."
+                message.chat.id,
+                "❌ Upload at least 2 PDF files before merging.",
             )
-
             return
 
         status = bot.send_message(
-            chat_id,
-            "⏳ Merging PDFs..."
+            message.chat.id,
+            "⏳ Merging PDFs...",
         )
 
         try:
+            writer = PdfWriter()
 
-            merger = PdfMerger()
-
-            for pdf in files:
-
-                merger.append(
-                    io.BytesIO(
-                        pdf["data"]
-                    )
+            for pdf_bytes in files:
+                reader = PdfReader(
+                    BytesIO(pdf_bytes)
                 )
 
-            output = io.BytesIO()
+                for page in reader.pages:
+                    writer.add_page(page)
 
-            merger.write(output)
-            merger.close()
-
+            output = BytesIO()
+            output.name = "merged.pdf"
+            writer.write(output)
             output.seek(0)
 
-            output.name = "Merged_PDF.pdf"
-
             bot.send_document(
-                chat_id,
+                message.chat.id,
                 output,
-                caption=f"""
-✅ PDFs merged!
-
-Files merged: {len(files)}
-"""
+                caption="✅ PDFs merged successfully.",
             )
 
-            merge_files[chat_id] = []
+            pdf_state.pop(
+                message.chat.id,
+                None,
+            )
 
             try:
-
                 bot.delete_message(
-                    chat_id,
-                    status.message_id
+                    message.chat.id,
+                    status.message_id,
                 )
-
             except Exception:
                 pass
 
-
-        except Exception as e:
-
-            bot.send_message(
-                chat_id,
-                f"""
-❌ Merge failed.
-
-{e}
-"""
+            _pdf_tools_menu(
+                bot,
+                message.chat.id,
             )
 
+        except Exception as error:
+            print(
+                "PDF merge error:",
+                repr(error),
+            )
 
-    # ==============================================
-    # CREATE IMAGE PDF
-    # ==============================================
+            bot.send_message(
+                message.chat.id,
+                "❌ Could not merge those PDFs.",
+            )
+
+    # ----------------------------------------------
+    # EXTRACT
+    # ----------------------------------------------
 
     @bot.message_handler(
-        func=lambda m: m.text == "✅ Create PDF"
+        func=lambda message:
+        message.text == "✂️ Extract Pages"
     )
-    def create_image_pdf(message):
+    def start_extract(message):
+        pdf_state[
+            message.chat.id
+        ] = {
+            "mode": "extract_wait_pdf",
+        }
 
-        chat_id = message.chat.id
-
-        data_list = image_files.get(
-            chat_id,
-            []
+        bot.send_message(
+            message.chat.id,
+            (
+                "✂️ Extract Pages\n\n"
+                "Upload one PDF.\n"
+                "After that I will ask which pages you want."
+            ),
+            reply_markup=_mode_keyboard(
+                "🔙 PDF Tools",
+                "🏠 Main Menu",
+            ),
         )
 
-        if not data_list:
+    # ----------------------------------------------
+    # IMAGES TO PDF
+    # ----------------------------------------------
 
+    @bot.message_handler(
+        func=lambda message:
+        message.text == "🖼 Images → PDF"
+    )
+    def start_images_to_pdf(message):
+        pdf_state[
+            message.chat.id
+        ] = {
+            "mode": "images",
+            "images": [],
+        }
+
+        bot.send_message(
+            message.chat.id,
+            (
+                "🖼 Images → PDF\n\n"
+                "Send JPG, PNG or Telegram photos in the order "
+                "you want them in the PDF.\n\n"
+                "When finished, press ✅ Create PDF."
+            ),
+            reply_markup=_mode_keyboard(
+                ["✅ Create PDF", "🔙 PDF Tools"],
+                "🏠 Main Menu",
+            ),
+        )
+
+    @bot.message_handler(
+        func=lambda message:
+        message.text == "✅ Create PDF"
+        and pdf_state.get(
+            message.chat.id,
+            {}
+        ).get("mode") == "images"
+    )
+    def finish_images_to_pdf(message):
+        state = pdf_state.get(
+            message.chat.id,
+            {}
+        )
+
+        images = state.get(
+            "images",
+            [],
+        )
+
+        if not images:
             bot.send_message(
-                chat_id,
-                "❌ Send images first."
+                message.chat.id,
+                "❌ Send at least one image first.",
             )
-
             return
 
         status = bot.send_message(
-            chat_id,
-            "⏳ Creating PDF..."
+            message.chat.id,
+            "⏳ Creating PDF...",
         )
 
-        images = []
-
         try:
-
-            for data in data_list:
-
-                img = Image.open(
-                    io.BytesIO(data)
-                )
-
-                img = ImageOps.exif_transpose(
-                    img
-                )
-
-                img.load()
-
-                if img.mode != "RGB":
-
-                    if "A" in img.getbands():
-
-                        background = Image.new(
-                            "RGB",
-                            img.size,
-                            "white"
-                        )
-
-                        background.paste(
-                            img,
-                            mask=img.getchannel("A")
-                        )
-
-                        img = background
-
-                    else:
-
-                        img = img.convert(
-                            "RGB"
-                        )
-
-                images.append(img)
-
-            output = io.BytesIO()
-
-            images[0].save(
-                output,
-                "PDF",
-                save_all=True,
-                append_images=images[1:]
+            output = _images_to_pdf(
+                images
             )
-
-            output.seek(0)
-
-            output.name = "Images_To_PDF.pdf"
 
             bot.send_document(
-                chat_id,
+                message.chat.id,
                 output,
-                caption=f"""
-✅ PDF created
-
-Images: {len(images)}
-"""
+                caption="✅ Image PDF created successfully.",
             )
 
-            image_files[chat_id] = []
+            pdf_state.pop(
+                message.chat.id,
+                None,
+            )
 
             try:
-
                 bot.delete_message(
-                    chat_id,
-                    status.message_id
+                    message.chat.id,
+                    status.message_id,
                 )
-
             except Exception:
                 pass
 
-
-        except Exception as e:
-
-            bot.send_message(
-                chat_id,
-                f"""
-❌ PDF creation failed.
-
-{e}
-"""
+            _pdf_tools_menu(
+                bot,
+                message.chat.id,
             )
 
-        finally:
+        except Exception as error:
+            print(
+                "Images to PDF error:",
+                repr(error),
+            )
 
-            for img in images:
+            bot.send_message(
+                message.chat.id,
+                "❌ Could not create the PDF.",
+            )
 
-                try:
-                    img.close()
+    # ----------------------------------------------
+    # ROTATE
+    # ----------------------------------------------
 
-                except Exception:
-                    pass
+    @bot.message_handler(
+        func=lambda message:
+        message.text == "🔄 Rotate PDF"
+    )
+    def start_rotate(message):
+        pdf_state[
+            message.chat.id
+        ] = {
+            "mode": "rotate_wait_pdf",
+        }
 
-
-    # ==============================================
-    # ROTATE FUNCTION
-    # ==============================================
-
-    def rotate_pdf(message, angle):
-
-        chat_id = message.chat.id
-
-        data = rotate_files.get(
-            chat_id
+        bot.send_message(
+            message.chat.id,
+            (
+                "🔄 Rotate PDF\n\n"
+                "Upload one PDF."
+            ),
+            reply_markup=_mode_keyboard(
+                "🔙 PDF Tools",
+                "🏠 Main Menu",
+            ),
         )
 
-        if not data:
+    # ----------------------------------------------
+    # PROTECT
+    # ----------------------------------------------
+
+    @bot.message_handler(
+        func=lambda message:
+        message.text == "🔐 Protect PDF"
+    )
+    def start_protect(message):
+        pdf_state[
+            message.chat.id
+        ] = {
+            "mode": "protect_wait_pdf",
+        }
+
+        bot.send_message(
+            message.chat.id,
+            (
+                "🔐 Protect PDF\n\n"
+                "Upload one PDF.\n"
+                "I will then ask for a password."
+            ),
+            reply_markup=_mode_keyboard(
+                "🔙 PDF Tools",
+                "🏠 Main Menu",
+            ),
+        )
+
+    # ==================================================
+    # DOCUMENT HANDLER
+    # IMPORTANT: Runs ONLY when a PDF tool is active.
+    # This prevents conflict with Translate Document.
+    # ==================================================
+
+    @bot.message_handler(
+        func=lambda message:
+        pdf_state.get(
+            message.chat.id,
+            {}
+        ).get("mode")
+        in PDF_TOOL_MODES,
+        content_types=["document"],
+    )
+    def receive_pdf_document(message):
+        chat_id = message.chat.id
+        state = pdf_state.get(
+            chat_id,
+            {}
+        )
+        mode = state.get("mode")
+
+        filename = (
+            message.document.file_name
+            or "document"
+        )
+
+        extension = Path(
+            filename
+        ).suffix.lower()
+
+        try:
+            file_bytes = _download_telegram_file(
+                bot,
+                message.document.file_id,
+            )
+
+            # --------------------------------------
+            # IMAGE DOCUMENTS
+            # --------------------------------------
+
+            if mode == "images":
+                if extension not in IMAGE_EXTENSIONS:
+                    bot.send_message(
+                        chat_id,
+                        "❌ For Images → PDF, send JPG, JPEG, PNG or WEBP.",
+                    )
+                    return
+
+                state.setdefault(
+                    "images",
+                    [],
+                ).append(file_bytes)
+
+                bot.send_message(
+                    chat_id,
+                    (
+                        "✅ Image added.\n"
+                        f"Total images: {len(state['images'])}"
+                    ),
+                )
+                return
+
+            # --------------------------------------
+            # PDF-ONLY MODES
+            # --------------------------------------
+
+            if extension != ".pdf":
+                bot.send_message(
+                    chat_id,
+                    "❌ Please upload a PDF file.",
+                )
+                return
+
+            if mode == "merge":
+                state.setdefault(
+                    "files",
+                    [],
+                ).append(file_bytes)
+
+                bot.send_message(
+                    chat_id,
+                    (
+                        "✅ PDF added.\n"
+                        f"Total PDFs: {len(state['files'])}\n\n"
+                        "Send another PDF or press ✅ Finish Merge."
+                    ),
+                )
+                return
+
+            if mode == "extract_wait_pdf":
+                reader = PdfReader(
+                    BytesIO(file_bytes)
+                )
+
+                total_pages = len(
+                    reader.pages
+                )
+
+                state.update(
+                    {
+                        "mode": "extract_pages",
+                        "pdf_bytes": file_bytes,
+                        "filename": filename,
+                        "total_pages": total_pages,
+                    }
+                )
+
+                bot.send_message(
+                    chat_id,
+                    (
+                        f"✅ PDF received: {total_pages} pages.\n\n"
+                        "Type the pages to extract.\n\n"
+                        "Examples:\n"
+                        "1\n"
+                        "1,3,5\n"
+                        "2-6\n"
+                        "1,3-5,8"
+                    ),
+                    reply_markup=_mode_keyboard(
+                        "🔙 PDF Tools",
+                        "🏠 Main Menu",
+                    ),
+                )
+                return
+
+            if mode == "rotate_wait_pdf":
+                state.update(
+                    {
+                        "mode": "rotate_angle",
+                        "pdf_bytes": file_bytes,
+                        "filename": filename,
+                    }
+                )
+
+                bot.send_message(
+                    chat_id,
+                    "✅ PDF received. Choose rotation:",
+                    reply_markup=_mode_keyboard(
+                        ["90°", "180°", "270°"],
+                        "🔙 PDF Tools",
+                        "🏠 Main Menu",
+                    ),
+                )
+                return
+
+            if mode == "protect_wait_pdf":
+                state.update(
+                    {
+                        "mode": "protect_password",
+                        "pdf_bytes": file_bytes,
+                        "filename": filename,
+                    }
+                )
+
+                bot.send_message(
+                    chat_id,
+                    (
+                        "✅ PDF received.\n\n"
+                        "🔐 Send the password you want to use."
+                    ),
+                    reply_markup=_mode_keyboard(
+                        "🔙 PDF Tools",
+                        "🏠 Main Menu",
+                    ),
+                )
+                return
+
+        except Exception as error:
+            print(
+                "PDF document handler error:",
+                repr(error),
+            )
 
             bot.send_message(
                 chat_id,
-                "❌ Please upload a PDF first."
+                "❌ I could not process that file.",
             )
 
-            return
+    # ==================================================
+    # PHOTO HANDLER
+    # IMPORTANT: Runs ONLY for Images → PDF.
+    # This prevents conflict with OCR Image → Translate.
+    # ==================================================
 
-        status = bot.send_message(
+    @bot.message_handler(
+        func=lambda message:
+        pdf_state.get(
+            message.chat.id,
+            {}
+        ).get("mode") == "images",
+        content_types=["photo"],
+    )
+    def receive_pdf_image_photo(message):
+        chat_id = message.chat.id
+        state = pdf_state.get(
             chat_id,
-            f"⏳ Rotating PDF {angle}°..."
+            {}
         )
 
         try:
+            photo = message.photo[-1]
+
+            image_bytes = _download_telegram_file(
+                bot,
+                photo.file_id,
+            )
+
+            state.setdefault(
+                "images",
+                [],
+            ).append(image_bytes)
+
+            bot.send_message(
+                chat_id,
+                (
+                    "✅ Image added.\n"
+                    f"Total images: {len(state['images'])}"
+                ),
+            )
+
+        except Exception as error:
+            print(
+                "PDF photo handler error:",
+                repr(error),
+            )
+
+            bot.send_message(
+                chat_id,
+                "❌ Could not read that image.",
+            )
+
+    # ==================================================
+    # EXTRACT PAGE INPUT
+    # ==================================================
+
+    @bot.message_handler(
+        func=lambda message:
+        message.text is not None
+        and pdf_state.get(
+            message.chat.id,
+            {}
+        ).get("mode") == "extract_pages"
+    )
+    def extract_pages_input(message):
+        state = pdf_state[
+            message.chat.id
+        ]
+
+        try:
+            selected_pages = _parse_page_selection(
+                message.text,
+                state["total_pages"],
+            )
 
             reader = PdfReader(
-                io.BytesIO(
-                    data["data"]
+                BytesIO(
+                    state["pdf_bytes"]
+                )
+            )
+
+            writer = PdfWriter()
+
+            for page_index in selected_pages:
+                writer.add_page(
+                    reader.pages[page_index]
+                )
+
+            output = BytesIO()
+            output.name = (
+                f"{_safe_stem(state.get('filename'))}_extracted.pdf"
+            )
+
+            writer.write(output)
+            output.seek(0)
+
+            bot.send_document(
+                message.chat.id,
+                output,
+                caption="✅ Selected pages extracted successfully.",
+            )
+
+            pdf_state.pop(
+                message.chat.id,
+                None,
+            )
+
+            _pdf_tools_menu(
+                bot,
+                message.chat.id,
+            )
+
+        except Exception as error:
+            bot.send_message(
+                message.chat.id,
+                f"❌ {str(error)}",
+            )
+
+    # ==================================================
+    # ROTATE ANGLE INPUT
+    # ==================================================
+
+    @bot.message_handler(
+        func=lambda message:
+        message.text is not None
+        and pdf_state.get(
+            message.chat.id,
+            {}
+        ).get("mode") == "rotate_angle"
+    )
+    def rotate_angle_input(message):
+        state = pdf_state[
+            message.chat.id
+        ]
+
+        value = (
+            message.text
+            .replace("°", "")
+            .strip()
+        )
+
+        if value not in {
+            "90",
+            "180",
+            "270",
+        }:
+            bot.send_message(
+                message.chat.id,
+                "❌ Choose 90°, 180° or 270°.",
+            )
+            return
+
+        try:
+            angle = int(value)
+
+            reader = PdfReader(
+                BytesIO(
+                    state["pdf_bytes"]
                 )
             )
 
             writer = PdfWriter()
 
             for page in reader.pages:
-
                 page.rotate(angle)
+                writer.add_page(page)
 
-                writer.add_page(
-                    page
-                )
-
-            output = io.BytesIO()
-
-            writer.write(
-                output
+            output = BytesIO()
+            output.name = (
+                f"{_safe_stem(state.get('filename'))}_rotated.pdf"
             )
 
+            writer.write(output)
             output.seek(0)
 
-            output.name = (
-                f"Rotated_{angle}_PDF.pdf"
-            )
-
             bot.send_document(
-                chat_id,
+                message.chat.id,
                 output,
-                caption=f"""
-✅ PDF rotated successfully
-
-🔄 Rotation: {angle}°
-"""
+                caption=(
+                    f"✅ PDF rotated {angle}° successfully."
+                ),
             )
 
-            rotate_files.pop(
-                chat_id,
-                None
+            pdf_state.pop(
+                message.chat.id,
+                None,
             )
 
-            try:
+            _pdf_tools_menu(
+                bot,
+                message.chat.id,
+            )
 
-                bot.delete_message(
-                    chat_id,
-                    status.message_id
-                )
-
-            except Exception:
-                pass
-
-
-        except Exception as e:
+        except Exception as error:
+            print(
+                "PDF rotate error:",
+                repr(error),
+            )
 
             bot.send_message(
-                chat_id,
-                f"""
-❌ Rotation failed.
-
-{e}
-"""
+                message.chat.id,
+                "❌ Could not rotate that PDF.",
             )
 
+    # ==================================================
+    # PASSWORD INPUT
+    # ==================================================
 
     @bot.message_handler(
-        func=lambda m: m.text == "↻ 90°"
+        func=lambda message:
+        message.text is not None
+        and pdf_state.get(
+            message.chat.id,
+            {}
+        ).get("mode") == "protect_password"
     )
-    def rotate_90(message):
-
-        rotate_pdf(
-            message,
-            90
-        )
-
-
-    @bot.message_handler(
-        func=lambda m: m.text == "↻ 180°"
-    )
-    def rotate_180(message):
-
-        rotate_pdf(
-            message,
-            180
-        )
-
-
-    @bot.message_handler(
-        func=lambda m: m.text == "↻ 270°"
-    )
-    def rotate_270(message):
-
-        rotate_pdf(
-            message,
-            270
-        )
-
-
-    # ==============================================
-    # EXTRACT PAGE NUMBERS
-    # ==============================================
-
-    @bot.message_handler(
-        func=lambda m:
-        user_mode.get(m.chat.id) == "extract"
-        and m.chat.id in extract_files
-    )
-    def extract_pages(message):
-
-        chat_id = message.chat.id
-
-        data = extract_files[
-            chat_id
+    def protect_password_input(message):
+        state = pdf_state[
+            message.chat.id
         ]
-
-        try:
-
-            pages = parse_pages(
-                message.text,
-                data["pages"]
-            )
-
-            status = bot.send_message(
-                chat_id,
-                "⏳ Extracting pages..."
-            )
-
-            reader = PdfReader(
-                io.BytesIO(
-                    data["data"]
-                )
-            )
-
-            writer = PdfWriter()
-
-            for number in pages:
-
-                writer.add_page(
-                    reader.pages[
-                        number - 1
-                    ]
-                )
-
-            output = io.BytesIO()
-
-            writer.write(
-                output
-            )
-
-            output.seek(0)
-
-            output.name = (
-                "Extracted_Pages.pdf"
-            )
-
-            bot.send_document(
-                chat_id,
-                output,
-                caption=f"""
-✅ Pages extracted
-
-Pages:
-{", ".join(map(str, pages))}
-"""
-            )
-
-            extract_files.pop(
-                chat_id,
-                None
-            )
-
-            user_mode.pop(
-                chat_id,
-                None
-            )
-
-            try:
-
-                bot.delete_message(
-                    chat_id,
-                    status.message_id
-                )
-
-            except Exception:
-                pass
-
-
-        except ValueError as e:
-
-            bot.send_message(
-                chat_id,
-                f"""
-❌ Invalid page selection.
-
-{e}
-
-Examples:
-
-1-3
-2,5,8
-1-3,7,10-12
-"""
-            )
-
-
-        except Exception as e:
-
-            bot.send_message(
-                chat_id,
-                f"""
-❌ Extraction failed.
-
-{e}
-"""
-            )
-
-
-    # ==============================================
-    # PROTECT PDF PASSWORD
-    # ==============================================
-
-    @bot.message_handler(
-        func=lambda m:
-        user_mode.get(m.chat.id) == "protect"
-        and m.chat.id in protect_files
-    )
-    def protect_pdf(message):
-
-        chat_id = message.chat.id
 
         password = message.text.strip()
 
-        if len(password) < 4:
-
+        if not password:
             bot.send_message(
-                chat_id,
-                """
-❌ Password is too short.
-
-Use at least 4 characters.
-"""
+                message.chat.id,
+                "❌ Password cannot be empty.",
             )
-
             return
 
-        data = protect_files[
-            chat_id
-        ]
-
-        status = bot.send_message(
-            chat_id,
-            "⏳ Protecting PDF..."
-        )
-
         try:
-
             reader = PdfReader(
-                io.BytesIO(
-                    data["data"]
+                BytesIO(
+                    state["pdf_bytes"]
                 )
             )
 
             writer = PdfWriter()
 
             for page in reader.pages:
+                writer.add_page(page)
 
-                writer.add_page(
-                    page
-                )
+            writer.encrypt(password)
 
-            # AES-256 when supported
-            try:
-
-                writer.encrypt(
-                    password,
-                    algorithm="AES-256"
-                )
-
-            except TypeError:
-
-                writer.encrypt(
-                    password
-                )
-
-            output = io.BytesIO()
-
-            writer.write(
-                output
+            output = BytesIO()
+            output.name = (
+                f"{_safe_stem(state.get('filename'))}_protected.pdf"
             )
 
+            writer.write(output)
             output.seek(0)
 
-            output.name = (
-                "Protected_PDF.pdf"
-            )
-
             bot.send_document(
-                chat_id,
+                message.chat.id,
                 output,
-                caption="""
-🔒 PDF protected successfully!
-
-⚠️ Remember your password.
-"""
+                caption="✅ Password-protected PDF created.",
             )
 
-            protect_files.pop(
-                chat_id,
-                None
+            pdf_state.pop(
+                message.chat.id,
+                None,
             )
 
-            user_mode.pop(
-                chat_id,
-                None
+            _pdf_tools_menu(
+                bot,
+                message.chat.id,
             )
 
-            try:
-
-                bot.delete_message(
-                    chat_id,
-                    status.message_id
-                )
-
-            except Exception:
-                pass
-
-
-        except Exception as e:
+        except Exception as error:
+            print(
+                "PDF protect error:",
+                repr(error),
+            )
 
             bot.send_message(
-                chat_id,
-                f"""
-❌ PDF protection failed.
-
-{e}
-"""
+                message.chat.id,
+                "❌ Could not protect that PDF.",
             )
