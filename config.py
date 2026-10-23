@@ -19,8 +19,13 @@ if not BOT_TOKEN:
 # ==========================================
 
 DATA_DIR = os.getenv(
-    "RAILWAY_VOLUME_MOUNT_PATH",
+    "DATA_DIR",
     "."
+)
+
+os.makedirs(
+    DATA_DIR,
+    exist_ok=True
 )
 
 DB_NAME = os.path.join(

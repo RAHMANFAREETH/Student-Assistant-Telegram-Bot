@@ -1,4 +1,5 @@
 .env
+student_bot.db
 __pycache__/
 *.pyc
 .venv/
