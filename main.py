@@ -30,6 +30,10 @@ from system_health import (
     register_system_health_handlers,
 )
 
+from safe_utils import (
+    split_telegram_text,
+)
+
 
 # ==================================================
 # CORE MODULES
@@ -247,9 +251,7 @@ def start(message):
     commands=["help"]
 )
 def help_command(message):
-    bot.send_message(
-        message.chat.id,
-        (
+    help_text = (
             "🎓 STUDENT ASSISTANT BOT V5.3\n\n"
 
             "━━━━━━━━━━━━━━━━━━\n"
@@ -578,8 +580,15 @@ def help_command(message):
             "/translate\n"
             "/healthcheck\n"
             "/systemhealth"
-        ),
     )
+
+    for part in split_telegram_text(
+        help_text
+    ):
+        bot.send_message(
+            message.chat.id,
+            part,
+        )
 
 
 # ==================================================
