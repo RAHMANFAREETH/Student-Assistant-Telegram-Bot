@@ -1,0 +1,126 @@
+STUDENT ASSISTANT BOT V4.8
+GLOBAL SEARCH + TODAY HUB + DATA EXPORT
+=======================================
+
+IMPORTANT:
+V4.8 REQUIRES NO NEW SUPABASE TABLE AND NO NEW PIP PACKAGE.
+
+
+1) Copy these files into your project root:
+
+today_hub.py
+global_search.py
+data_export.py
+
+
+2) Add imports to main.py:
+
+from today_hub import register_today_hub_handlers
+from global_search import register_global_search_handlers
+from data_export import register_data_export_handlers
+
+
+3) Add menu buttons:
+
+types.KeyboardButton("☀️ Today Hub"),
+types.KeyboardButton("🔎 Global Search"),
+types.KeyboardButton("📦 Export My Data"),
+
+
+Recommended final menu section:
+
+types.KeyboardButton("🎓 Semesters"),
+types.KeyboardButton("📊 Grades & GPA"),
+
+types.KeyboardButton("☀️ Today Hub"),
+types.KeyboardButton("🔎 Global Search"),
+
+types.KeyboardButton("📦 Export My Data"),
+types.KeyboardButton("📊 Dashboard"),
+
+types.KeyboardButton("📈 Progress"),
+types.KeyboardButton("ℹ️ Help"),
+
+
+4) Register:
+
+register_today_hub_handlers(
+    bot,
+    show_main_menu
+)
+
+register_global_search_handlers(
+    bot,
+    show_main_menu
+)
+
+register_data_export_handlers(
+    bot,
+    show_main_menu
+)
+
+
+5) Commands:
+
+/todayhub
+/search
+/export
+
+
+6) Syntax check:
+
+python -m py_compile main.py today_hub.py global_search.py data_export.py
+
+
+7) Run:
+
+python main.py
+
+
+8) TEST TODAY HUB:
+
+☀️ Today Hub
+
+It shows:
+- today's timetable
+- assignments due today
+- exams in the next 7 days
+- active/overdue goals
+- study minutes today
+
+
+9) TEST GLOBAL SEARCH:
+
+🔎 Global Search
+→ 🔎 Search Everything
+→ type a word or phrase
+
+It searches:
+- notes
+- study materials
+- assignments
+- exams
+- study goals
+- voice transcripts
+- vocabulary
+- flashcards
+
+
+10) TEST EXPORT:
+
+📦 Export My Data
+
+The bot sends:
+student_assistant_backup_YYYYMMDD_HHMMSS.json.gz
+
+The export excludes bot/API secrets.
+
+
+11) No SQL file is required for V4.8.
+
+
+12) Push:
+
+git add .
+git commit -m "Add V4.8 today hub global search and data export"
+git push

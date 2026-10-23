@@ -32,7 +32,7 @@ from study_planner import register_study_planner_handlers
 
 
 # ==================================================
-# VOICE + MULTILINGUAL MODULES
+# VOICE + LANGUAGE MODULES
 # ==================================================
 
 from voice_notes import register_voice_note_handlers
@@ -63,6 +63,15 @@ from study_goals import register_study_goal_handlers
 
 from semesters import register_semester_handlers
 from grades_gpa import register_grade_handlers
+
+
+# ==================================================
+# V4.8 MODULES
+# ==================================================
+
+from today_hub import register_today_hub_handlers
+from global_search import register_global_search_handlers
+from data_export import register_data_export_handlers
 
 
 # ==================================================
@@ -178,6 +187,18 @@ def show_main_menu(
         ),
 
         types.KeyboardButton(
+            "☀️ Today Hub"
+        ),
+
+        types.KeyboardButton(
+            "🔎 Global Search"
+        ),
+
+        types.KeyboardButton(
+            "📦 Export My Data"
+        ),
+
+        types.KeyboardButton(
             "📊 Dashboard"
         ),
 
@@ -195,11 +216,11 @@ def show_main_menu(
         (
             f"👋 Hello {first_name}!\n\n"
 
-            "🎓 Student Assistant Bot V4.7\n\n"
+            "🎓 Student Assistant Bot V4.8\n\n"
 
             "Choose what you want to do:\n\n"
 
-            "📄 PDF & Document Tools\n"
+            "📄 PDF Tools\n"
             "📝 Notes\n"
             "🌐 Translation\n"
             "⏰ Study Reminders\n\n"
@@ -223,6 +244,10 @@ def show_main_menu(
             "🎓 Semesters\n"
             "📊 Grades & GPA\n\n"
 
+            "☀️ Today Hub\n"
+            "🔎 Global Search\n"
+            "📦 Export My Data\n\n"
+
             "📊 Dashboard\n"
             "📈 Progress\n"
             "ℹ️ Help"
@@ -232,7 +257,7 @@ def show_main_menu(
 
 
 # ==================================================
-# START
+# /START
 # ==================================================
 
 @bot.message_handler(
@@ -257,7 +282,7 @@ def start(message):
 
 
 # ==================================================
-# HELP
+# /HELP
 # ==================================================
 
 @bot.message_handler(
@@ -268,13 +293,13 @@ def help_command(message):
     bot.send_message(
         message.chat.id,
         (
-            "🎓 STUDENT ASSISTANT BOT V4.7\n\n"
+            "🎓 STUDENT ASSISTANT BOT V4.8\n\n"
 
             "━━━━━━━━━━━━━━━━━━\n"
             "📄 PDF TOOLS\n"
             "━━━━━━━━━━━━━━━━━━\n"
             "• Merge PDFs\n"
-            "• Extract PDF pages\n"
+            "• Extract pages\n"
             "• Images → PDF\n"
             "• Rotate PDF\n"
             "• Protect PDF\n\n"
@@ -303,16 +328,16 @@ def help_command(message):
             "━━━━━━━━━━━━━━━━━━\n"
             "⏰ STUDY REMINDERS\n"
             "━━━━━━━━━━━━━━━━━━\n"
-            "• Add reminder\n"
+            "• Add reminders\n"
             "• View reminders\n"
-            "• Delete reminder\n"
+            "• Delete reminders\n"
             "• Automatic Telegram alerts\n\n"
 
             "━━━━━━━━━━━━━━━━━━\n"
             "📚 SUBJECTS\n"
             "━━━━━━━━━━━━━━━━━━\n"
-            "• Add subject\n"
-            "• Subject code\n"
+            "• Add subjects\n"
+            "• Subject codes\n"
             "• View subjects\n"
             "• Delete subjects\n\n"
 
@@ -328,14 +353,14 @@ def help_command(message):
             "• Due this week\n"
             "• Complete assignments\n"
             "• Delete assignments\n"
-            "• Deadline alerts\n\n"
+            "• Automatic deadline alerts\n\n"
 
             "━━━━━━━━━━━━━━━━━━\n"
             "📚 STUDY MATERIALS\n"
             "━━━━━━━━━━━━━━━━━━\n"
             "• PDF / DOCX / TXT\n"
             "• OCR scanned PDFs\n"
-            "• Link material to subject\n"
+            "• Subject linking\n"
             "• Read extracted text\n"
             "• Search materials\n"
             "• Summaries\n"
@@ -346,7 +371,7 @@ def help_command(message):
             "━━━━━━━━━━━━━━━━━━\n"
             "• Weekly classes\n"
             "• Subject linking\n"
-            "• Start/end times\n"
+            "• Start/end time\n"
             "• Location\n"
             "• Today's timetable\n"
             "• Weekly timetable\n\n"
@@ -356,19 +381,19 @@ def help_command(message):
             "━━━━━━━━━━━━━━━━━━\n"
             "• 25-minute focus\n"
             "• 50-minute focus\n"
-            "• Custom sessions\n"
+            "• Custom study sessions\n"
             "• Subject linking\n"
-            "• Automatic completion alert\n"
-            "• Weekly analytics\n\n"
+            "• Automatic completion alerts\n"
+            "• Weekly study analytics\n\n"
 
             "━━━━━━━━━━━━━━━━━━\n"
             "🎙 VOICE NOTES\n"
             "━━━━━━━━━━━━━━━━━━\n"
             "• Save voice notes\n"
             "• Organize by subject\n"
-            "• Replay voice notes\n"
+            "• Replay notes\n"
             "• Optional speech-to-text\n"
-            "• Saved transcripts\n\n"
+            "• View transcripts\n\n"
 
             "━━━━━━━━━━━━━━━━━━\n"
             "🌍 LANGUAGE TOOLS\n"
@@ -389,8 +414,8 @@ def help_command(message):
             "🧠 FLASHCARDS\n"
             "━━━━━━━━━━━━━━━━━━\n"
             "• Add flashcards\n"
-            "• Study cards\n"
-            "• Subject-based learning\n"
+            "• Subject-based cards\n"
+            "• Study mode\n"
             "• Mastery tracking\n\n"
 
             "━━━━━━━━━━━━━━━━━━\n"
@@ -399,18 +424,18 @@ def help_command(message):
             "• MCQ quizzes\n"
             "• Quiz by subject\n"
             "• Immediate feedback\n"
-            "• Scores\n"
+            "• Quiz scores\n"
             "• Quiz history\n\n"
 
             "━━━━━━━━━━━━━━━━━━\n"
-            "📝 EXAMS\n"
+            "📝 EXAM PLANNER\n"
             "━━━━━━━━━━━━━━━━━━\n"
             "• Add exams\n"
             "• Exam date/time\n"
             "• Location\n"
             "• Notes\n"
             "• Upcoming exams\n"
-            "• Automatic exam alerts\n\n"
+            "• Automatic alerts\n\n"
 
             "━━━━━━━━━━━━━━━━━━\n"
             "✅ ATTENDANCE\n"
@@ -419,7 +444,7 @@ def help_command(message):
             "• Absent\n"
             "• Late\n"
             "• Excused\n"
-            "• Attendance history\n"
+            "• Subject history\n"
             "• Attendance percentage\n\n"
 
             "━━━━━━━━━━━━━━━━━━\n"
@@ -435,8 +460,8 @@ def help_command(message):
             "🎓 SEMESTERS\n"
             "━━━━━━━━━━━━━━━━━━\n"
             "• Create semesters\n"
-            "• Start/end date\n"
             "• GPA scale\n"
+            "• Start/end dates\n"
             "• Active semester\n"
             "• Semester history\n\n"
 
@@ -453,6 +478,36 @@ def help_command(message):
             "• Target GPA calculator\n\n"
 
             "━━━━━━━━━━━━━━━━━━\n"
+            "☀️ TODAY HUB\n"
+            "━━━━━━━━━━━━━━━━━━\n"
+            "• Today's classes\n"
+            "• Assignments due today\n"
+            "• Exams in next 7 days\n"
+            "• Active goals\n"
+            "• Overdue goals\n"
+            "• Study minutes today\n\n"
+
+            "━━━━━━━━━━━━━━━━━━\n"
+            "🔎 GLOBAL SEARCH\n"
+            "━━━━━━━━━━━━━━━━━━\n"
+            "Search across:\n"
+            "• Notes\n"
+            "• Materials\n"
+            "• Assignments\n"
+            "• Exams\n"
+            "• Goals\n"
+            "• Voice transcripts\n"
+            "• Vocabulary\n"
+            "• Flashcards\n\n"
+
+            "━━━━━━━━━━━━━━━━━━\n"
+            "📦 DATA EXPORT\n"
+            "━━━━━━━━━━━━━━━━━━\n"
+            "• Download your academic data\n"
+            "• Compressed JSON backup\n"
+            "• Excludes bot/API secrets\n\n"
+
+            "━━━━━━━━━━━━━━━━━━\n"
             "📊 DASHBOARD\n"
             "━━━━━━━━━━━━━━━━━━\n"
             "• Subjects\n"
@@ -462,7 +517,7 @@ def help_command(message):
             "• Flashcards\n"
             "• Assignments\n"
             "• Due today\n"
-            "• Next assignment\n\n"
+            "• Completion percentage\n\n"
 
             "━━━━━━━━━━━━━━━━━━\n"
             "📈 PROGRESS\n"
@@ -492,6 +547,9 @@ def help_command(message):
             "/goals\n"
             "/semesters\n"
             "/gpa\n"
+            "/todayhub\n"
+            "/search\n"
+            "/export\n"
             "/dashboard\n"
             "/progress\n"
             "/translate"
@@ -515,7 +573,7 @@ def help_button(message):
 
 
 # ==================================================
-# USER / CHAT ID
+# /ID
 # ==================================================
 
 @bot.message_handler(
@@ -536,7 +594,7 @@ def user_id(message):
 
 
 # ==================================================
-# REGISTER MODULES
+# REGISTER CORE MODULES
 # ==================================================
 
 register_pdf_handlers(
@@ -558,6 +616,11 @@ register_reminder_handlers(
     bot,
     show_main_menu,
 )
+
+
+# ==================================================
+# REGISTER ACADEMIC MODULES
+# ==================================================
 
 register_subject_handlers(
     bot,
@@ -584,6 +647,11 @@ register_study_planner_handlers(
     show_main_menu,
 )
 
+
+# ==================================================
+# REGISTER VOICE / LANGUAGE
+# ==================================================
+
 register_voice_note_handlers(
     bot,
     show_main_menu,
@@ -594,6 +662,11 @@ register_language_tool_handlers(
     show_main_menu,
 )
 
+
+# ==================================================
+# REGISTER LEARNING
+# ==================================================
+
 register_flashcard_handlers(
     bot,
     show_main_menu,
@@ -603,6 +676,11 @@ register_quiz_handlers(
     bot,
     show_main_menu,
 )
+
+
+# ==================================================
+# REGISTER EXAMS / ATTENDANCE / GOALS
+# ==================================================
 
 register_exam_handlers(
     bot,
@@ -619,6 +697,11 @@ register_study_goal_handlers(
     show_main_menu,
 )
 
+
+# ==================================================
+# REGISTER SEMESTERS / GPA
+# ==================================================
+
 register_semester_handlers(
     bot,
     show_main_menu,
@@ -628,6 +711,31 @@ register_grade_handlers(
     bot,
     show_main_menu,
 )
+
+
+# ==================================================
+# REGISTER V4.8
+# ==================================================
+
+register_today_hub_handlers(
+    bot,
+    show_main_menu,
+)
+
+register_global_search_handlers(
+    bot,
+    show_main_menu,
+)
+
+register_data_export_handlers(
+    bot,
+    show_main_menu,
+)
+
+
+# ==================================================
+# REGISTER DASHBOARD / PROGRESS
+# ==================================================
 
 register_dashboard_handlers(
     bot,
@@ -656,7 +764,7 @@ def home():
     return {
         "status": "ok",
         "bot": "Student Assistant Bot",
-        "version": "4.7",
+        "version": "4.8",
         "database": "Supabase",
         "deployment": "Render",
 
@@ -686,6 +794,9 @@ def home():
             "study_goals": True,
             "semesters": True,
             "grades_gpa": True,
+            "today_hub": True,
+            "global_search": True,
+            "data_export": True,
             "dashboard": True,
             "progress": True,
         },
@@ -789,15 +900,14 @@ def setup_render_webhook():
 
         return
 
-
     webhook_url = (
         render_url.rstrip("/")
         + "/telegram-webhook"
     )
 
-
     try:
 
+        # Remove old webhook first.
         bot.remove_webhook()
 
         result = bot.set_webhook(
@@ -812,7 +922,6 @@ def setup_render_webhook():
             ],
         )
 
-
         print(
             "🌐 Webhook URL:",
             webhook_url,
@@ -823,9 +932,7 @@ def setup_render_webhook():
             result,
         )
 
-
         info = bot.get_webhook_info()
-
 
         print(
             "📡 Telegram webhook information:"
@@ -841,14 +948,12 @@ def setup_render_webhook():
             info.pending_update_count,
         )
 
-
         if info.last_error_message:
 
             print(
                 "⚠️ Last webhook error:",
                 info.last_error_message,
             )
-
 
     except Exception as error:
 
@@ -895,7 +1000,7 @@ if __name__ == "__main__":
         )
 
         print(
-            "🎓 Student Assistant Bot V4.7 enabled."
+            "🎓 Student Assistant Bot V4.8 enabled."
         )
 
         print(
@@ -971,6 +1076,18 @@ if __name__ == "__main__":
         )
 
         print(
+            "☀️ Today Hub enabled."
+        )
+
+        print(
+            "🔎 Global Search enabled."
+        )
+
+        print(
+            "📦 Data Export enabled."
+        )
+
+        print(
             "📊 Dashboard enabled."
         )
 
@@ -978,11 +1095,10 @@ if __name__ == "__main__":
             "📈 Study Progress enabled."
         )
 
-
         try:
 
             # Local mode uses polling.
-            # Remove Render webhook first.
+            # Remove Render webhook before polling.
 
             bot.remove_webhook()
 
@@ -995,13 +1111,11 @@ if __name__ == "__main__":
                 long_polling_timeout=30,
             )
 
-
         except KeyboardInterrupt:
 
             print(
                 "🛑 Bot stopped."
             )
-
 
         except Exception as error:
 
@@ -1013,16 +1127,11 @@ if __name__ == "__main__":
                 repr(error)
             )
 
-
-    # ==================================================
-    # DIRECT RENDER MODE
-    #
-    # Render normally runs:
-    #
-    # gunicorn main:app --bind 0.0.0.0:$PORT
-    # ==================================================
-
     else:
+
+        # Render normally starts:
+        #
+        # gunicorn main:app --bind 0.0.0.0:$PORT
 
         port = int(
             os.getenv(
