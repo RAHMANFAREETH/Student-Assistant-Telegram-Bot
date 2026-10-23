@@ -15,19 +15,7 @@ from flashcards import get_flashcards
 quiz_state = {}
 
 
-GLOBAL_BUTTONS = {
-    "📄 PDF Tools",
-    "📝 Notes",
-    "🌐 Translate",
-    "⏰ Study Reminder",
-    "📚 Subjects",
-    "📅 Assignments",
-    "📊 Dashboard",
-    "🧠 Flashcards",
-    "❓ Quiz",
-    "📈 Progress",
-    "ℹ️ Help",
-}
+from navigation import GLOBAL_BUTTONS
 
 
 def save_quiz_attempt(

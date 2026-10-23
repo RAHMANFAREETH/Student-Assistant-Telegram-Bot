@@ -9,32 +9,7 @@ from db import supabase
 search_state = {}
 
 
-GLOBAL_BUTTONS = {
-    "📄 PDF Tools",
-    "📝 Notes",
-    "🌐 Translate",
-    "⏰ Study Reminder",
-    "📚 Subjects",
-    "📅 Assignments",
-    "📚 Study Materials",
-    "🗓 Timetable",
-    "⏱ Study Planner",
-    "🎙 Voice Notes",
-    "🌍 Language Tools",
-    "🧠 Flashcards",
-    "❓ Quiz",
-    "📝 Exams",
-    "✅ Attendance",
-    "🎯 Study Goals",
-    "🎓 Semesters",
-    "📊 Grades & GPA",
-    "☀️ Today Hub",
-    "🔎 Global Search",
-    "📦 Export My Data",
-    "📊 Dashboard",
-    "📈 Progress",
-    "ℹ️ Help",
-}
+from navigation import GLOBAL_BUTTONS
 
 
 def _clean_preview(

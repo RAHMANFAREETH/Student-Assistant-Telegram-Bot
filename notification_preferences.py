@@ -10,36 +10,7 @@ from db import supabase
 notification_state = {}
 
 
-GLOBAL_BUTTONS = {
-    "📄 PDF Tools",
-    "📝 Notes",
-    "🌐 Translate",
-    "⏰ Study Reminder",
-    "📚 Subjects",
-    "📅 Assignments",
-    "📚 Study Materials",
-    "🗓 Timetable",
-    "⏱ Study Planner",
-    "🎙 Voice Notes",
-    "🌍 Language Tools",
-    "🧠 Flashcards",
-    "❓ Quiz",
-    "📝 Exams",
-    "✅ Attendance",
-    "🎯 Study Goals",
-    "🎓 Semesters",
-    "📊 Grades & GPA",
-    "☀️ Today Hub",
-    "🔎 Global Search",
-    "📚 Revision Planner",
-    "🔥 Study Streak",
-    "🧠 Smart Insights",
-    "🔔 Smart Notifications",
-    "📦 Export My Data",
-    "📊 Dashboard",
-    "📈 Progress",
-    "ℹ️ Help",
-}
+from navigation import GLOBAL_BUTTONS
 
 
 DOW_NAMES = {

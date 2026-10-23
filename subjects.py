@@ -7,16 +7,7 @@ from db import supabase
 subject_state = {}
 
 
-GLOBAL_BUTTONS = {
-    "📄 PDF Tools",
-    "📝 Notes",
-    "🌐 Translate",
-    "⏰ Study Reminder",
-    "ℹ️ Help",
-    "📚 Subjects",
-    "📅 Assignments",
-    "📊 Dashboard",
-}
+from navigation import GLOBAL_BUTTONS
 
 
 def get_subjects(user_id):

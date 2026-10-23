@@ -26,20 +26,7 @@ MAX_MATERIAL_CHARS = 100000
 TELEGRAM_CHUNK_SIZE = 3600
 
 
-GLOBAL_BUTTONS = {
-    "📄 PDF Tools",
-    "📝 Notes",
-    "🌐 Translate",
-    "⏰ Study Reminder",
-    "📚 Subjects",
-    "📅 Assignments",
-    "🧠 Flashcards",
-    "❓ Quiz",
-    "📊 Dashboard",
-    "📈 Progress",
-    "📚 Study Materials",
-    "ℹ️ Help",
-}
+from navigation import GLOBAL_BUTTONS
 
 
 STOPWORDS = {

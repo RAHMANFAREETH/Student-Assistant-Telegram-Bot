@@ -16,27 +16,7 @@ attendance_state = {}
 SRI_LANKA_TZ = ZoneInfo("Asia/Colombo")
 
 
-GLOBAL_BUTTONS = {
-    "📄 PDF Tools",
-    "📝 Notes",
-    "🌐 Translate",
-    "⏰ Study Reminder",
-    "📚 Subjects",
-    "📅 Assignments",
-    "📚 Study Materials",
-    "🗓 Timetable",
-    "⏱ Study Planner",
-    "🎙 Voice Notes",
-    "🌍 Language Tools",
-    "🧠 Flashcards",
-    "❓ Quiz",
-    "📝 Exams",
-    "✅ Attendance",
-    "🎯 Study Goals",
-    "📊 Dashboard",
-    "📈 Progress",
-    "ℹ️ Help",
-}
+from navigation import GLOBAL_BUTTONS
 
 
 STATUS_MAP = {

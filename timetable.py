@@ -35,22 +35,7 @@ DAY_BUTTONS = {
     "Sun": 6,
 }
 
-GLOBAL_BUTTONS = {
-    "📄 PDF Tools",
-    "📝 Notes",
-    "🌐 Translate",
-    "⏰ Study Reminder",
-    "📚 Subjects",
-    "📅 Assignments",
-    "📚 Study Materials",
-    "🧠 Flashcards",
-    "❓ Quiz",
-    "📊 Dashboard",
-    "📈 Progress",
-    "🗓 Timetable",
-    "⏱ Study Planner",
-    "ℹ️ Help",
-}
+from navigation import GLOBAL_BUTTONS
 
 
 def get_timetable_entries(

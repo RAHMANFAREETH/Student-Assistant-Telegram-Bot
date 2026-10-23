@@ -14,19 +14,7 @@ from subjects import (
 flashcard_state = {}
 
 
-GLOBAL_BUTTONS = {
-    "📄 PDF Tools",
-    "📝 Notes",
-    "🌐 Translate",
-    "⏰ Study Reminder",
-    "📚 Subjects",
-    "📅 Assignments",
-    "📊 Dashboard",
-    "🧠 Flashcards",
-    "❓ Quiz",
-    "📈 Progress",
-    "ℹ️ Help",
-}
+from navigation import GLOBAL_BUTTONS
 
 
 def get_flashcards(

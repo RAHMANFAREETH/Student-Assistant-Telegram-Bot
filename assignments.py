@@ -23,16 +23,7 @@ SRI_LANKA_TZ = ZoneInfo(
     "Asia/Colombo"
 )
 
-GLOBAL_BUTTONS = {
-    "📄 PDF Tools",
-    "📝 Notes",
-    "🌐 Translate",
-    "⏰ Study Reminder",
-    "ℹ️ Help",
-    "📚 Subjects",
-    "📅 Assignments",
-    "📊 Dashboard",
-}
+from navigation import GLOBAL_BUTTONS
 
 
 def local_to_utc_iso(local_dt):

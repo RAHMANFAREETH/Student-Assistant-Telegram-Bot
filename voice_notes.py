@@ -16,24 +16,7 @@ from speech_to_text import (
 voice_note_state = {}
 
 
-GLOBAL_BUTTONS = {
-    "📄 PDF Tools",
-    "📝 Notes",
-    "🌐 Translate",
-    "⏰ Study Reminder",
-    "📚 Subjects",
-    "📅 Assignments",
-    "📚 Study Materials",
-    "🗓 Timetable",
-    "⏱ Study Planner",
-    "🎙 Voice Notes",
-    "🌍 Language Tools",
-    "🧠 Flashcards",
-    "❓ Quiz",
-    "📊 Dashboard",
-    "📈 Progress",
-    "ℹ️ Help",
-}
+from navigation import GLOBAL_BUTTONS
 
 
 def get_voice_notes(

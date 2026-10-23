@@ -16,22 +16,7 @@ from study_analytics import build_study_analytics
 planner_state = {}
 SRI_LANKA_TZ = ZoneInfo("Asia/Colombo")
 
-GLOBAL_BUTTONS = {
-    "📄 PDF Tools",
-    "📝 Notes",
-    "🌐 Translate",
-    "⏰ Study Reminder",
-    "📚 Subjects",
-    "📅 Assignments",
-    "📚 Study Materials",
-    "🧠 Flashcards",
-    "❓ Quiz",
-    "📊 Dashboard",
-    "📈 Progress",
-    "🗓 Timetable",
-    "⏱ Study Planner",
-    "ℹ️ Help",
-}
+from navigation import GLOBAL_BUTTONS
 
 
 def active_session(
