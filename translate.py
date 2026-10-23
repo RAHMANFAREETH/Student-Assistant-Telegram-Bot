@@ -3,6 +3,9 @@ from collections import OrderedDict
 
 from telebot import types
 from deep_translator import GoogleTranslator, MyMemoryTranslator
+import requests
+
+from config import LIBRETRANSLATE_URL, LIBRETRANSLATE_API_KEY
 
 from translation_history import (
     save_translation,
@@ -148,76 +151,109 @@ def split_long_text(
     return chunks
 
 
-def translate_chunk(
-    source,
-    target,
-    text,
-):
-    cache_key = (
-        source,
-        target,
-        text,
-    )
+def translate_google_endpoint(source, target, text):
+    """Best-effort fallback. Google's public endpoint is not an official API.
 
-    cached = cache_get(
-        cache_key
+    It may be rate limited; do not rely on it for guaranteed availability.
+    """
+    response = requests.get(
+        "https://translate.googleapis.com/translate_a/single",
+        params={
+            "client": "gtx",
+            "sl": source,
+            "tl": target,
+            "dt": "t",
+            "q": text,
+        },
+        timeout=(5, 12),
+        headers={"User-Agent": "Mozilla/5.0 (compatible; StudentAssistantBot/5.4)"},
     )
+    response.raise_for_status()
+    data = response.json()
+    if not isinstance(data, list) or not data or not isinstance(data[0], list):
+        raise ValueError("Unexpected Google translation response")
+    parts = [part[0] for part in data[0] if isinstance(part, list) and part and isinstance(part[0], str)]
+    translation = "".join(parts).strip()
+    if not translation:
+        raise ValueError("Empty Google translation response")
+    return translation
 
+
+def translate_libretranslate(source, target, text):
+    """Optional configured LibreTranslate instance; no key is required unless host does."""
+    if not LIBRETRANSLATE_URL:
+        raise RuntimeError("LIBRETRANSLATE_URL is not configured")
+    payload = {"q": text, "source": source, "target": target, "format": "text"}
+    if LIBRETRANSLATE_API_KEY:
+        payload["api_key"] = LIBRETRANSLATE_API_KEY
+    response = requests.post(
+        LIBRETRANSLATE_URL + "/translate",
+        json=payload,
+        timeout=(5, 20),
+    )
+    response.raise_for_status()
+    result = response.json().get("translatedText", "")
+    if not isinstance(result, str) or not result.strip():
+        raise ValueError("LibreTranslate returned no translated text")
+    return result.strip()
+
+
+def translate_chunk(source, target, text):
+    text = (text or "").strip()
+    if not text:
+        return "", "Empty"
+    if source == target:
+        return text, "Same language"
+
+    cache_key = (source, target, text)
+    cached = cache_get(cache_key)
     if cached:
         return cached, "Cache"
 
-    google_error = None
+    errors = []
 
-    for attempt in range(2):
+    def attempt(label, translate_fn):
         try:
-            result = GoogleTranslator(
-                source=source,
-                target=target,
-            ).translate(text)
-
-            if result:
-                cache_save(
-                    cache_key,
-                    result,
-                )
-
-                return result, "Google"
-
+            value = translate_fn()
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError("Provider returned empty translation")
+            cache_save(cache_key, value.strip())
+            return value.strip(), label
         except Exception as error:
-            google_error = error
+            # Keep detailed diagnostics in Render logs, not public Telegram chat.
+            errors.append(f"{label}: {type(error).__name__}: {error}")
+            return None
 
-            print(
-                "Google translation error:",
-                repr(error),
-            )
-
-            if attempt == 0:
-                time.sleep(1.2)
-
-    try:
-        result = MyMemoryTranslator(
-            source=source,
-            target=target,
-        ).translate(text)
-
-        if result:
-            cache_save(
-                cache_key,
-                result,
-            )
-
-            return result, "MyMemory"
-
-    except Exception as error:
-        print(
-            "MyMemory translation error:",
-            repr(error),
-        )
-
-    raise RuntimeError(
-        f"Translation services failed: "
-        f"{google_error}"
+    result = attempt(
+        "Google", lambda: GoogleTranslator(source=source, target=target).translate(text)
     )
+    if result:
+        return result
+
+    result = attempt(
+        "MyMemory", lambda: MyMemoryTranslator(source=source, target=target).translate(text)
+    )
+    if result:
+        return result
+
+    # When a self-hosted or managed LibreTranslate URL is available, prefer it.
+    if LIBRETRANSLATE_URL:
+        result = attempt(
+            "LibreTranslate", lambda: translate_libretranslate(source, target, text)
+        )
+        if result:
+            return result
+
+    # Free best-effort fallback, not an official Google API.
+    result = attempt(
+        "Google Public Endpoint", lambda: translate_google_endpoint(source, target, text)
+    )
+    if result:
+        return result
+
+    for problem in errors:
+        print("Translator provider failure:", problem)
+    raise RuntimeError("All available translation services failed; check Render logs")
 
 
 def translate_complete_text(
@@ -294,45 +330,44 @@ def short_preview(
     )
 
 
-def create_result_markup(
-    translated_text,
-    history_id,
-):
-    markup = types.InlineKeyboardMarkup(
-        row_width=2
-    )
-
+def create_result_markup(translated_text, history_id):
+    """Build optional buttons. Outdated Telegram libraries must not hide a translation."""
+    markup = types.InlineKeyboardMarkup(row_width=2)
     buttons = []
 
-    if (
-        1
-        <= len(translated_text)
-        <= 256
-    ):
-        buttons.append(
-            types.InlineKeyboardButton(
-                "📋 Copy",
-                copy_text=types.CopyTextButton(
-                    translated_text
-                ),
+    if 1 <= len(translated_text) <= 256 and hasattr(types, "CopyTextButton"):
+        try:
+            buttons.append(
+                types.InlineKeyboardButton(
+                    "📋 Copy", copy_text=types.CopyTextButton(translated_text)
+                )
             )
-        )
+        except (AttributeError, TypeError, ValueError) as error:
+            print("Optional Copy button unavailable:", type(error).__name__)
 
     if history_id:
-        buttons.append(
-            types.InlineKeyboardButton(
-                "🔊 Listen",
-                callback_data=(
-                    f"tts:{history_id}"
-                ),
+        try:
+            buttons.append(
+                types.InlineKeyboardButton("🔊 Listen", callback_data=f"tts:{history_id}")
             )
-        )
+        except (AttributeError, TypeError, ValueError) as error:
+            print("Optional TTS button unavailable:", type(error).__name__)
 
     if buttons:
         markup.add(*buttons)
         return markup
-
     return None
+
+
+def send_safe_translation_message(bot, chat_id, text, markup=None):
+    """If an optional inline keyboard is rejected, deliver the text alone."""
+    try:
+        return bot.send_message(chat_id, text, reply_markup=markup)
+    except Exception as error:
+        if markup is None:
+            raise
+        print("Telegram inline keyboard error (retrying without it):", repr(error))
+        return bot.send_message(chat_id, text)
 
 
 def send_translation_result(
@@ -376,10 +411,8 @@ def send_translation_result(
     if len(
         complete_message
     ) <= TELEGRAM_CHUNK_SIZE:
-        bot.send_message(
-            message.chat.id,
-            complete_message,
-            reply_markup=markup,
+        send_safe_translation_message(
+            bot, message.chat.id, complete_message, markup
         )
         return
 
@@ -806,10 +839,7 @@ def register_translation_handlers(
             )
 
             try:
-                bot.delete_message(
-                    chat_id,
-                    status.message_id,
-                )
+                bot.delete_message(chat_id, status.message_id)
             except Exception:
                 pass
 
@@ -1631,17 +1661,15 @@ def register_translation_handlers(
                 )
 
             except Exception as error:
-                print(
-                    "Translation error:",
-                    repr(error),
-                )
-
+                print("Translation or Telegram delivery error:", repr(error))
+                try:
+                    bot.delete_message(chat_id, status.message_id)
+                except Exception:
+                    pass
                 bot.send_message(
                     chat_id,
-                    (
-                        "❌ Translation failed. "
-                        "Please try again shortly."
-                    ),
+                    "❌ Translator unavailable or result could not be sent. "
+                    "Please try again. If it continues, ask the admin to check Render logs.",
                 )
 
             return
