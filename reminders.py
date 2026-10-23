@@ -1,83 +1,58 @@
-import sqlite3
-import threading
-import time
+from datetime import (
+    datetime,
+    timedelta
+)
 
-from datetime import datetime
 from zoneinfo import ZoneInfo
 from telebot import types
 
-from config import DB_NAME
+from db import supabase
 
 
-
-
-TIMEZONE = ZoneInfo("Asia/Colombo")
+TIMEZONE = ZoneInfo(
+    "Asia/Colombo"
+)
 
 reminder_state = {}
 temp_reminder = {}
 
 
 # ==================================================
-# DATABASE
-# ==================================================
-
-def init_reminder_database():
-
-    conn = sqlite3.connect(DB_NAME)
-
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS reminders (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            chat_id INTEGER NOT NULL,
-            title TEXT NOT NULL,
-            remind_at TEXT NOT NULL,
-            status TEXT DEFAULT 'pending',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-
-    conn.commit()
-    conn.close()
-
-
-init_reminder_database()
-
-
-# ==================================================
-# DATE / TIME HELPERS
+# DATE
 # ==================================================
 
 def parse_date(text):
 
-    from datetime import timedelta
-
-    text = text.strip().lower()
-
-    # Convert different dash characters to normal hyphen
     text = (
-        text
+        text.strip()
+        .lower()
         .replace("–", "-")
         .replace("—", "-")
         .replace("−", "-")
+        .replace(" - ", "-")
+        .replace(" / ", "/")
+        .replace(" . ", ".")
     )
-
-    # Remove spaces around separators
-    text = text.replace(" - ", "-")
-    text = text.replace(" / ", "/")
-    text = text.replace(" . ", ".")
 
     today = datetime.now(
         TIMEZONE
     ).date()
 
-    if text in ["today", "இன்று"]:
+    if text in [
+        "today",
+        "இன்று"
+    ]:
+
         return today
 
-    if text in ["tomorrow", "நாளை"]:
-        return today + timedelta(days=1)
+    if text in [
+        "tomorrow",
+        "நாளை"
+    ]:
+
+        return today + timedelta(
+            days=1
+        )
 
     formats = [
         "%d-%m-%Y",
@@ -102,7 +77,14 @@ def parse_date(text):
         except ValueError:
             pass
 
-    raise ValueError("Invalid date format")
+    raise ValueError(
+        "Invalid date"
+    )
+
+
+# ==================================================
+# TIME
+# ==================================================
 
 def parse_time(text):
 
@@ -124,136 +106,39 @@ def parse_time(text):
             ).time()
 
         except ValueError:
-
             pass
 
     raise ValueError(
-        "Invalid time format"
+        "Invalid time"
     )
 
 
 # ==================================================
-# REMINDER WORKER
+# FORMAT SUPABASE TIME
 # ==================================================
 
-def start_reminder_worker(bot):
+def format_database_time(value):
 
-    def worker():
-
-        while True:
-
-            try:
-
-                now = datetime.now(
-                    TIMEZONE
-                )
-
-                now_string = now.strftime(
-                    "%Y-%m-%d %H:%M"
-                )
-
-                conn = sqlite3.connect(
-                    DB_NAME
-                )
-
-                cursor = conn.cursor()
-
-                cursor.execute(
-                    """
-                    SELECT
-                        id,
-                        chat_id,
-                        title,
-                        remind_at
-                    FROM reminders
-                    WHERE status = 'pending'
-                    AND remind_at <= ?
-                    ORDER BY remind_at ASC
-                    """,
-                    (now_string,)
-                )
-
-                reminders = cursor.fetchall()
-
-                conn.close()
-
-
-                for reminder in reminders:
-
-                    reminder_id = reminder[0]
-                    chat_id = reminder[1]
-                    title = reminder[2]
-                    remind_at = reminder[3]
-
-                    try:
-
-                        formatted_time = datetime.strptime(
-                            remind_at,
-                            "%Y-%m-%d %H:%M"
-                        ).strftime(
-                            "%d-%m-%Y %I:%M %p"
-                        )
-
-                        bot.send_message(
-                            chat_id,
-                            f"""
-⏰ Study Reminder
-
-📚 {title}
-
-🕒 {formatted_time}
-
-It's time for your study task! 📖
-"""
-                        )
-
-                        conn = sqlite3.connect(
-                            DB_NAME
-                        )
-
-                        cursor = conn.cursor()
-
-                        cursor.execute(
-                            """
-                            UPDATE reminders
-                            SET status = 'sent'
-                            WHERE id = ?
-                            """,
-                            (reminder_id,)
-                        )
-
-                        conn.commit()
-                        conn.close()
-
-                    except Exception as error:
-
-                        print(
-                            "Reminder send error:",
-                            error
-                        )
-
-
-            except Exception as error:
-
-                print(
-                    "Reminder worker error:",
-                    error
-                )
-
-
-            time.sleep(20)
-
-
-    thread = threading.Thread(
-        target=worker,
-        daemon=True
+    value = value.replace(
+        "Z",
+        "+00:00"
     )
 
-    thread.start()
+    dt = datetime.fromisoformat(
+        value
+    )
+
+    dt = dt.astimezone(
+        TIMEZONE
+    )
+
+    return dt.strftime(
+        "%d-%m-%Y %I:%M %p"
+    )
 
 
 # ==================================================
-# REGISTER HANDLERS
+# REGISTER
 # ==================================================
 
 def register_reminder_handlers(
@@ -263,7 +148,7 @@ def register_reminder_handlers(
 
 
     # ==============================================
-    # REMINDER MENU
+    # MENU
     # ==============================================
 
     @bot.message_handler(
@@ -303,7 +188,7 @@ def register_reminder_handlers(
             ),
 
             types.KeyboardButton(
-                "🏠 Main Menu"
+                "⬅️ Main Menu"
             )
         )
 
@@ -323,7 +208,40 @@ Choose an option:
 
 
     # ==============================================
-    # ADD REMINDER
+    # CANCEL
+    # ==============================================
+
+    @bot.message_handler(
+        func=lambda m:
+        m.text == "❌ Cancel Reminder"
+        and m.chat.id in reminder_state
+    )
+    def cancel_reminder(message):
+
+        chat_id = message.chat.id
+
+        reminder_state.pop(
+            chat_id,
+            None
+        )
+
+        temp_reminder.pop(
+            chat_id,
+            None
+        )
+
+        bot.send_message(
+            chat_id,
+            "❌ Reminder operation cancelled."
+        )
+
+        reminder_menu(
+            message
+        )
+
+
+    # ==============================================
+    # ADD
     # ==============================================
 
     @bot.message_handler(
@@ -368,39 +286,7 @@ Arabic Assignment
 
 
     # ==============================================
-    # CANCEL
-    # ==============================================
-
-    @bot.message_handler(
-        func=lambda m:
-        m.text == "❌ Cancel Reminder"
-    )
-    def cancel_reminder(message):
-
-        chat_id = message.chat.id
-
-        reminder_state.pop(
-            chat_id,
-            None
-        )
-
-        temp_reminder.pop(
-            chat_id,
-            None
-        )
-
-        bot.send_message(
-            chat_id,
-            "❌ Reminder creation cancelled."
-        )
-
-        reminder_menu(
-            message
-        )
-
-
-    # ==============================================
-    # VIEW REMINDERS
+    # VIEW
     # ==============================================
 
     @bot.message_handler(
@@ -412,73 +298,82 @@ Arabic Assignment
         user_id = message.from_user.id
         chat_id = message.chat.id
 
-        conn = sqlite3.connect(
-            DB_NAME
-        )
+        try:
 
-        cursor = conn.cursor()
+            response = (
+                supabase
+                .table("reminders")
+                .select(
+                    "id,title,remind_at"
+                )
+                .eq(
+                    "user_id",
+                    user_id
+                )
+                .eq(
+                    "status",
+                    "pending"
+                )
+                .order(
+                    "remind_at"
+                )
+                .execute()
+            )
 
-        cursor.execute(
-            """
-            SELECT
-                id,
-                title,
-                remind_at
-            FROM reminders
-            WHERE user_id = ?
-            AND status = 'pending'
-            ORDER BY remind_at ASC
-            """,
-            (user_id,)
-        )
+            reminders = (
+                response.data
+                or []
+            )
 
-        reminders = cursor.fetchall()
+            if not reminders:
 
-        conn.close()
+                bot.send_message(
+                    chat_id,
+                    """
+📭 You don't have any upcoming reminders.
+"""
+                )
 
+                return
 
-        if not reminders:
+            text = (
+                "📋 Upcoming Reminders\n\n"
+            )
+
+            for reminder in reminders:
+
+                when = format_database_time(
+                    reminder[
+                        "remind_at"
+                    ]
+                )
+
+                text += (
+                    f'⏰ #{reminder["id"]}\n'
+                    f'📚 {reminder["title"]}\n'
+                    f'🕒 {when}\n\n'
+                )
 
             bot.send_message(
                 chat_id,
-                """
-📭 You don't have any upcoming reminders.
-"""
+                text
             )
 
-            return
+        except Exception as e:
 
-
-        text = "📋 Upcoming Reminders\n\n"
-
-        for reminder in reminders:
-
-            reminder_id = reminder[0]
-            title = reminder[1]
-            remind_at = reminder[2]
-
-            formatted = datetime.strptime(
-                remind_at,
-                "%Y-%m-%d %H:%M"
-            ).strftime(
-                "%d-%m-%Y %I:%M %p"
+            print(
+                "View reminder error:",
+                e
             )
 
-            text += (
-                f"⏰ #{reminder_id}\n"
-                f"📚 {title}\n"
-                f"🕒 {formatted}\n\n"
+            bot.send_message(
+                chat_id,
+                "❌ Failed to load reminders."
             )
-
-
-        bot.send_message(
-            chat_id,
-            text
-        )
 
 
     # ==============================================
-    # DELETE REMINDER
+    # DELETE MENU
     # ==============================================
 
     @bot.message_handler(
@@ -487,118 +382,105 @@ Arabic Assignment
     )
     def delete_reminder_menu(message):
 
-        chat_id = message.chat.id
         user_id = message.from_user.id
+        chat_id = message.chat.id
 
-        conn = sqlite3.connect(
-            DB_NAME
-        )
+        try:
 
-        cursor = conn.cursor()
+            response = (
+                supabase
+                .table("reminders")
+                .select(
+                    "id,title"
+                )
+                .eq(
+                    "user_id",
+                    user_id
+                )
+                .eq(
+                    "status",
+                    "pending"
+                )
+                .order(
+                    "id"
+                )
+                .execute()
+            )
 
-        cursor.execute(
-            """
-            SELECT
-                id,
-                title,
-                remind_at
-            FROM reminders
-            WHERE user_id = ?
-            AND status = 'pending'
-            ORDER BY remind_at ASC
-            """,
-            (user_id,)
-        )
+            reminders = (
+                response.data
+                or []
+            )
 
-        reminders = cursor.fetchall()
+            if not reminders:
 
-        conn.close()
+                bot.send_message(
+                    chat_id,
+                    "📭 No reminders to delete."
+                )
 
+                return
 
-        if not reminders:
+            text = (
+                "🗑 Send the Reminder ID "
+                "you want to delete:\n\n"
+            )
+
+            for reminder in reminders:
+
+                text += (
+                    f'#{reminder["id"]} - '
+                    f'{reminder["title"]}\n'
+                )
+
+            reminder_state[
+                chat_id
+            ] = "delete"
+
+            markup = types.ReplyKeyboardMarkup(
+                resize_keyboard=True
+            )
+
+            markup.add(
+                types.KeyboardButton(
+                    "❌ Cancel Reminder"
+                )
+            )
 
             bot.send_message(
                 chat_id,
-                "📭 No reminders to delete."
+                text,
+                reply_markup=markup
             )
 
-            return
+        except Exception as e:
 
+            print(
+                "Delete reminder menu error:",
+                e
+            )
 
-        text = (
-            "🗑 Send the Reminder ID "
-            "you want to delete:\n\n"
-        )
-
-
-        for reminder in reminders:
-
-            text += (
-                f"#{reminder[0]} "
-                f"- {reminder[1]}\n"
+            bot.send_message(
+                chat_id,
+                "❌ Failed to load reminders."
             )
 
 
-        reminder_state[
-            chat_id
-        ] = "delete"
-
-
-        bot.send_message(
-            chat_id,
-            text
-        )
-
-
     # ==============================================
-    # MAIN MENU
-    # ==============================================
-
-    @bot.message_handler(
-        func=lambda m:
-        m.text == "🏠 Main Menu"
-        and m.chat.id in reminder_state
-    )
-    def reminder_main_menu(message):
-
-        chat_id = message.chat.id
-
-        reminder_state.pop(
-            chat_id,
-            None
-        )
-
-        temp_reminder.pop(
-            chat_id,
-            None
-        )
-
-        name = (
-            message.from_user.first_name
-            or "Friend"
-        )
-
-        show_main_menu(
-            chat_id,
-            name
-        )
-
-
-    # ==============================================
-    # REMINDER INPUT HANDLER
+    # INPUT
     # ==============================================
 
     @bot.message_handler(
         func=lambda m:
         m.chat.id in reminder_state
     )
-    def handle_reminder_input(message):
-
-        chat_id = message.chat.id
-        user_id = message.from_user.id
+    def reminder_input(message):
 
         if not message.text:
             return
+
+        chat_id = message.chat.id
+        user_id = message.from_user.id
 
         text = message.text.strip()
 
@@ -607,43 +489,38 @@ Arabic Assignment
         )
 
 
-        # ==========================================
+        # ======================================
         # TITLE
-        # ==========================================
+        # ======================================
 
         if state == "title":
 
-            if len(text) < 1:
+            if not text:
 
                 bot.send_message(
                     chat_id,
-                    "❌ Please enter a title."
+                    "❌ Enter a title."
                 )
 
                 return
-
 
             temp_reminder[
                 chat_id
             ]["title"] = text
 
-
             reminder_state[
                 chat_id
             ] = "date"
-
 
             bot.send_message(
                 chat_id,
                 """
 📅 Enter the reminder date.
 
-Use:
+Examples:
 
-DD-MM-YYYY
-
-Example:
-
+today
+tomorrow
 25-10-2026
 """
             )
@@ -651,9 +528,9 @@ Example:
             return
 
 
-        # ==========================================
+        # ======================================
         # DATE
-        # ==========================================
+        # ======================================
 
         if state == "date":
 
@@ -670,28 +547,23 @@ Example:
                     """
 ❌ Invalid date.
 
-Please use:
+Examples:
 
-DD-MM-YYYY
-
-Example:
-
+today
+tomorrow
 25-10-2026
 """
                 )
 
                 return
 
-
             temp_reminder[
                 chat_id
             ]["date"] = selected_date
 
-
             reminder_state[
                 chat_id
             ] = "time"
-
 
             bot.send_message(
                 chat_id,
@@ -701,9 +573,7 @@ Example:
 Examples:
 
 7:30 PM
-
 10:00 AM
-
 21:30
 """
             )
@@ -711,9 +581,9 @@ Examples:
             return
 
 
-        # ==========================================
+        # ======================================
         # TIME
-        # ==========================================
+        # ======================================
 
         if state == "time":
 
@@ -733,33 +603,28 @@ Examples:
 Examples:
 
 7:30 PM
-
 10:00 AM
-
 21:30
 """
                 )
 
                 return
 
-
-            date_value = temp_reminder[
-                chat_id
-            ]["date"]
-
-
-            reminder_datetime = datetime.combine(
-                date_value,
-                selected_time
-            ).replace(
-                tzinfo=TIMEZONE
+            reminder_datetime = (
+                datetime.combine(
+                    temp_reminder[
+                        chat_id
+                    ]["date"],
+                    selected_time
+                )
+                .replace(
+                    tzinfo=TIMEZONE
+                )
             )
-
 
             now = datetime.now(
                 TIMEZONE
             )
-
 
             if reminder_datetime <= now:
 
@@ -768,8 +633,54 @@ Examples:
                     """
 ❌ That time has already passed.
 
-Please create the reminder again with a future date and time.
+Please enter a future time.
 """
+                )
+
+                return
+
+            title = temp_reminder[
+                chat_id
+            ]["title"]
+
+            try:
+
+                response = (
+                    supabase
+                    .table("reminders")
+                    .insert(
+                        {
+                            "user_id":
+                                user_id,
+
+                            "chat_id":
+                                chat_id,
+
+                            "title":
+                                title,
+
+                            "remind_at":
+                                reminder_datetime.isoformat(),
+
+                            "status":
+                                "pending"
+                        }
+                    )
+                    .select("id")
+                    .execute()
+                )
+
+                reminder_id = (
+                    response.data[0]["id"]
+                    if response.data
+                    else "Saved"
+                )
+
+                formatted = (
+                    reminder_datetime
+                    .strftime(
+                        "%d-%m-%Y %I:%M %p"
+                    )
                 )
 
                 reminder_state.pop(
@@ -782,76 +693,9 @@ Please create the reminder again with a future date and time.
                     None
                 )
 
-                reminder_menu(
-                    message
-                )
-
-                return
-
-
-            title = temp_reminder[
-                chat_id
-            ]["title"]
-
-
-            stored_time = reminder_datetime.strftime(
-                "%Y-%m-%d %H:%M"
-            )
-
-
-            conn = sqlite3.connect(
-                DB_NAME
-            )
-
-            cursor = conn.cursor()
-
-
-            cursor.execute(
-                """
-                INSERT INTO reminders (
-                    user_id,
+                bot.send_message(
                     chat_id,
-                    title,
-                    remind_at,
-                    status
-                )
-                VALUES (?, ?, ?, ?, 'pending')
-                """,
-                (
-                    user_id,
-                    chat_id,
-                    title,
-                    stored_time
-                )
-            )
-
-
-            conn.commit()
-
-            reminder_id = cursor.lastrowid
-
-            conn.close()
-
-
-            formatted = reminder_datetime.strftime(
-                "%d-%m-%Y %I:%M %p"
-            )
-
-
-            reminder_state.pop(
-                chat_id,
-                None
-            )
-
-            temp_reminder.pop(
-                chat_id,
-                None
-            )
-
-
-            bot.send_message(
-                chat_id,
-                f"""
+                    f"""
 ✅ Reminder created!
 
 ⏰ Reminder #{reminder_id}
@@ -860,21 +704,32 @@ Please create the reminder again with a future date and time.
 
 📅 {formatted}
 
-🇱🇰 Timezone: Sri Lanka
+🇱🇰 Sri Lanka Time
 """
-            )
+                )
 
+                reminder_menu(
+                    message
+                )
 
-            reminder_menu(
-                message
-            )
+            except Exception as e:
+
+                print(
+                    "Create reminder error:",
+                    e
+                )
+
+                bot.send_message(
+                    chat_id,
+                    "❌ Failed to create reminder."
+                )
 
             return
 
 
-        # ==========================================
+        # ======================================
         # DELETE
-        # ==========================================
+        # ======================================
 
         if state == "delete":
 
@@ -889,7 +744,7 @@ Please create the reminder again with a future date and time.
                 bot.send_message(
                     chat_id,
                     """
-❌ Send only the reminder number.
+❌ Send only the Reminder ID.
 
 Example:
 
@@ -899,79 +754,83 @@ Example:
 
                 return
 
+            try:
 
-            conn = sqlite3.connect(
-                DB_NAME
-            )
-
-            cursor = conn.cursor()
-
-
-            cursor.execute(
-                """
-                SELECT title
-                FROM reminders
-                WHERE id = ?
-                AND user_id = ?
-                AND status = 'pending'
-                """,
-                (
-                    reminder_id,
-                    user_id
+                response = (
+                    supabase
+                    .table("reminders")
+                    .select(
+                        "id,title"
+                    )
+                    .eq(
+                        "id",
+                        reminder_id
+                    )
+                    .eq(
+                        "user_id",
+                        user_id
+                    )
+                    .eq(
+                        "status",
+                        "pending"
+                    )
+                    .execute()
                 )
-            )
 
+                if not response.data:
 
-            result = cursor.fetchone()
+                    bot.send_message(
+                        chat_id,
+                        "❌ Reminder not found."
+                    )
 
+                    return
 
-            if not result:
+                title = response.data[
+                    0
+                ]["title"]
 
-                conn.close()
+                (
+                    supabase
+                    .table("reminders")
+                    .delete()
+                    .eq(
+                        "id",
+                        reminder_id
+                    )
+                    .eq(
+                        "user_id",
+                        user_id
+                    )
+                    .execute()
+                )
+
+                reminder_state.pop(
+                    chat_id,
+                    None
+                )
 
                 bot.send_message(
                     chat_id,
-                    """
-❌ Reminder not found.
-"""
-                )
-
-                return
-
-
-            cursor.execute(
-                """
-                DELETE FROM reminders
-                WHERE id = ?
-                AND user_id = ?
-                """,
-                (
-                    reminder_id,
-                    user_id
-                )
-            )
-
-
-            conn.commit()
-            conn.close()
-
-
-            reminder_state.pop(
-                chat_id,
-                None
-            )
-
-
-            bot.send_message(
-                chat_id,
-                f"""
+                    f"""
 🗑 Reminder deleted.
 
-📚 {result[0]}
+📚 {title}
 """
-            )
+                )
 
+                reminder_menu(
+                    message
+                )
 
-            reminder_menu(
-                message
-            )
+            except Exception as e:
+
+                print(
+                    "Delete reminder error:",
+                    e
+                )
+
+                bot.send_message(
+                    chat_id,
+                    "❌ Failed to delete reminder."
+                )

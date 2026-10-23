@@ -1,47 +1,19 @@
-import sqlite3
 from telebot import types
-from config import DB_NAME
+from db import supabase
+
 
 note_mode = {}
 temp_note = {}
 
 
-# ==================================================
-# DATABASE
-# ==================================================
+def register_note_handlers(
+    bot,
+    show_main_menu
+):
 
-def init_database():
-
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS notes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            title TEXT NOT NULL,
-            content TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-
-    conn.commit()
-    conn.close()
-
-
-init_database()
-
-
-# ==================================================
-# REGISTER NOTE HANDLERS
-# ==================================================
-
-def register_note_handlers(bot, show_main_menu):
-
-
-    # ==============================================
+    # ==========================================
     # NOTES MENU
-    # ==============================================
+    # ==========================================
 
     @bot.message_handler(
         func=lambda m: m.text == "📝 Notes"
@@ -73,59 +45,23 @@ def register_note_handlers(bot, show_main_menu):
 
 Choose an option:
 
-➕ Add a new note
-📚 View saved notes
-🔍 Search notes
-🗑 Delete a note
-""",
-            reply_markup=markup
-        )
-
-
-    # ==============================================
-    # ADD NOTE
-    # ==============================================
-
-    @bot.message_handler(
-        func=lambda m: m.text == "➕ Add Note"
-    )
-    def add_note(message):
-
-        chat_id = message.chat.id
-
-        note_mode[chat_id] = "waiting_title"
-
-        temp_note[chat_id] = {}
-
-        markup = types.ReplyKeyboardMarkup(
-            resize_keyboard=True
-        )
-
-        markup.add(
-            types.KeyboardButton("❌ Cancel Note")
-        )
-
-        bot.send_message(
-            chat_id,
-            """
 ➕ Add Note
-
-Send me the title of your note.
-
-Example:
-
-Database Lecture
+📚 View Notes
+🔍 Search Notes
+🗑 Delete Note
 """,
             reply_markup=markup
         )
 
 
-    # ==============================================
+    # ==========================================
     # CANCEL
-    # ==============================================
+    # ==========================================
 
     @bot.message_handler(
-        func=lambda m: m.text == "❌ Cancel Note"
+        func=lambda m:
+        m.text == "❌ Cancel Note"
+        and m.chat.id in note_mode
     )
     def cancel_note(message):
 
@@ -136,15 +72,54 @@ Database Lecture
 
         bot.send_message(
             chat_id,
-            "❌ Note creation cancelled."
+            "❌ Operation cancelled."
         )
 
         notes_menu(message)
 
 
-    # ==============================================
+    # ==========================================
+    # ADD NOTE
+    # ==========================================
+
+    @bot.message_handler(
+        func=lambda m: m.text == "➕ Add Note"
+    )
+    def add_note(message):
+
+        chat_id = message.chat.id
+
+        note_mode[chat_id] = "title"
+        temp_note[chat_id] = {}
+
+        markup = types.ReplyKeyboardMarkup(
+            resize_keyboard=True
+        )
+
+        markup.add(
+            types.KeyboardButton(
+                "❌ Cancel Note"
+            )
+        )
+
+        bot.send_message(
+            chat_id,
+            """
+➕ Add Note
+
+Send the title of your note.
+
+Example:
+
+Python Lecture
+""",
+            reply_markup=markup
+        )
+
+
+    # ==========================================
     # VIEW NOTES
-    # ==============================================
+    # ==========================================
 
     @bot.message_handler(
         func=lambda m: m.text == "📚 View Notes"
@@ -152,68 +127,74 @@ Database Lecture
     def view_notes(message):
 
         user_id = message.from_user.id
+        chat_id = message.chat.id
 
-        conn = sqlite3.connect(DB_NAME)
-        cursor = conn.cursor()
+        try:
 
-        cursor.execute(
-            """
-            SELECT id, title, content, created_at
-            FROM notes
-            WHERE user_id = ?
-            ORDER BY id DESC
-            """,
-            (user_id,)
-        )
+            response = (
+                supabase
+                .table("notes")
+                .select(
+                    "id,title,content,created_at"
+                )
+                .eq(
+                    "user_id",
+                    user_id
+                )
+                .order(
+                    "id",
+                    desc=True
+                )
+                .execute()
+            )
 
-        notes = cursor.fetchall()
+            notes = response.data or []
 
-        conn.close()
+            if not notes:
 
-        if not notes:
-
-            bot.send_message(
-                message.chat.id,
-                """
+                bot.send_message(
+                    chat_id,
+                    """
 📭 You don't have any saved notes yet.
-
-Press:
-
-➕ Add Note
 """
-            )
+                )
 
-            return
-
-        bot.send_message(
-            message.chat.id,
-            f"📚 You have {len(notes)} saved note(s):"
-        )
-
-        for note in notes:
-
-            note_id = note[0]
-            title = note[1]
-            content = note[2]
-            created = note[3]
+                return
 
             bot.send_message(
-                message.chat.id,
-                f"""
-📝 Note #{note_id}
+                chat_id,
+                f"📚 Saved notes: {len(notes)}"
+            )
 
-📌 {title}
+            for note in notes:
 
-{content}
+                bot.send_message(
+                    chat_id,
+                    f"""
+📝 Note #{note["id"]}
 
-🕒 {created}
+📌 {note["title"]}
+
+{note["content"]}
 """
+                )
+
+        except Exception as e:
+
+            print(
+                "View notes error:",
+                e
+            )
+
+            bot.send_message(
+                chat_id,
+                "❌ Failed to load notes."
             )
 
 
-    # ==============================================
-    # SEARCH NOTES
-    # ==============================================
+    # ==========================================
+    # SEARCH
+    # ==========================================
 
     @bot.message_handler(
         func=lambda m: m.text == "🔍 Search Notes"
@@ -223,6 +204,16 @@ Press:
         chat_id = message.chat.id
 
         note_mode[chat_id] = "search"
+
+        markup = types.ReplyKeyboardMarkup(
+            resize_keyboard=True
+        )
+
+        markup.add(
+            types.KeyboardButton(
+                "❌ Cancel Note"
+            )
+        )
 
         bot.send_message(
             chat_id,
@@ -234,337 +225,344 @@ Send a word or phrase.
 Example:
 
 Python
-"""
+""",
+            reply_markup=markup
         )
 
 
-    # ==============================================
-    # DELETE NOTE
-    # ==============================================
+    # ==========================================
+    # DELETE MENU
+    # ==========================================
 
     @bot.message_handler(
         func=lambda m: m.text == "🗑 Delete Note"
     )
-    def delete_note(message):
+    def delete_note_menu(message):
 
         chat_id = message.chat.id
         user_id = message.from_user.id
 
-        conn = sqlite3.connect(DB_NAME)
-        cursor = conn.cursor()
+        try:
 
-        cursor.execute(
-            """
-            SELECT id, title
-            FROM notes
-            WHERE user_id = ?
-            ORDER BY id DESC
-            """,
-            (user_id,)
-        )
+            response = (
+                supabase
+                .table("notes")
+                .select(
+                    "id,title"
+                )
+                .eq(
+                    "user_id",
+                    user_id
+                )
+                .order(
+                    "id",
+                    desc=True
+                )
+                .execute()
+            )
 
-        notes = cursor.fetchall()
+            notes = response.data or []
 
-        conn.close()
+            if not notes:
 
-        if not notes:
+                bot.send_message(
+                    chat_id,
+                    "📭 No notes to delete."
+                )
+
+                return
+
+            text = (
+                "🗑 Send the Note ID "
+                "you want to delete:\n\n"
+            )
+
+            for note in notes:
+
+                text += (
+                    f'#{note["id"]} - '
+                    f'{note["title"]}\n'
+                )
+
+            note_mode[chat_id] = "delete"
+
+            markup = types.ReplyKeyboardMarkup(
+                resize_keyboard=True
+            )
+
+            markup.add(
+                types.KeyboardButton(
+                    "❌ Cancel Note"
+                )
+            )
 
             bot.send_message(
                 chat_id,
-                "📭 You don't have any notes to delete."
+                text,
+                reply_markup=markup
             )
 
-            return
+        except Exception as e:
 
-        text = "🗑 Send the Note ID you want to delete:\n\n"
-
-        for note in notes:
-
-            text += (
-                f"#{note[0]} - {note[1]}\n"
+            print(
+                "Delete menu error:",
+                e
             )
 
-        note_mode[chat_id] = "delete"
-
-        bot.send_message(
-            chat_id,
-            text
-        )
+            bot.send_message(
+                chat_id,
+                "❌ Failed to load notes."
+            )
 
 
-    # ==============================================
-    # BACK TO MAIN MENU
-    # ==============================================
-
-    @bot.message_handler(
-        func=lambda m:
-        m.text == "⬅️ Main Menu"
-        and (
-            m.chat.id in note_mode
-            or m.text == "⬅️ Main Menu"
-        )
-    )
-    def note_back_main(message):
-
-        chat_id = message.chat.id
-
-        note_mode.pop(chat_id, None)
-        temp_note.pop(chat_id, None)
-
-        first_name = (
-            message.from_user.first_name
-            or "Friend"
-        )
-
-        show_main_menu(
-            chat_id,
-            first_name
-        )
-
-
-    # ==============================================
-    # HANDLE NOTE TEXT
-    # ==============================================
+    # ==========================================
+    # NOTE INPUT
+    # ==========================================
 
     @bot.message_handler(
         func=lambda m:
         m.chat.id in note_mode
     )
-    def handle_note_text(message):
+    def handle_note_input(message):
+
+        if not message.text:
+            return
 
         chat_id = message.chat.id
         user_id = message.from_user.id
 
-        mode = note_mode.get(chat_id)
+        text = message.text.strip()
+
+        mode = note_mode.get(
+            chat_id
+        )
 
 
-        # ==========================================
+        # ======================================
         # TITLE
-        # ==========================================
+        # ======================================
 
-        if mode == "waiting_title":
+        if mode == "title":
 
-            title = message.text.strip()
-
-            if len(title) < 1:
+            if not text:
 
                 bot.send_message(
                     chat_id,
-                    "❌ Please send a valid title."
+                    "❌ Enter a valid title."
                 )
 
                 return
 
-            if len(title) > 100:
+            temp_note[
+                chat_id
+            ]["title"] = text
 
-                bot.send_message(
-                    chat_id,
-                    "❌ Keep the title below 100 characters."
-                )
-
-                return
-
-            temp_note[chat_id]["title"] = title
-
-            note_mode[chat_id] = "waiting_content"
+            note_mode[
+                chat_id
+            ] = "content"
 
             bot.send_message(
                 chat_id,
                 """
 ✅ Title saved.
 
-Now send the content of your note.
-
-You can write multiple sentences or paragraphs.
+Now send the note content.
 """
             )
 
+            return
 
-        # ==========================================
+
+        # ======================================
         # CONTENT
-        # ==========================================
+        # ======================================
 
-        elif mode == "waiting_content":
-
-            content = message.text.strip()
-
-            if not content:
-
-                bot.send_message(
-                    chat_id,
-                    "❌ Note content cannot be empty."
-                )
-
-                return
+        if mode == "content":
 
             title = temp_note[
                 chat_id
             ]["title"]
 
-            conn = sqlite3.connect(
-                DB_NAME
-            )
+            try:
 
-            cursor = conn.cursor()
-
-            cursor.execute(
-                """
-                INSERT INTO notes (
-                    user_id,
-                    title,
-                    content
+                response = (
+                    supabase
+                    .table("notes")
+                    .insert(
+                        {
+                            "user_id": user_id,
+                            "title": title,
+                            "content": text
+                        }
+                    )
+                    .select("id")
+                    .execute()
                 )
-                VALUES (?, ?, ?)
-                """,
-                (
-                    user_id,
-                    title,
-                    content
+
+                note_id = (
+                    response.data[0]["id"]
+                    if response.data
+                    else "Saved"
                 )
-            )
 
-            conn.commit()
+                note_mode.pop(
+                    chat_id,
+                    None
+                )
 
-            note_id = cursor.lastrowid
+                temp_note.pop(
+                    chat_id,
+                    None
+                )
 
-            conn.close()
-
-            note_mode.pop(
-                chat_id,
-                None
-            )
-
-            temp_note.pop(
-                chat_id,
-                None
-            )
-
-            bot.send_message(
-                chat_id,
-                f"""
+                bot.send_message(
+                    chat_id,
+                    f"""
 ✅ Note saved successfully!
 
 📝 Note ID: {note_id}
 
 📌 {title}
 """
-            )
+                )
 
-            notes_menu(message)
+                notes_menu(
+                    message
+                )
+
+            except Exception as e:
+
+                print(
+                    "Save note error:",
+                    e
+                )
+
+                bot.send_message(
+                    chat_id,
+                    "❌ Failed to save note."
+                )
+
+            return
 
 
-        # ==========================================
+        # ======================================
         # SEARCH
-        # ==========================================
+        # ======================================
 
-        elif mode == "search":
+        if mode == "search":
 
-            keyword = message.text.strip()
-
-            if not keyword:
-
-                bot.send_message(
-                    chat_id,
-                    "❌ Please enter something to search."
-                )
-
-                return
-
-            conn = sqlite3.connect(
-                DB_NAME
-            )
-
-            cursor = conn.cursor()
-
-            cursor.execute(
-                """
-                SELECT id, title, content
-                FROM notes
-                WHERE user_id = ?
-                AND (
-                    title LIKE ?
-                    OR content LIKE ?
-                )
-                ORDER BY id DESC
-                """,
-                (
-                    user_id,
-                    f"%{keyword}%",
-                    f"%{keyword}%"
-                )
-            )
-
-            results = cursor.fetchall()
-
-            conn.close()
-
-            note_mode.pop(
-                chat_id,
-                None
-            )
-
-            if not results:
-
-                bot.send_message(
-                    chat_id,
-                    f"""
-🔍 No notes found for:
-
-{keyword}
-"""
-                )
-
-                notes_menu(message)
-
-                return
-
-            bot.send_message(
-                chat_id,
-                f"""
-🔍 Search results for:
-
-{keyword}
-
-Found: {len(results)}
-"""
-            )
-
-            for note in results:
-
-                bot.send_message(
-                    chat_id,
-                    f"""
-📝 Note #{note[0]}
-
-📌 {note[1]}
-
-{note[2]}
-"""
-                )
-
-            notes_menu(message)
-
-
-        # ==========================================
-        # DELETE
-        # ==========================================
-
-        elif mode == "delete":
+            keyword = text.casefold()
 
             try:
 
-                note_id = int(
-                    message.text.strip()
+                response = (
+                    supabase
+                    .table("notes")
+                    .select(
+                        "id,title,content"
+                    )
+                    .eq(
+                        "user_id",
+                        user_id
+                    )
+                    .order(
+                        "id",
+                        desc=True
+                    )
+                    .execute()
                 )
+
+                notes = response.data or []
+
+                results = [
+                    note
+                    for note in notes
+                    if (
+                        keyword
+                        in note[
+                            "title"
+                        ].casefold()
+                        or
+                        keyword
+                        in note[
+                            "content"
+                        ].casefold()
+                    )
+                ]
+
+                note_mode.pop(
+                    chat_id,
+                    None
+                )
+
+                if not results:
+
+                    bot.send_message(
+                        chat_id,
+                        "🔍 No matching notes found."
+                    )
+
+                    notes_menu(
+                        message
+                    )
+
+                    return
+
+                bot.send_message(
+                    chat_id,
+                    f"""
+🔍 Results found: {len(results)}
+"""
+                )
+
+                for note in results:
+
+                    bot.send_message(
+                        chat_id,
+                        f"""
+📝 Note #{note["id"]}
+
+📌 {note["title"]}
+
+{note["content"]}
+"""
+                    )
+
+                notes_menu(
+                    message
+                )
+
+            except Exception as e:
+
+                print(
+                    "Search error:",
+                    e
+                )
+
+                bot.send_message(
+                    chat_id,
+                    "❌ Note search failed."
+                )
+
+            return
+
+
+        # ======================================
+        # DELETE
+        # ======================================
+
+        if mode == "delete":
+
+            try:
+
+                note_id = int(text)
 
             except ValueError:
 
                 bot.send_message(
                     chat_id,
                     """
-❌ Invalid Note ID.
-
-Send only the number.
+❌ Send only the Note ID number.
 
 Example:
 
@@ -574,69 +572,79 @@ Example:
 
                 return
 
-            conn = sqlite3.connect(
-                DB_NAME
-            )
+            try:
 
-            cursor = conn.cursor()
-
-            cursor.execute(
-                """
-                SELECT title
-                FROM notes
-                WHERE id = ?
-                AND user_id = ?
-                """,
-                (
-                    note_id,
-                    user_id
+                response = (
+                    supabase
+                    .table("notes")
+                    .select(
+                        "id,title"
+                    )
+                    .eq(
+                        "id",
+                        note_id
+                    )
+                    .eq(
+                        "user_id",
+                        user_id
+                    )
+                    .execute()
                 )
-            )
 
-            note = cursor.fetchone()
+                if not response.data:
 
-            if not note:
+                    bot.send_message(
+                        chat_id,
+                        "❌ Note not found."
+                    )
 
-                conn.close()
+                    return
+
+                title = response.data[
+                    0
+                ]["title"]
+
+                (
+                    supabase
+                    .table("notes")
+                    .delete()
+                    .eq(
+                        "id",
+                        note_id
+                    )
+                    .eq(
+                        "user_id",
+                        user_id
+                    )
+                    .execute()
+                )
+
+                note_mode.pop(
+                    chat_id,
+                    None
+                )
 
                 bot.send_message(
                     chat_id,
-                    """
-❌ Note not found.
+                    f"""
+🗑 Note deleted!
 
-Make sure you entered the correct Note ID.
+📌 {title}
 """
                 )
 
-                return
-
-            cursor.execute(
-                """
-                DELETE FROM notes
-                WHERE id = ?
-                AND user_id = ?
-                """,
-                (
-                    note_id,
-                    user_id
+                notes_menu(
+                    message
                 )
-            )
 
-            conn.commit()
-            conn.close()
+            except Exception as e:
 
-            note_mode.pop(
-                chat_id,
-                None
-            )
+                print(
+                    "Delete note error:",
+                    e
+                )
 
-            bot.send_message(
-                chat_id,
-                f"""
-🗑 Note deleted successfully!
-
-📌 {note[0]}
-"""
-            )
-
-            notes_menu(message)
+                bot.send_message(
+                    chat_id,
+                    "❌ Failed to delete note."
+                )
