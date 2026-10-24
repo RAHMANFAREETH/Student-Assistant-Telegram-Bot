@@ -86,6 +86,32 @@ MAIN_MENU_ROWS = [
     (HELP,),
 ]
 
+# V5.7 CATEGORY MENU START
+# Retain the exact legacy button labels for all older feature handlers.
+LEGACY_MENU_ROWS = MAIN_MENU_ROWS
+
+UI_AI = "🤖 AI & Questions"
+UI_STUDY = "📚 Study Tools"
+UI_PLAN = "📅 Plans & Reminders"
+UI_PRACTICE = "🧠 Practice & Quiz"
+UI_LANGUAGES = "🌍 Languages"
+UI_PROGRESS = "📊 My Progress"
+UI_FILES = "🎙 Voice & PDF"
+UI_MORE = "📦 More Tools"
+UI_HELP = "❓ Help & Tutorial"
+UI_LANGUAGE = "🌐 Menu Language"
+UI_CATEGORIES = "↩️ All Categories"
+
+MAIN_MENU_ROWS = [
+    (UI_AI, UI_STUDY),
+    (UI_PLAN, UI_PRACTICE),
+    (UI_LANGUAGES, UI_PROGRESS),
+    (UI_FILES, UI_MORE),
+    (UI_HELP, UI_LANGUAGE),
+]
+
+# V5.7 CATEGORY MENU END
+
 
 GLOBAL_BUTTONS = {
     button
@@ -95,6 +121,15 @@ GLOBAL_BUTTONS = {
 # Review statistics is available in the Flashcards submenu. Treat it as
 # a global action so other modules do not consume its text as form data.
 GLOBAL_BUTTONS.add(REVIEW_STATS)
+GLOBAL_BUTTONS.update(button for row in LEGACY_MENU_ROWS for button in row)
+GLOBAL_BUTTONS.update({
+    UI_CATEGORIES,
+    "🇬🇧 English", "🇱🇰 தமிழ்", "🇱🇰 සිංහල", "🇸🇦 العربية",
+    "🚀 Getting Started", "🤖 Ask AI Guide", "📄 Ask My PDF Guide",
+    "🧠 Flashcards Guide", "📅 Study Planning Guide",
+    "🎙 Voice Notes Guide", "🔒 Privacy Tips",
+})
+
 
 
 NAVIGATION_BUTTONS = {

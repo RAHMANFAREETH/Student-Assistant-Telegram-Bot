@@ -13,6 +13,8 @@ from config import (
 # CENTRAL NAVIGATION
 # ==================================================
 
+from ui_v57 import greeting, register_ui_v57_handlers
+
 from navigation import (
     build_main_menu_markup,
 )
@@ -164,63 +166,14 @@ app = Flask(__name__)
 # MAIN MENU
 # ==================================================
 
-def show_main_menu(
-    chat_id,
-    first_name="Friend",
-):
-    markup = build_main_menu_markup()
-
+def show_main_menu(chat_id, first_name="Friend"):
+    """V5.7 compact menu; existing modules still receive original button text."""
     bot.send_message(
         chat_id,
-        (
-            f"👋 Hello {first_name}!\n\n"
-
-            "🎓 Student Assistant Bot V5.5\n\n"
-
-            "Choose what you want to do:\n\n"
-
-            "📄 PDF Tools\n"
-            "📝 Notes\n"
-            "🌐 Translation\n"
-            "⏰ Study Reminders\n\n"
-
-            "📚 Subjects\n"
-            "📅 Assignments\n"
-            "📚 Study Materials\n"
-            "🗓 Timetable\n\n"
-
-            "⏱ Study Planner\n"
-            "🎙 Voice Notes\n"
-            "🌍 Language Tools\n\n"
-
-            "🧠 Flashcards\n"
-            "❓ Quiz\n\n"
-
-            "📝 Exams\n"
-            "✅ Attendance\n"
-            "🎯 Study Goals\n\n"
-
-            "🎓 Semesters\n"
-            "📊 Grades & GPA\n\n"
-
-            "☀️ Today Hub\n"
-            "🔎 Global Search\n\n"
-
-            "📚 Revision Planner\n"
-            "🔥 Study Streak\n\n"
-
-            "🧠 Smart Insights\n"
-            "🔔 Smart Notifications\n\n"
-
-            "📢 Student Resources\n"
-            "📦 Export My Data\n\n"
-
-            "📊 Dashboard\n"
-            "📈 Progress\n"
-            "ℹ️ Help"
-        ),
-        reply_markup=markup,
+        greeting(first_name, chat_id),
+        reply_markup=build_main_menu_markup(),
     )
+
 
 
 # ==================================================
@@ -641,6 +594,9 @@ def user_id(message):
 # so the new main-menu button and /reviews are handled first.
 # ==================================================
 
+# V5.7 category handlers MUST come before legacy handlers.
+register_ui_v57_handlers(bot, show_main_menu)
+
 register_study_context_handlers(bot, show_main_menu)
 register_ai_study_assistant_handlers(bot, show_main_menu)
 
@@ -886,7 +842,7 @@ def home():
     return {
         "status": "ok",
         "bot": "Student Assistant Bot",
-        "version": "5.5",
+        "version": "5.7",
         "database": "Supabase",
         "deployment": "Render",
 
