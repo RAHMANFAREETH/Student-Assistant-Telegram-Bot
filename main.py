@@ -17,6 +17,8 @@ from navigation import (
     build_main_menu_markup,
 )
 
+from ai_study_assistant import register_ai_study_assistant_handlers
+
 from navigation_handlers import (
     register_navigation_handlers,
 )
@@ -172,7 +174,7 @@ def show_main_menu(
         (
             f"👋 Hello {first_name}!\n\n"
 
-            "🎓 Student Assistant Bot V5.4\n\n"
+            "🎓 Student Assistant Bot V5.5\n\n"
 
             "Choose what you want to do:\n\n"
 
@@ -583,6 +585,9 @@ def help_command(message):
             "/dashboard\n"
             "/progress\n"
             "/translate\n"
+            "/ai\n"
+            "/aiclear\n"
+            "/aistats\n"
             "/healthcheck\n"
             "/systemhealth"
     )
@@ -634,6 +639,8 @@ def user_id(message):
 # V5.4 REVIEW HANDLERS — register before legacy module handlers
 # so the new main-menu button and /reviews are handled first.
 # ==================================================
+
+register_ai_study_assistant_handlers(bot, show_main_menu)
 
 register_spaced_repetition_handlers(
     bot,
@@ -877,7 +884,7 @@ def home():
     return {
         "status": "ok",
         "bot": "Student Assistant Bot",
-        "version": "5.4",
+        "version": "5.5",
         "database": "Supabase",
         "deployment": "Render",
 
@@ -909,6 +916,7 @@ def home():
             "language_tools": True,
             "flashcards": True,
             "spaced_repetition": True,
+            "ai_study_assistant": True,
             "quiz": True,
             "exams": True,
             "attendance": True,
@@ -1122,7 +1130,7 @@ if __name__ == "__main__":
         )
 
         print(
-            "🎓 Student Assistant Bot V5.4 enabled."
+            "🎓 Student Assistant Bot V5.5 enabled."
         )
 
         print(

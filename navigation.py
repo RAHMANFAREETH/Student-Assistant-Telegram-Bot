@@ -46,6 +46,8 @@ DATA_EXPORT = "📦 Export My Data"
 DASHBOARD = "📊 Dashboard"
 PROGRESS = "📈 Progress"
 
+ASK_AI = "🤖 Ask AI"
+
 HELP = "ℹ️ Help"
 
 
@@ -76,6 +78,7 @@ MAIN_MENU_ROWS = [
     (SMART_INSIGHTS, SMART_NOTIFICATIONS),
     (STUDENT_RESOURCES, DATA_EXPORT),
     (DASHBOARD, PROGRESS),
+    (ASK_AI,),
     (HELP,),
 ]
 
