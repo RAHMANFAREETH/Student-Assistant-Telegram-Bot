@@ -140,6 +140,14 @@ def _provider_call(model, messages, max_tokens):
         raise AIUnavailable("⌛ The AI took too long. Please try again later.", "timeout") from exc
     except requests.exceptions.RequestException as exc:
         raise AIUnavailable("🌐 AI connection unavailable. Please try again later.", "network") from exc
+    # Log model and HTTP status, never API tokens, prompts, or response bodies.
+    # This line appears for ALL HTTP responses, including 401/403/429.
+    print(
+        "Cloudflare AI diagnostic:",
+        "Model:", model,
+        "HTTP Status:", resp.status_code,
+        flush=True,
+    )
     if resp.status_code == 429:
         raise AIUnavailable("⏳ AI free-tier quota or request limit reached. Please try later.", "rate_limit")
     if resp.status_code in (401, 403):
