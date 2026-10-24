@@ -148,6 +148,30 @@ def _provider_call(model, messages, max_tokens):
         "HTTP Status:", resp.status_code,
         flush=True,
     )
+    # Cloudflare error responses contain machine-readable numeric codes.
+    # Print only those codes, not response bodies (which could echo private data).
+    if resp.status_code >= 400:
+        error_codes = []
+        try:
+            payload = resp.json()
+            if isinstance(payload, dict):
+                for item in (payload.get("errors") or [])[:5]:
+                    if isinstance(item, dict):
+                        code = item.get("code")
+                        # Numeric codes are safe to log. Never log server messages,
+                        # request bodies, prompts, or authorization headers.
+                        if isinstance(code, int) and not isinstance(code, bool):
+                            error_codes.append(str(code))
+                        elif isinstance(code, str) and re.fullmatch(r"[0-9]{1,8}", code):
+                            error_codes.append(code)
+        except (ValueError, TypeError, AttributeError):
+            pass
+        print(
+            "Cloudflare AI error codes:",
+            ",".join(error_codes) if error_codes else "not_provided",
+            "Model:", model,
+            flush=True,
+        )
     if resp.status_code == 429:
         raise AIUnavailable("⏳ AI free-tier quota or request limit reached. Please try later.", "rate_limit")
     if resp.status_code in (401, 403):
@@ -172,10 +196,23 @@ def _provider_call(model, messages, max_tokens):
     raise AIUnavailable("⚠️ No answer returned. Please try again.", "empty_response")
 
 
-def _check_safety(text, *, response=False):
-    # Llama Guard is an additional imperfect filter, not a guarantee of teen safety.
-    role = "assistant" if response else "user"
-    result = _provider_call(GUARD_MODEL, [{"role": role, "content": text[:2500]}], 64)
+def _check_safety(text, *, response=False, original_question=None):
+    """Classify student input or a generated answer with Llama Guard 3.
+
+    Cloudflare Llama Guard requires role-alternating messages. A response check
+    must contain a user turn followed by an assistant turn; an assistant-only
+    payload causes HTTP 400. Keep moderation enabled and fail closed.
+    """
+    if response:
+        if not isinstance(original_question, str) or not original_question.strip():
+            raise AIUnavailable("⚠️ Safety check unavailable. Please try again later.", "safety_context_missing")
+        messages = [
+            {"role": "user", "content": original_question[:1600]},
+            {"role": "assistant", "content": text[:2500]},
+        ]
+    else:
+        messages = [{"role": "user", "content": text[:2500]}]
+    result = _provider_call(GUARD_MODEL, messages, 64)
     first = result.strip().splitlines()[0].strip().lower()
     if first == "safe":
         return True
@@ -378,7 +415,7 @@ def register_ai_study_assistant_handlers(bot, show_main_menu):
             answer = re.sub(r"<think>.*?</think>", "", answer, flags=re.S | re.I).strip()
             if not answer:
                 raise AIUnavailable("⚠️ No answer returned. Try asking differently.", "empty_response")
-            if not _check_safety(answer, response=True):
+            if not _check_safety(answer, response=True, original_question=text):
                 bot.send_message(chat_id,
                     "⚠️ I couldn't provide a suitable answer. Please rephrase the study question.")
                 return
