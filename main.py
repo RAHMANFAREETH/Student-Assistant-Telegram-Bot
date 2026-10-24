@@ -17,6 +17,7 @@ from navigation import (
     build_main_menu_markup,
 )
 
+from study_context_ai import register_study_context_handlers
 from ai_study_assistant import register_ai_study_assistant_handlers
 
 from navigation_handlers import (
@@ -640,6 +641,7 @@ def user_id(message):
 # so the new main-menu button and /reviews are handled first.
 # ==================================================
 
+register_study_context_handlers(bot, show_main_menu)
 register_ai_study_assistant_handlers(bot, show_main_menu)
 
 register_spaced_repetition_handlers(

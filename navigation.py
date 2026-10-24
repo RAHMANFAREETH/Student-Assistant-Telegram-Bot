@@ -47,6 +47,9 @@ DASHBOARD = "📊 Dashboard"
 PROGRESS = "📈 Progress"
 
 ASK_AI = "🤖 Ask AI"
+ASK_NOTES = "📝 Ask My Notes"
+ASK_PDF = "📄 Ask My PDF"
+
 
 HELP = "ℹ️ Help"
 
@@ -79,6 +82,7 @@ MAIN_MENU_ROWS = [
     (STUDENT_RESOURCES, DATA_EXPORT),
     (DASHBOARD, PROGRESS),
     (ASK_AI,),
+    (ASK_NOTES, ASK_PDF),
     (HELP,),
 ]
 
