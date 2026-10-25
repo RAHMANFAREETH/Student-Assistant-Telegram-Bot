@@ -27,6 +27,7 @@ TELEGRAM_CHUNK_SIZE = 3600
 
 
 from navigation import GLOBAL_BUTTONS
+from material_library_v75 import register_material_library_handlers
 
 
 STOPWORDS = {
@@ -409,6 +410,9 @@ def register_study_material_handlers(
                 "➕ Add Material"
             ),
             types.KeyboardButton(
+                "📚 Material Library"
+            ),
+            types.KeyboardButton(
                 "📂 My Materials"
             ),
             types.KeyboardButton(
@@ -445,6 +449,8 @@ def register_study_material_handlers(
             ),
             reply_markup=markup,
         )
+
+    register_material_library_handlers(bot, show_material_menu, material_state)
 
     def show_material_list(
         message
