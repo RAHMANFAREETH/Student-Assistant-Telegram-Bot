@@ -163,6 +163,8 @@ def register_material_library_handlers(bot, show_material_menu, material_state, 
             reply(chat_id, '🔒 Material not found or not accessible.')
             return
         markup = keyboard()
+        markup.row(button('📥 TXT Extract', f'v77:req:txt:{material_id}'),
+                   button('📝 Markdown Extract', f'v77:req:md:{material_id}'))
         markup.row(button('🗑 Delete (confirm)', f'v75:del:{material_id}'),
                    button('📚 Library', 'v75:page:0'))
         reply(chat_id, preview_text(material), markup)
@@ -301,5 +303,8 @@ def register_material_library_handlers(bot, show_material_menu, material_state, 
     register_material_filter_handlers(
         bot, types_module, list_fn, material_state, show_material_menu, show_library, clock=now
     )
+
+    from material_download_v77 import register_material_download_handlers
+    register_material_download_handlers(bot, types_module, get_fn, material_state, clock=now)
 
     return {'show_library': show_library, 'show_preview': show_preview}
