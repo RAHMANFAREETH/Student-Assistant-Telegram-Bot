@@ -144,6 +144,7 @@ def register_material_library_handlers(bot, show_material_menu, material_state, 
             paging.append(button('Older ➡️', f'v75:{kind}:{page + 1}'))
         if paging:
             markup.row(*paging)
+        markup.add(button('🧰 Filters & Stats', 'v76:menu'))
         markup.add(button('🔙 Materials Menu', 'v75:menu:0'))
         if query is None:
             text = f'{heading}\nSaved materials: {len(rows)} (latest {MAX_BROWSE} maximum)\nPage {page + 1}/{pages}\n\nTap a document to preview it.'
@@ -295,5 +296,10 @@ def register_material_library_handlers(bot, show_material_menu, material_state, 
                 return
             reply(chat_id, '✅ Material deleted.' if deleted else '⚠️ Material was not deleted.')
             return
+
+    from material_filters_v76 import register_material_filter_handlers
+    register_material_filter_handlers(
+        bot, types_module, list_fn, material_state, show_material_menu, show_library, clock=now
+    )
 
     return {'show_library': show_library, 'show_preview': show_preview}
