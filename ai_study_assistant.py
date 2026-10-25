@@ -34,6 +34,33 @@ BACK_BUTTON = "⬅️ AI Menu"
 CONTINUE_BUTTON = "➡️ Continue Answer"
 SIMPLIFY_BUTTON = "🧩 Explain Simply"
 EXAMPLES_BUTTON = "💡 More Examples"
+# V6.4: turn the latest AI answer into study aids
+SUMMARY_BUTTON = "📝 Summarize Reply"
+KEYPOINTS_BUTTON = "📌 Key Points"
+PRACTICE_BUTTON = "🧠 Practice Quiz"
+V64_STUDY_ACTIONS = {
+    SUMMARY_BUTTON: (
+        "Summarize only the most recent assistant answer excerpt available in our chat history "
+        "in 4 or 5 short clear sentences. Use the same language as that answer, "
+        "including Tamil, Sinhala, English, or Arabic. Do not invent any missing facts. "
+        "If the excerpt is incomplete, briefly say the summary covers only the available excerpt. "
+        "Finish with one takeaway sentence."
+    ),
+    KEYPOINTS_BUTTON: (
+        "Extract up to five concise numbered key study points supported by the most recent "
+        "assistant answer excerpt available in our chat history. Use the same language "
+        "as the answer. Do not invent or add facts that the excerpt does not contain. "
+        "If the excerpt is incomplete, say these are points from the available excerpt."
+    ),
+    PRACTICE_BUTTON: (
+        "Create exactly three short multiple-choice practice questions based ONLY on the "
+        "most recent assistant answer excerpt available in our chat history. "
+        "For each question give four choices A, B, C, D. After all questions, "
+        "provide an answer key with a one-sentence explanation for each answer. "
+        "Match the answer's language. If the excerpt lacks enough factual detail, "
+        "make fewer questions and say why rather than inventing answers."
+    ),
+}
 V63_FOLLOW_UPS = {
     CONTINUE_BUTTON: (
         "Continue your previous answer immediately after its last part, without repeating it. "
@@ -346,6 +373,8 @@ def _ai_chat_markup():
     markup.row(types.KeyboardButton(BACK_BUTTON), types.KeyboardButton(CLEAR_BUTTON))
     markup.row(types.KeyboardButton(CONTINUE_BUTTON), types.KeyboardButton(SIMPLIFY_BUTTON))
     markup.add(types.KeyboardButton(EXAMPLES_BUTTON))
+    markup.row(types.KeyboardButton(SUMMARY_BUTTON), types.KeyboardButton(KEYPOINTS_BUTTON))
+    markup.add(types.KeyboardButton(PRACTICE_BUTTON))
     markup.add(types.KeyboardButton("🏠 Main Menu"))
     return markup
 
@@ -507,6 +536,14 @@ def register_ai_study_assistant_handlers(bot, show_main_menu):
                     "🤖 First ask a study question and get an answer, then use this shortcut.")
                 return
             text = V63_FOLLOW_UPS[text]
+        # V6.4 shortcuts require a previously completed answer in this student's session.
+        if text in V64_STUDY_ACTIONS:
+            history = session.get("history") or []
+            if not history or history[-1].get("role") != "assistant":
+                bot.send_message(message.chat.id,
+                    "🤖 First ask a study question and get an answer, then use this study tool.")
+                return
+            text = V64_STUDY_ACTIONS[text]
         if len(text) > MAX_INPUT_CHARS:
             bot.send_message(message.chat.id,
                 f"✂️ Question too long. Please use {MAX_INPUT_CHARS} characters or fewer.")
