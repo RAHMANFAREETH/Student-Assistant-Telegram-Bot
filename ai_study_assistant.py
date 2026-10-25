@@ -41,7 +41,8 @@ MODE_LABELS = {
 CF_MODEL = "@cf/qwen/qwen3-30b-a3b-fp8"
 GUARD_MODEL = "@cf/meta/llama-guard-3-8b"
 MAX_INPUT_CHARS = 1600
-MAX_OUTPUT_TOKENS = 650
+# V6.2.2: allow complete multilingual study explanations without extra requests
+MAX_OUTPUT_TOKENS = 1800
 HISTORY_PAIRS = 3
 SESSION_TTL_SECONDS = 1800
 MAX_SESSIONS = 200
@@ -248,6 +249,8 @@ def _system_prompt(mode):
         "You are Student Assistant, a friendly academic tutor for secondary and university students. "
         "Explain clearly, encourage understanding over cheating, give examples and practice. "
         "Respond in the student's language (Tamil, Sinhala, English, or Arabic), unless they request another. "
+        "Write clear Telegram-friendly plain text without Markdown symbols such as ### or **. "
+        "For numbered examples, keep each example brief and finish every requested item. "
         "Be age-appropriate. Do not request private identity details, location or contacts. "
         "Do not produce sexual content, illegal instructions, self-harm encouragement, or dangerous advice. "
         "For distress, suggest a trusted adult or professional; for emergencies, urge immediate local help. "
