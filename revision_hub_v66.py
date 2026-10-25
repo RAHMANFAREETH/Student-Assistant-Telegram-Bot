@@ -116,9 +116,84 @@ def send_study_library(bot, db, chat_id, uid, page=0):
         return
     _note_choices(bot, chat_id, rows,
                   f"📚 Saved AI Notes • Page {page + 1}\n"
-                  "Tap any note to revise. Search titles: /studyfind photosynthesis",
+                  "Tap a note to revise. Titles: /studyfind biology\nFull text: /studysearch biology",
                   prev_page=page-1 if page else None,
                   next_page=page+1 if has_more and page < 999 else None)
+
+
+# V6.8 Full-Text Saved AI Note Search
+STUDYSEARCH_MAX_RECENT = SEARCH_MAX_RECENT  # search only latest 200 saved AI notes
+STUDYSEARCH_PREVIEW_CHARS = 125
+
+
+def _v68_excerpt(text, term, max_chars=STUDYSEARCH_PREVIEW_CHARS):
+    """A short, unformatted snippet near the first occurrence of the literal search term."""
+    content = str(text or "")
+    index = content.casefold().find(term.casefold())
+    if index < 0:
+        return ""
+    start = max(0, index - 40)
+    end = min(len(content), start + max_chars)
+    piece = " ".join(content[start:end].split())
+    # Control chars should not break the private Telegram preview.
+    piece = "".join(c for c in piece if c.isprintable())
+    return ("…" if start else "") + piece[:max_chars] + ("…" if end < len(content) else "")
+
+
+def search_saved_ai_content(db, uid, term):
+    """Read-only, user-filtered literal search in title or content, newest 200 notes.
+
+    Returns (at most 8 result dictionaries, total matches, scan_capped).
+    Title matches are listed first, then body-only matches; both retain newest order.
+    """
+    term = str(term or "").strip()
+    if not 2 <= len(term) <= 60 or any(ord(c) < 32 for c in term):
+        raise ValueError("Search term must be 2–60 printable characters")
+    data = _rows(db.table("notes").select("id,title,content")
+                 .eq("user_id", int(uid)).ilike("title", "AI Study:%")
+                 .order("id", desc=True).limit(STUDYSEARCH_MAX_RECENT).execute())
+    needle = term.casefold()
+    titles, bodies = [], []
+    for row in data:
+        title = str(row.get("title") or "")
+        content = str(row.get("content") or "")
+        if not title.startswith("AI Study:"):
+            continue
+        if needle in title.casefold():
+            titles.append({"id": row.get("id"), "title": title,
+                           "excerpt": "Title match", "kind": "title"})
+        elif needle in content.casefold():
+            bodies.append({"id": row.get("id"), "title": title,
+                           "excerpt": _v68_excerpt(content, term), "kind": "content"})
+    ranked = titles + bodies
+    return ranked[:LIBRARY_PAGE_SIZE], len(ranked), len(data) >= STUDYSEARCH_MAX_RECENT
+
+
+def show_saved_ai_search(bot, db, chat_id, uid, term):
+    matches, count, scan_capped = search_saved_ai_content(db, uid, term)
+    if not matches:
+        bot.send_message(chat_id, "🔎 No matches in recent saved AI notes. Try /studysearch with another word.")
+        return
+    kb = types.InlineKeyboardMarkup(row_width=1)
+    lines = [f"🔎 Saved AI Notes: {count} matching note(s).",
+             f"Search: {term[:60]}", "Tap a title to open the complete note."]
+    for row in matches:
+        try:
+            ident = int(row["id"])
+            if ident < 1 or ident >= 10**18:
+                continue
+        except (TypeError, ValueError, KeyError):
+            continue
+        title = " ".join(str(row["title"]).split())[:48]
+        kb.add(types.InlineKeyboardButton("📖 " + title,
+                   callback_data=f"v66:n:{ident}"))
+        if row["kind"] == "content":
+            lines.append("• " + title[:44] + ": " + row["excerpt"])
+    if count > LIBRARY_PAGE_SIZE:
+        lines.append(f"Showing first {LIBRARY_PAGE_SIZE} results (title matches first).")
+    if scan_capped:
+        lines.append("⚠️ Only the 200 most recent AI notes were searched.")
+    bot.send_message(chat_id, "\n".join(lines)[:3500], reply_markup=kb)
 
 
 def load_note(db, user_id: int, note_id: int):
@@ -258,6 +333,28 @@ def register_revision_hub_v66_handlers(bot, show_main_menu):
         warning = "\nSearch checked only the 200 most recent AI notes." if capped else ""
         _note_choices(bot, message.chat.id, rows,
                       f"🔎 Found {count} title matches; showing up to 8.{warning}")
+
+    @bot.message_handler(commands=["studysearch"])
+    def revision_content_search(message):
+        if not _private(message):
+            bot.send_message(message.chat.id, "🔒 Use this in a private chat.")
+            return
+        text = str(getattr(message, "text", "") or "")
+        term = text.partition(" ")[2].strip()
+        if not 2 <= len(term) <= 60 or any(ord(c) < 32 for c in term):
+            bot.send_message(message.chat.id,
+                             "🔎 Search saved AI note titles AND content:\n"
+                             "/studysearch photosynthesis\n"
+                             "/studysearch ஒளிச்சேர்க்கை\n"
+                             "Type 2–60 characters after the command.")
+            return
+        try:
+            show_saved_ai_search(bot, supabase, message.chat.id,
+                                 message.from_user.id, term)
+        except Exception as exc:
+            print("V6.8 private content search failed:", type(exc).__name__)
+            bot.send_message(message.chat.id,
+                             "⚠️ Note search is unavailable. Try again later.")
 
     @bot.message_handler(commands=["studypractice", "practicecards"])
     @bot.message_handler(func=lambda m: getattr(m, "text", None) == PRACTICE)
