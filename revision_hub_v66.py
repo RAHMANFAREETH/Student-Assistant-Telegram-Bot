@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from telebot import types
 from db import supabase
 from safe_utils import split_telegram_text
+from study_export_v69 import register_study_export_v69_handlers
 
 LIBRARY = "📚 My AI Study Library"
 REVISE = "🔄 Revise AI Note"
@@ -116,7 +117,7 @@ def send_study_library(bot, db, chat_id, uid, page=0):
         return
     _note_choices(bot, chat_id, rows,
                   f"📚 Saved AI Notes • Page {page + 1}\n"
-                  "Tap a note to revise. Titles: /studyfind biology\nFull text: /studysearch biology",
+                  "Tap a note to revise. Titles: /studyfind biology\nFull text: /studysearch biology\nExport: /studyexport",
                   prev_page=page-1 if page else None,
                   next_page=page+1 if has_more and page < 999 else None)
 
@@ -294,7 +295,8 @@ def register_revision_hub_v66_handlers(bot, show_main_menu):
                          "🔄 Revise AI Note — open a saved note\n"
                          "🧠 Practice Saved Cards — reveal saved flashcard answers\n"
                          "📊 Revision Progress — tracked /reviews statistics\n"
-                         "⏰ Revision Reminders — use existing planner and reminders",
+                         "⏰ Revision Reminders — use existing planner and reminders\n"
+                         "📤 Export AI Notes — /studyexport",
                          reply_markup=_reply_markup())
 
     @bot.message_handler(commands=["studylibrary", "reviseagain"])
@@ -493,4 +495,6 @@ def register_revision_hub_v66_handlers(bot, show_main_menu):
             print("V6.7 page load failed:", type(exc).__name__)
             bot.send_message(call.message.chat.id, "⚠️ Could not load that page. Try /studylibrary.")
 
+    # V6.9 AI Study Notes Export registration
+    register_study_export_v69_handlers(bot, supabase)
     return True
