@@ -137,6 +137,13 @@ GLOBAL_BUTTONS.update({
 # Add BEFORE ALL_NAVIGATION_BUTTONS is constructed; preserve older buttons.
 GLOBAL_BUTTONS.update({"🏆 Achievements", "⭐ My Level"})
 
+# V6.6 revision hub global navigation
+# Older stateful handlers must yield when a user taps these buttons.
+GLOBAL_BUTTONS.update({
+    "📖 Revision Hub", "📚 My AI Study Library", "🔄 Revise AI Note",
+    "🧠 Practice Saved Cards", "📊 Revision Progress", "⏰ Revision Reminders",
+})
+
 NAVIGATION_BUTTONS = {
     MAIN_MENU,
     LEGACY_MAIN_MENU,

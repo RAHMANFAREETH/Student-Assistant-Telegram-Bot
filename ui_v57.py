@@ -27,11 +27,14 @@ BACK_CATEGORIES = "↩️ All Categories"
 
 CATEGORY_FEATURES = OrderedDict([
     (CAT_AI, ["🤖 Ask AI", "📝 Ask My Notes", "📄 Ask My PDF"]),
-    (CAT_STUDY, ["📚 Subjects", "📝 Notes", "📚 Study Materials", "🔎 Global Search"]),
+    # V6.6 revision hub menu options
+    (CAT_STUDY, ["📚 Subjects", "📝 Notes", "📚 Study Materials", "🔎 Global Search",
+                 "📖 Revision Hub", "📚 My AI Study Library", "🔄 Revise AI Note"]),
     (CAT_PLANNER, ["📅 Assignments", "🗓 Timetable", "📝 Exams", "⏱ Study Planner",
                    "⏰ Study Reminder", "🎯 Study Goals", "🔔 Smart Notifications"]),
     (CAT_PRACTICE, ["🧠 Flashcards", "🧠 Due Reviews", "📊 Review Stats", "❓ Quiz",
-                    "📚 Revision Planner"]),
+                    "📚 Revision Planner", "🧠 Practice Saved Cards", "📊 Revision Progress",
+                    "⏰ Revision Reminders"]),
     (CAT_LANGUAGE, ["🌐 Translate", "🌍 Language Tools"]),
     (CAT_PROGRESS, ["☀️ Today Hub", "📊 Dashboard", "📈 Progress", "✅ Attendance",
                     "📊 Grades & GPA", "🎓 Semesters", "🔥 Study Streak", "🏆 Achievements", "⭐ My Level", "🧠 Smart Insights"]),
