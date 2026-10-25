@@ -477,3 +477,8 @@ def register_ai_study_assistant_handlers(bot, show_main_menu):
         bot.send_message(message.chat.id, "🤖 Thinking... I'll reply here shortly.")
 
     return {"menu": send_ai_menu, "sessions": _sessions}
+
+# V6.0 aggregate Cloudflare monitoring (no prompt data)
+# This wraps existing calls without modifying provider requests or safety logic.
+from ai_ops_v60 import wrap_cloudflare_provider
+_provider_call = wrap_cloudflare_provider(_provider_call)

@@ -15,6 +15,7 @@ from config import (
 
 from ui_v57 import greeting, register_ui_v57_handlers
 from achievements_v58 import register_achievements_v58_handlers
+from ai_ops_v60 import register_ai_ops_v60_handlers
 
 from navigation import (
     build_main_menu_markup,
@@ -598,6 +599,7 @@ def user_id(message):
 # V5.7 category handlers MUST come before legacy handlers.
 register_ui_v57_handlers(bot, show_main_menu)
 register_achievements_v58_handlers(bot, show_main_menu)
+register_ai_ops_v60_handlers(bot)
 
 register_study_context_handlers(bot, show_main_menu)
 register_ai_study_assistant_handlers(bot, show_main_menu)
@@ -844,7 +846,7 @@ def home():
     return {
         "status": "ok",
         "bot": "Student Assistant Bot",
-        "version": "5.8",
+        "version": "6.0",
         "database": "Supabase",
         "deployment": "Render",
 
