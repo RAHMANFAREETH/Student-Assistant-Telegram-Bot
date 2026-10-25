@@ -278,6 +278,11 @@ def _send_note(bot, chat_id, row):
     bot.send_message(chat_id, "✅ Finished reviewing this note.\n"
                      "Try 🧠 Practice Saved Cards or /reviews to study with flashcards.",
                      reply_markup=_reply_markup())
+    # V7.1 Individual Note Quick Actions
+    from study_note_actions_v71 import note_actions_keyboard
+    actions = note_actions_keyboard(types, row.get("id"))
+    if actions is not None:
+        bot.send_message(chat_id, "📎 Quick actions for this note:", reply_markup=actions)
 
 
 def register_revision_hub_v66_handlers(bot, show_main_menu):
@@ -494,6 +499,10 @@ def register_revision_hub_v66_handlers(bot, show_main_menu):
         except Exception as exc:
             print("V6.7 page load failed:", type(exc).__name__)
             bot.send_message(call.message.chat.id, "⚠️ Could not load that page. Try /studylibrary.")
+
+    # V7.1 Individual Note Quick Actions registration
+    from study_note_actions_v71 import register_study_note_actions_v71_handlers
+    register_study_note_actions_v71_handlers(bot, supabase, load_note, send_study_library)
 
     # V6.9 AI Study Notes Export registration
     register_study_export_v69_handlers(bot, supabase)
