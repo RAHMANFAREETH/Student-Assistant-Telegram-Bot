@@ -38,6 +38,19 @@ EXAMPLES_BUTTON = "💡 More Examples"
 SUMMARY_BUTTON = "📝 Summarize Reply"
 KEYPOINTS_BUTTON = "📌 Key Points"
 PRACTICE_BUTTON = "🧠 Practice Quiz"
+# V6.5: student-confirmed saves to Notes and Flashcards
+SAVE_NOTE_BUTTON = "💾 Save AI Answer"
+SAVE_QUIZ_BUTTON = "🗂 Save AI Quiz"
+SAVE_CONFIRM_BUTTON = "✅ Confirm Save"
+SAVE_CANCEL_BUTTON = "❌ Cancel Save"
+V65_SAVE_ACTIONS = frozenset((SAVE_NOTE_BUTTON, SAVE_QUIZ_BUTTON))
+
+
+def _v65_confirmation_markup():
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
+    markup.row(types.KeyboardButton(SAVE_CONFIRM_BUTTON), types.KeyboardButton(SAVE_CANCEL_BUTTON))
+    return markup
+
 V64_STUDY_ACTIONS = {
     SUMMARY_BUTTON: (
         "Summarize only the most recent assistant answer excerpt available in our chat history "
@@ -358,6 +371,13 @@ def _remember(user_id, question, answer):
             {"role": "assistant", "content": answer[-1800:]},
         ])[-HISTORY_PAIRS * 2:]
         entry["updated_at"] = time.monotonic()
+        # Keep the complete last moderated AI reply for explicit student saves.
+        # This is memory-only (subject to the existing session TTL and size bound).
+        entry["last_answer"] = answer if len(answer) <= 20000 else ""
+        entry["last_question"] = question
+        entry.pop("pending_save", None)
+        entry["saved_note"] = False
+        entry["saved_quiz"] = False
 
 
 def _ai_menu_markup():
@@ -375,6 +395,7 @@ def _ai_chat_markup():
     markup.add(types.KeyboardButton(EXAMPLES_BUTTON))
     markup.row(types.KeyboardButton(SUMMARY_BUTTON), types.KeyboardButton(KEYPOINTS_BUTTON))
     markup.add(types.KeyboardButton(PRACTICE_BUTTON))
+    markup.row(types.KeyboardButton(SAVE_NOTE_BUTTON), types.KeyboardButton(SAVE_QUIZ_BUTTON))
     markup.add(types.KeyboardButton("🏠 Main Menu"))
     return markup
 
@@ -527,6 +548,90 @@ def register_ai_study_assistant_handlers(bot, show_main_menu):
             _clear(user_id)
             return ContinueHandling()
         if not text:
+            return
+        # V6.5 save commands never call an AI provider or claim an AI quota.
+        if text in V65_SAVE_ACTIONS or text in (SAVE_CONFIRM_BUTTON, SAVE_CANCEL_BUTTON):
+            with _jobs_lock:
+                busy = user_id in _active_user_ids
+            if busy:
+                bot.send_message(message.chat.id,
+                    "⏳ The AI reply is still being generated. Try saving after it finishes.")
+                return
+            if text in V65_SAVE_ACTIONS:
+                from ai_save_v65 import prepare_note, parse_quiz_cards, SaveValidationError
+                with _sessions_lock:
+                    if _sessions.get(user_id) is not session:
+                        return
+                    answer = session.get("last_answer") or ""
+                    question = session.get("last_question") or ""
+                    done = session.get("saved_note" if text == SAVE_NOTE_BUTTON else "saved_quiz", False)
+                if done:
+                    bot.send_message(message.chat.id, "✅ This answer was already saved in this chat session.")
+                    return
+                if not answer:
+                    bot.send_message(message.chat.id,
+                        "🤖 Ask AI for an answer first. Very long answers cannot be saved directly.")
+                    return
+                try:
+                    if text == SAVE_NOTE_BUTTON:
+                        payload = prepare_note(question, answer)
+                        action = "note"
+                        preview = ("📝 Save to My Notes?\nTitle: " + payload["title"] +
+                                   "\nAnswer length: " + str(len(payload["content"])) + " characters")
+                    else:
+                        payload = parse_quiz_cards(answer)
+                        action = "quiz"
+                        preview = ("🧠 Save " + str(len(payload)) +
+                                   " multiple-choice questions to Flashcards?\n" +
+                                   "Cards will be saved with No Subject.\nFirst question: " +
+                                   payload[0]["question"].splitlines()[0][:120])
+                except SaveValidationError as exc:
+                    bot.send_message(message.chat.id, "⚠️ " + str(exc))
+                    return
+                with _sessions_lock:
+                    if _sessions.get(user_id) is not session:
+                        return
+                    session["pending_save"] = {"action": action, "payload": payload}
+                bot.send_message(message.chat.id,
+                    preview + "\n\nSelect Confirm Save or Cancel Save.",
+                    reply_markup=_v65_confirmation_markup())
+                return
+            if text == SAVE_CANCEL_BUTTON:
+                with _sessions_lock:
+                    if _sessions.get(user_id) is session:
+                        session.pop("pending_save", None)
+                bot.send_message(message.chat.id, "❌ Save cancelled. Nothing was written.",
+                                 reply_markup=_ai_chat_markup())
+                return
+            with _sessions_lock:
+                if _sessions.get(user_id) is not session:
+                    return
+                pending = session.pop("pending_save", None)
+            if not pending:
+                bot.send_message(message.chat.id, "No save awaiting confirmation.",
+                                 reply_markup=_ai_chat_markup())
+                return
+            try:
+                from ai_save_v65 import save_note, save_flashcards
+                if pending["action"] == "note":
+                    new_id = save_note(supabase, user_id, pending["payload"])
+                    response = f"✅ Note #{new_id} saved! Open 📝 Notes → 📚 View Notes."
+                    flag = "saved_note"
+                else:
+                    saved = save_flashcards(supabase, user_id, pending["payload"])
+                    response = (f"✅ {saved} flashcards saved! Open 🧠 Flashcards → "
+                                "📚 My Flashcards. They are filed under No Subject.")
+                    flag = "saved_quiz"
+                with _sessions_lock:
+                    if _sessions.get(user_id) is session:
+                        session[flag] = True
+                bot.send_message(message.chat.id, response, reply_markup=_ai_chat_markup())
+            except Exception as exc:
+                # Never log prompts, answers, student records or API credentials.
+                print("V6.5 save failure type:", type(exc).__name__)
+                bot.send_message(message.chat.id,
+                    "⚠️ Could not verify the save in Supabase. Please check My Notes/Flashcards "
+                    "before trying again to avoid duplicates.", reply_markup=_ai_chat_markup())
             return
         # V6.3 quick actions are opt-in. The normal quota and safety path still runs.
         if text in V63_FOLLOW_UPS:
