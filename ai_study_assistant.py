@@ -30,6 +30,26 @@ MODE_BUTTONS = OrderedDict([
 ])
 CLEAR_BUTTON = "🧹 Clear AI Chat"
 BACK_BUTTON = "⬅️ AI Menu"
+# V6.3: student-controlled AI follow-up shortcuts
+CONTINUE_BUTTON = "➡️ Continue Answer"
+SIMPLIFY_BUTTON = "🧩 Explain Simply"
+EXAMPLES_BUTTON = "💡 More Examples"
+V63_FOLLOW_UPS = {
+    CONTINUE_BUTTON: (
+        "Continue your previous answer immediately after its last part, without repeating it. "
+        "First finish any incomplete sentence or numbered example, then finish the explanation. "
+        "Use the same language and plain-text style. If the answer was already complete, "
+        "say so briefly and give a one-sentence recap."
+    ),
+    SIMPLIFY_BUTTON: (
+        "Explain the previous study topic again in much simpler terms for a beginner. "
+        "Use short clear sentences, one everyday example, and a brief recap in the same language."
+    ),
+    EXAMPLES_BUTTON: (
+        "Give three new, distinct, short examples of the topic we just discussed. "
+        "Avoid repeating the prior examples. Explain each briefly in the same language."
+    ),
+}
 MODE_LABELS = {
     "ask": "Ask a study question, then send follow-up questions.",
     "explain": "Send a topic or concept you would like explained.",
@@ -308,7 +328,7 @@ def _remember(user_id, question, answer):
             return
         entry["history"] = (entry["history"] + [
             {"role": "user", "content": question},
-            {"role": "assistant", "content": answer[:1800]},
+            {"role": "assistant", "content": answer[-1800:]},
         ])[-HISTORY_PAIRS * 2:]
         entry["updated_at"] = time.monotonic()
 
@@ -324,6 +344,8 @@ def _ai_menu_markup():
 def _ai_chat_markup():
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
     markup.row(types.KeyboardButton(BACK_BUTTON), types.KeyboardButton(CLEAR_BUTTON))
+    markup.row(types.KeyboardButton(CONTINUE_BUTTON), types.KeyboardButton(SIMPLIFY_BUTTON))
+    markup.add(types.KeyboardButton(EXAMPLES_BUTTON))
     markup.add(types.KeyboardButton("🏠 Main Menu"))
     return markup
 
@@ -477,6 +499,14 @@ def register_ai_study_assistant_handlers(bot, show_main_menu):
             return ContinueHandling()
         if not text:
             return
+        # V6.3 quick actions are opt-in. The normal quota and safety path still runs.
+        if text in V63_FOLLOW_UPS:
+            history = session.get("history") or []
+            if not history or history[-1].get("role") != "assistant":
+                bot.send_message(message.chat.id,
+                    "🤖 First ask a study question and get an answer, then use this shortcut.")
+                return
+            text = V63_FOLLOW_UPS[text]
         if len(text) > MAX_INPUT_CHARS:
             bot.send_message(message.chat.id,
                 f"✂️ Question too long. Please use {MAX_INPUT_CHARS} characters or fewer.")
