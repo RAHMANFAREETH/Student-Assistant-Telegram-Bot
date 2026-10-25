@@ -167,4 +167,8 @@ def register_study_export_v69_handlers(bot, db):
             print('V6.9 private export failed:', type(exc).__name__)
             bot.send_message(call.message.chat.id,
                              '⚠️ Could not export your notes. Please try again later.')
+    # V7.0 Private Markdown Export registration
+    from study_markdown_v70 import register_study_markdown_v70_handlers
+    register_study_markdown_v70_handlers(bot, db, types, load_export_notes,
+                                         _private_sender, _private_callback)
     return True
