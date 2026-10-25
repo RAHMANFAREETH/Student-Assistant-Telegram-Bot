@@ -35,7 +35,7 @@ def register_note_handlers(
             types.KeyboardButton("📚 View Notes"),
             types.KeyboardButton("🔍 Search Notes"),
             types.KeyboardButton("🗑 Delete Note"),
-            types.KeyboardButton("⬅️ Main Menu")
+            types.KeyboardButton("🏠 Main Menu")
         )
 
         bot.send_message(
@@ -332,6 +332,14 @@ Python
         user_id = message.from_user.id
 
         text = message.text.strip()
+
+        # V6.5.1: navigation must never be saved as a note.
+        if text in ("🏠 Main Menu", "⬅️ Main Menu"):
+            note_mode.pop(chat_id, None)
+            temp_note.pop(chat_id, None)
+            show_main_menu(chat_id, message.from_user.first_name or "Friend")
+            return
+
 
         mode = note_mode.get(
             chat_id

@@ -188,7 +188,7 @@ def register_reminder_handlers(
             ),
 
             types.KeyboardButton(
-                "⬅️ Main Menu"
+                "🏠 Main Menu"
             )
         )
 
@@ -483,6 +483,14 @@ Arabic Assignment
         user_id = message.from_user.id
 
         text = message.text.strip()
+
+        # V6.5.1: navigation must never be saved as a reminder field.
+        if text in ("🏠 Main Menu", "⬅️ Main Menu"):
+            reminder_state.pop(chat_id, None)
+            temp_reminder.pop(chat_id, None)
+            show_main_menu(chat_id, message.from_user.first_name or "Friend")
+            return
+
 
         state = reminder_state.get(
             chat_id

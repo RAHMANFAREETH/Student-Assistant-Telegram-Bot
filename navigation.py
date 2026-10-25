@@ -59,6 +59,7 @@ HELP = "ℹ️ Help"
 # ==================================================
 
 MAIN_MENU = "🏠 Main Menu"
+LEGACY_MAIN_MENU = "⬅️ Main Menu"
 CANCEL = "❌ Cancel"
 BACK = "⬅️ Back"
 BACK_ALT = "🔙 Back"
@@ -138,6 +139,7 @@ GLOBAL_BUTTONS.update({"🏆 Achievements", "⭐ My Level"})
 
 NAVIGATION_BUTTONS = {
     MAIN_MENU,
+    LEGACY_MAIN_MENU,
     CANCEL,
     BACK,
     BACK_ALT,

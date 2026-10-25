@@ -1,5 +1,6 @@
 from navigation import (
     MAIN_MENU,
+    LEGACY_MAIN_MENU,
     CANCEL,
 )
 
@@ -23,6 +24,7 @@ def register_navigation_handlers(
         func=lambda m:
         m.text in {
             MAIN_MENU,
+            LEGACY_MAIN_MENU,
             CANCEL,
         }
     )
