@@ -261,6 +261,8 @@ def _reply_markup():
     kb = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
     kb.row(types.KeyboardButton(LIBRARY), types.KeyboardButton(REVISE))
     kb.row(types.KeyboardButton(PRACTICE), types.KeyboardButton(PROGRESS))
+    # V7.2 Study Notes Organizer menu
+    kb.row(types.KeyboardButton("🗂 Organize AI Notes"))
     kb.row(types.KeyboardButton(REMINDERS), types.KeyboardButton("🏠 Main Menu"))
     return kb
 
@@ -278,6 +280,11 @@ def _send_note(bot, chat_id, row):
     bot.send_message(chat_id, "✅ Finished reviewing this note.\n"
                      "Try 🧠 Practice Saved Cards or /reviews to study with flashcards.",
                      reply_markup=_reply_markup())
+    # V7.2 Note Organizer shortcut
+    from study_organizer_v72 import note_organizer_keyboard
+    org_actions = note_organizer_keyboard(types, row.get("id"))
+    if org_actions is not None:
+        bot.send_message(chat_id, "🗂 Organize this saved AI note:", reply_markup=org_actions)
     # V7.1 Individual Note Quick Actions
     from study_note_actions_v71 import note_actions_keyboard
     actions = note_actions_keyboard(types, row.get("id"))
@@ -499,6 +506,10 @@ def register_revision_hub_v66_handlers(bot, show_main_menu):
         except Exception as exc:
             print("V6.7 page load failed:", type(exc).__name__)
             bot.send_message(call.message.chat.id, "⚠️ Could not load that page. Try /studylibrary.")
+
+    # V7.2 Study Notes Organizer registration
+    from study_organizer_v72 import register_study_organizer_v72_handlers
+    register_study_organizer_v72_handlers(bot, supabase, load_note, load_ai_note_page, types)
 
     # V7.1 Individual Note Quick Actions registration
     from study_note_actions_v71 import register_study_note_actions_v71_handlers
