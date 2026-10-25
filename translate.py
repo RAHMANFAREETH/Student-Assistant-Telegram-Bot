@@ -1112,7 +1112,11 @@ def register_translation_handlers(
             )
 
     @bot.message_handler(
-        content_types=["document"]
+        func=lambda m: (
+            translation_state.get(m.chat.id, {}).get("step")
+            in {"waiting_document", "waiting_ocr_image"}
+        ),
+        content_types=["document"],
     )
     def translation_document_handler(
         message
