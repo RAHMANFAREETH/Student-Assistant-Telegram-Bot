@@ -151,6 +151,8 @@ def _list_ui(bot,db,types,uid,chat_id):
         cid=_id(row['id'])
         name=' '.join(str(row.get('name') or 'Untitled').split())[:45]
         kb.add(types.InlineKeyboardButton('📁 '+name,callback_data=f'v73:c:{cid}'))
+    # V7.4 Collection Tools shortcut
+    kb.add(types.InlineKeyboardButton('📊 Collection Tools',callback_data='v74:menu:0'))
     inventory = '\n'.join(f'#{_id(row["id"])} — '+
                           ' '.join(str(row.get('name') or 'Untitled').split())[:55]
                           for row in rows[:MAX_COLLECTIONS])
@@ -191,6 +193,8 @@ def _show_collection(bot,db,types,uid,chat_id,cid,load_note,page=0):
         nav.append(types.InlineKeyboardButton('Older ➡️',callback_data=f'v73:l:{cid}:{page+1}'))
     if nav:
         kb.row(*nav)
+    # V7.4 Export current collection as Markdown
+    kb.add(types.InlineKeyboardButton('📤 Export Collection (MD)',callback_data=f'v74:request:{cid}'))
     kb.add(types.InlineKeyboardButton('🗑 Delete Collection',callback_data=f'v73:x:{cid}'))
     kb.add(types.InlineKeyboardButton('📁 All Collections',callback_data='v73:list:0'))
     name=' '.join(str(collection['name']).split())[:60]
@@ -341,4 +345,7 @@ def register_study_collections_v73_handlers(bot, db, load_note, types):
         except Exception as exc:
             print('V7.3 collection action failed:',type(exc).__name__)
             bot.answer_callback_query(call.id,'Collections temporarily unavailable.',show_alert=True)
+    # V7.4 Collection Tools registration
+    from study_collection_tools_v74 import register_study_collection_tools_v74_handlers
+    register_study_collection_tools_v74_handlers(bot, db, types)
     return True
