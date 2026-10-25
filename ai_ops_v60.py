@@ -148,6 +148,8 @@ def format_report() -> str:
         "Gemini: developer-only client installed" if gemini_installed
             else "Gemini: developer-only client not found",
         "Gemini Telegram routing: DISABLED (mixed-age bot)",
+        # V6.1 Gemini Render configuration-only status (no API call)
+        __import__("gemini_render_v61").admin_line(),
         "",
         f"📊 This Render/Python process only — since {s['started_utc']}",
         f"Uptime: {s['uptime_minutes']} minutes",
