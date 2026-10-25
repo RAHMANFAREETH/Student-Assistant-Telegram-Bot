@@ -120,6 +120,27 @@ def claim_quota(user_id):
     return int(value or 0)
 
 
+
+# V6.2.1 Qwen3 non-thinking request and safer blank-response fallback
+def _v621_generation_payload(model, messages, max_tokens):
+    """Use Qwen3 non-thinking mode on generation calls only; no extra API calls.
+
+    The /no_think text is a documented Qwen3 chat instruction. Llama Guard
+    requests are passed unmodified. Caller-owned history is never mutated.
+    """
+    payload = {"messages": messages, "max_tokens": max_tokens}
+    if model != CF_MODEL:
+        return payload
+    if not isinstance(messages, list) or not all(isinstance(msg, dict) for msg in messages):
+        return payload
+    copied = [dict(msg) for msg in messages]
+    for msg in reversed(copied):
+        if msg.get("role") == "user" and isinstance(msg.get("content"), str):
+            msg["content"] += "\n/no_think"
+            payload["messages"] = copied
+            break
+    return payload
+
 def _provider_call(model, messages, max_tokens):
     account = os.getenv("CLOUDFLARE_ACCOUNT_ID", "").strip()
     token = os.getenv("CLOUDFLARE_API_TOKEN", "").strip()
@@ -133,7 +154,7 @@ def _provider_call(model, messages, max_tokens):
         resp = requests.post(
             url,
             headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
-            json={"messages": messages, "max_tokens": max_tokens},
+            json=_v621_generation_payload(model, messages, max_tokens),
             timeout=(4, 15),
         )
     except requests.exceptions.Timeout as exc:
@@ -185,7 +206,7 @@ def _provider_call(model, messages, max_tokens):
         result = data.get("result", data)
         if isinstance(result, dict):
             output = result.get("response")
-            if output is None:
+            if not isinstance(output, str) or not output.strip():
                 choices = result.get("choices") or []
                 if choices:
                     output = (choices[0].get("message") or {}).get("content")
