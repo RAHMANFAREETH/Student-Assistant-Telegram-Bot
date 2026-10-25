@@ -1,4 +1,5 @@
-"""Student Assistant Bot V5.7: beginner-friendly, multilingual category navigation.
+# V5.8 achievements category
+"""Student Assistant Bot V5.8: beginner-friendly, multilingual category navigation.
 
 Existing feature button texts are intentionally left unchanged, so existing
 V5.4–V5.6 Telegram handlers keep working. The displayed explanations can be
@@ -33,7 +34,7 @@ CATEGORY_FEATURES = OrderedDict([
                     "📚 Revision Planner"]),
     (CAT_LANGUAGE, ["🌐 Translate", "🌍 Language Tools"]),
     (CAT_PROGRESS, ["☀️ Today Hub", "📊 Dashboard", "📈 Progress", "✅ Attendance",
-                    "📊 Grades & GPA", "🎓 Semesters", "🔥 Study Streak", "🧠 Smart Insights"]),
+                    "📊 Grades & GPA", "🎓 Semesters", "🔥 Study Streak", "🏆 Achievements", "⭐ My Level", "🧠 Smart Insights"]),
     (CAT_FILES, ["📄 PDF Tools", "🎙 Voice Notes"]),
     (CAT_MORE, ["📢 Student Resources", "📦 Export My Data", "ℹ️ Help"]),
 ])
@@ -60,7 +61,7 @@ ALL_UI_BUTTONS = (set(CATEGORY_FEATURES) | set(LANG_BUTTONS) |
 
 TEXT = {
     "en": {
-        "welcome": "👋 Hello, {name}!\n🎓 Student Assistant V5.7\n\nChoose a category below. New here? Tap ❓ Help & Tutorial.\nUse /language to change the guide language.",
+        "welcome": "👋 Hello, {name}!\n🎓 Student Assistant V5.8\n\nChoose a category below. New here? Tap ❓ Help & Tutorial.\nUse /language to change the guide language.",
         "category": "Select a tool. The buttons below open your existing features.",
         "help": "❓ Quick Help\nChoose a short step-by-step guide:",
         "language": "🌐 Choose a language for menu guidance. Feature button names stay unchanged for compatibility.",
@@ -69,7 +70,7 @@ TEXT = {
         "back": "Choose a category from the main menu.",
     },
     "ta": {
-        "welcome": "👋 வணக்கம், {name}!\n🎓 மாணவர் உதவி Bot V5.7\n\nகீழே உங்களுக்கு தேவையான பகுதியைத் தேர்ந்தெடுக்கவும். புதிதாக பயன்படுத்துகிறீர்களா? ❓ Help & Tutorial அழுத்தவும்.\nவழிகாட்டும் மொழியை மாற்ற /language அனுப்பவும்.",
+        "welcome": "👋 வணக்கம், {name}!\n🎓 மாணவர் உதவி Bot V5.8\n\nகீழே உங்களுக்கு தேவையான பகுதியைத் தேர்ந்தெடுக்கவும். புதிதாக பயன்படுத்துகிறீர்களா? ❓ Help & Tutorial அழுத்தவும்.\nவழிகாட்டும் மொழியை மாற்ற /language அனுப்பவும்.",
         "category": "உங்களுக்கு வேண்டிய வசதியைத் தேர்ந்தெடுக்கவும். கீழே உள்ள buttons பழைய வசதிகளையே திறக்கும்.",
         "help": "❓ உதவி மையம்\nஎப்படி பயன்படுத்துவது என்பதை அறியுங்கள்:",
         "language": "🌐 வழிகாட்டும் மொழியைத் தேர்ந்தெடுக்கவும். பழைய features வேலை செய்வதற்காக button பெயர்கள் English-இலேயே இருக்கும்.",
@@ -78,7 +79,7 @@ TEXT = {
         "back": "முதன்மை மெனுவில் ஒரு பகுதியைத் தேர்ந்தெடுக்கவும்.",
     },
     "si": {
-        "welcome": "👋 ආයුබෝවන්, {name}!\n🎓 ශිෂ්‍ය සහායක Bot V5.7\n\nපහළින් ඔබට අවශ්‍ය කාණ්ඩය තෝරන්න. නව පරිශීලකයෙක් නම් ❓ Help & Tutorial තෝරන්න.\nභාෂාව වෙනස් කිරීමට /language යවන්න.",
+        "welcome": "👋 ආයුබෝවන්, {name}!\n🎓 ශිෂ්‍ය සහායක Bot V5.8\n\nපහළින් ඔබට අවශ්‍ය කාණ්ඩය තෝරන්න. නව පරිශීලකයෙක් නම් ❓ Help & Tutorial තෝරන්න.\nභාෂාව වෙනස් කිරීමට /language යවන්න.",
         "category": "ඔබට අවශ්‍ය මෙවලම තෝරන්න. බොත්තම් දැනටමත් ඇති විශේෂාංග විවෘත කරයි.",
         "help": "❓ උපකාරක මධ්‍යස්ථානය\nපියවරෙන් පියවර උපදෙස් තෝරන්න:",
         "language": "🌐 උපදෙස් භාෂාව තෝරන්න. පැරණි විශේෂාංග ක්‍රියා කිරීම සඳහා බොත්තම් නම් ඉංග්‍රීසියෙන් පවතී.",
@@ -87,7 +88,7 @@ TEXT = {
         "back": "ප්‍රධාන මෙනුවෙන් කාණ්ඩයක් තෝරන්න.",
     },
     "ar": {
-        "welcome": "👋 مرحبًا {name}!\n🎓 مساعد الطالب V5.7\n\nاختر قسمًا من الأزرار أدناه. إن كنت جديدًا فاضغط ❓ Help & Tutorial.\nلتغيير لغة الشرح أرسل /language.",
+        "welcome": "👋 مرحبًا {name}!\n🎓 مساعد الطالب V5.8\n\nاختر قسمًا من الأزرار أدناه. إن كنت جديدًا فاضغط ❓ Help & Tutorial.\nلتغيير لغة الشرح أرسل /language.",
         "category": "اختر الأداة المطلوبة. تفتح هذه الأزرار الميزات الحالية دون تغيير.",
         "help": "❓ مركز المساعدة\nاختر شرحًا خطوة بخطوة:",
         "language": "🌐 اختر لغة الإرشادات. ستظل أسماء الأزرار بالإنجليزية لضمان عمل الميزات القديمة.",

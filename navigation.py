@@ -132,6 +132,10 @@ GLOBAL_BUTTONS.update({
 
 
 
+# V5.8 achievements navigation
+# Add BEFORE ALL_NAVIGATION_BUTTONS is constructed; preserve older buttons.
+GLOBAL_BUTTONS.update({"🏆 Achievements", "⭐ My Level"})
+
 NAVIGATION_BUTTONS = {
     MAIN_MENU,
     CANCEL,
