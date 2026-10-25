@@ -482,3 +482,7 @@ def register_ai_study_assistant_handlers(bot, show_main_menu):
 # This wraps existing calls without modifying provider requests or safety logic.
 from ai_ops_v60 import wrap_cloudflare_provider
 _provider_call = wrap_cloudflare_provider(_provider_call)
+
+# V6.2 passive Cloudflare health observation (never changes outputs)
+from ai_reliability_v62 import observe_cloudflare_health
+_provider_call = observe_cloudflare_health(_provider_call)

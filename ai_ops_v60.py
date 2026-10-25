@@ -175,7 +175,7 @@ def format_report() -> str:
 def register_ai_ops_v60_handlers(bot):
     """Install admin-only, private-chat command; no public menu button."""
 
-    @bot.message_handler(commands=["aiops", "aiproviders"])
+    @bot.message_handler(commands=["aiops", "aiproviders", "aihealth"])
     def aiops_command(message):
         chat = getattr(message, "chat", None)
         sender = getattr(message, "from_user", None)
@@ -185,6 +185,11 @@ def register_ai_ops_v60_handlers(bot):
         if sender is None or int(getattr(sender, "id", 0)) not in admin_ids():
             bot.send_message(chat.id, "🔒 Admin diagnostics are not enabled for this account.")
             return
-        bot.send_message(chat.id, format_report())
+        # V6.2 private admin health report (same authorization as /aiops)
+        command = ((getattr(message, "text", "") or "").split(maxsplit=1) or [""])[0].split("@", 1)[0]
+        if command == "/aihealth":
+            bot.send_message(chat.id, __import__("ai_reliability_v62").format_health_report())
+        else:
+            bot.send_message(chat.id, format_report())
 
     return {"admin_command": aiops_command}
