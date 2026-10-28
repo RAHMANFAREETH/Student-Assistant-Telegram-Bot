@@ -6,6 +6,13 @@ from PyPDF2 import PdfReader, PdfWriter
 from telebot import types
 from telebot.handler_backends import ContinueHandling
 
+from image_filters_v713 import (
+    FILTER_BUTTON, PREVIEW_BUTTON, REMOVE_BUTTON, BACK_BUTTON,
+    FILTER_LABELS, FILTER_NAMES, MAX_IMAGE_BYTES, MAX_IMAGES,
+    ImageFilterError, enqueue_image, selected_filter, make_preview,
+    images_to_pdf,
+)
+
 from navigation import should_yield_to_navigation
 from text_pdf_v711 import (
     create_text_pdf, TextPdfError, MAX_TEXT_CHARS, MAX_TEXT_MESSAGES,
@@ -100,6 +107,23 @@ def _mode_keyboard(*buttons):
             )
 
     return markup
+
+
+def _image_tools_keyboard():
+    return _mode_keyboard(
+        [FILTER_BUTTON, PREVIEW_BUTTON],
+        [REMOVE_BUTTON, "✅ Create PDF"],
+        ["🔙 PDF Tools", "🏠 Main Menu"],
+    )
+
+
+def _image_filter_keyboard():
+    choices = list(FILTER_LABELS)
+    return _mode_keyboard(
+        *[choices[i:i + 2] for i in range(0, len(choices), 2)],
+        BACK_BUTTON,
+        "🏠 Main Menu",
+    )
 
 
 def _safe_stem(filename, default="document"):
@@ -541,6 +565,7 @@ def register_pdf_handlers(bot, show_main_menu):
         ] = {
             "mode": "images",
             "images": [],
+            "image_filter": "original",
         }
 
         bot.send_message(
@@ -549,12 +574,100 @@ def register_pdf_handlers(bot, show_main_menu):
                 "🖼 Images → PDF\n\n"
                 "Send JPG, PNG or Telegram photos in the order "
                 "you want them in the PDF.\n\n"
-                "When finished, press ✅ Create PDF."
+                "Choose 🎨 Choose Filter (default: Original).\n"
+                "Use 👁 Preview Last to see the effect before converting.\n"
+                f"Maximum {MAX_IMAGES} images. Press ✅ Create PDF when ready."
             ),
-            reply_markup=_mode_keyboard(
-                ["✅ Create PDF", "🔙 PDF Tools"],
-                "🏠 Main Menu",
-            ),
+            reply_markup=_image_tools_keyboard(),
+        )
+
+    @bot.message_handler(commands=["imagefilters"])
+    @bot.message_handler(
+        func=lambda m: getattr(m, "text", None) == FILTER_BUTTON
+        and pdf_state.get(m.chat.id, {}).get("mode") == "images"
+    )
+    def open_image_filter_picker(message):
+        chat_id = message.chat.id
+        state = pdf_state.get(chat_id, {})
+        if state.get("mode") != "images":
+            bot.send_message(chat_id, "🖼 First open PDF Tools → Images → PDF.")
+            return
+        code = selected_filter(state)
+        bot.send_message(
+            chat_id,
+            f"🎨 Choose a filter for all {len(state.get('images', []))} images.\n"
+            f"Current: {FILTER_NAMES[code]}\n\n"
+            "Your original photos stay unchanged.",
+            reply_markup=_image_filter_keyboard(),
+        )
+
+    @bot.message_handler(
+        func=lambda m: getattr(m, "text", None) in FILTER_LABELS
+        and pdf_state.get(m.chat.id, {}).get("mode") == "images"
+    )
+    def choose_image_filter(message):
+        state = pdf_state[message.chat.id]
+        state["image_filter"] = FILTER_LABELS[message.text]
+        bot.send_message(
+            message.chat.id,
+            f"✅ Filter selected: {message.text}\n"
+            "Send more photos, preview the last image, or create your PDF.",
+            reply_markup=_image_tools_keyboard(),
+        )
+
+    @bot.message_handler(
+        func=lambda m: getattr(m, "text", None) == BACK_BUTTON
+        and pdf_state.get(m.chat.id, {}).get("mode") == "images"
+    )
+    def return_to_image_mode(message):
+        state = pdf_state[message.chat.id]
+        bot.send_message(
+            message.chat.id,
+            f"🖼 {len(state.get('images', []))} image(s) added. "
+            f"Filter: {FILTER_NAMES[selected_filter(state)]}",
+            reply_markup=_image_tools_keyboard(),
+        )
+
+    @bot.message_handler(
+        func=lambda m: getattr(m, "text", None) == PREVIEW_BUTTON
+        and pdf_state.get(m.chat.id, {}).get("mode") == "images"
+    )
+    def preview_filtered_image(message):
+        state = pdf_state[message.chat.id]
+        images = state.get("images", [])
+        if not images:
+            bot.send_message(message.chat.id, "❌ Send an image first to preview it.")
+            return
+        try:
+            output = make_preview(images[-1], selected_filter(state))
+            try:
+                bot.send_photo(
+                    message.chat.id, output,
+                    caption=f"👁 Preview of last image: {FILTER_NAMES[selected_filter(state)]}\n"
+                            "The same filter will be used for all PDF pages.",
+                )
+            finally:
+                output.close()
+        except ImageFilterError as error:
+            bot.send_message(message.chat.id, str(error))
+        except Exception as error:
+            print("Image filter preview error:", type(error).__name__)
+            bot.send_message(message.chat.id, "❌ Preview failed. Try another image.")
+
+    @bot.message_handler(
+        func=lambda m: getattr(m, "text", None) == REMOVE_BUTTON
+        and pdf_state.get(m.chat.id, {}).get("mode") == "images"
+    )
+    def remove_last_image(message):
+        images = pdf_state[message.chat.id].setdefault("images", [])
+        if not images:
+            bot.send_message(message.chat.id, "❌ No images to remove.")
+            return
+        images.pop()
+        bot.send_message(
+            message.chat.id,
+            f"🗑 Last image removed. Remaining: {len(images)}",
+            reply_markup=_image_tools_keyboard(),
         )
 
     @bot.message_handler(
@@ -589,15 +702,17 @@ def register_pdf_handlers(bot, show_main_menu):
         )
 
         try:
-            output = _images_to_pdf(
-                images
-            )
+            output = images_to_pdf(images, selected_filter(state))
 
-            bot.send_document(
-                message.chat.id,
-                output,
-                caption="✅ Image PDF created successfully.",
-            )
+            try:
+                bot.send_document(
+                    message.chat.id,
+                    output,
+                    caption=f"✅ PDF ready! Filter: {FILTER_NAMES[selected_filter(state)]} "
+                            f"• Pages: {len(images)}",
+                )
+            finally:
+                output.close()
 
             pdf_state.pop(
                 message.chat.id,
@@ -716,6 +831,9 @@ def register_pdf_handlers(bot, show_main_menu):
         ).suffix.lower()
 
         try:
+            if mode == "images" and (getattr(message.document, "file_size", 0) or 0) > MAX_IMAGE_BYTES:
+                bot.send_message(chat_id, "❌ Image too large (12 MB maximum).")
+                return
             file_bytes = _download_telegram_file(
                 bot,
                 message.document.file_id,
@@ -733,17 +851,13 @@ def register_pdf_handlers(bot, show_main_menu):
                     )
                     return
 
-                state.setdefault(
-                    "images",
-                    [],
-                ).append(file_bytes)
+                total = enqueue_image(state, file_bytes)
 
                 bot.send_message(
                     chat_id,
-                    (
-                        "✅ Image added.\n"
-                        f"Total images: {len(state['images'])}"
-                    ),
+                    f"✅ Image added. Total: {total}/{MAX_IMAGES}. "
+                    f"Filter: {FILTER_NAMES[selected_filter(state)]}",
+                    reply_markup=_image_tools_keyboard(),
                 )
                 return
 
@@ -852,6 +966,8 @@ def register_pdf_handlers(bot, show_main_menu):
                 )
                 return
 
+        except ImageFilterError as error:
+            bot.send_message(chat_id, str(error))
         except Exception as error:
             print(
                 "PDF document handler error:",
@@ -886,25 +1002,26 @@ def register_pdf_handlers(bot, show_main_menu):
 
         try:
             photo = message.photo[-1]
+            if (getattr(photo, "file_size", 0) or 0) > MAX_IMAGE_BYTES:
+                bot.send_message(chat_id, "❌ Photo too large (12 MB maximum).")
+                return
 
             image_bytes = _download_telegram_file(
                 bot,
                 photo.file_id,
             )
 
-            state.setdefault(
-                "images",
-                [],
-            ).append(image_bytes)
+            total = enqueue_image(state, image_bytes)
 
             bot.send_message(
                 chat_id,
-                (
-                    "✅ Image added.\n"
-                    f"Total images: {len(state['images'])}"
-                ),
+                f"✅ Image added. Total: {total}/{MAX_IMAGES}. "
+                f"Filter: {FILTER_NAMES[selected_filter(state)]}",
+                reply_markup=_image_tools_keyboard(),
             )
 
+        except ImageFilterError as error:
+            bot.send_message(chat_id, str(error))
         except Exception as error:
             print(
                 "PDF photo handler error:",
