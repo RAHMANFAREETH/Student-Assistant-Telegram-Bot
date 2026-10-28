@@ -25,6 +25,15 @@ from photo_crop_v715 import (
     parse_custom_edges, read_image, create_cropped_image,
 )
 
+from scan_document_v716 import (
+    SCAN_BUTTON, SCAN_MODE, SCAN_PREVIEW, SCAN_ADJUST, SCAN_RESCAN,
+    SCAN_ORIGINAL, SCAN_SAVE_IMAGE, SCAN_SAVE_PDF, SCAN_CHANGE,
+    SCAN_CANCEL, SUPPORTED_EXTENSIONS as SCAN_EXTENSIONS,
+    MAX_SOURCE_BYTES as SCAN_MAX_SOURCE_BYTES, ScanError,
+    read_photo as scan_read_photo, detect_corners, parse_corners,
+    rectify, create_scan, create_scan_pdf,
+)
+
 from navigation import should_yield_to_navigation
 from text_pdf_v711 import (
     create_text_pdf, TextPdfError, MAX_TEXT_CHARS, MAX_TEXT_MESSAGES,
@@ -78,6 +87,7 @@ def _pdf_tools_menu(bot, chat_id):
         types.KeyboardButton("✂️ Extract Pages"),
         types.KeyboardButton("🖼 Images → PDF"),
         types.KeyboardButton(PHOTO_CROP_BUTTON),
+        types.KeyboardButton(SCAN_BUTTON),
         types.KeyboardButton(PDF_TEXT_BUTTON),
         types.KeyboardButton("🔄 Rotate PDF"),
         types.KeyboardButton("🔐 Protect PDF"),
@@ -93,11 +103,22 @@ def _pdf_tools_menu(bot, chat_id):
             "✂️ Extract Pages\n"
             "🖼 Images → PDF\n"
             f"{PHOTO_CROP_BUTTON}\n"
+            f"{SCAN_BUTTON}\n"
             "📝 Text → PDF\n"
             "🔄 Rotate PDF\n"
             "🔐 Protect PDF"
         ),
         reply_markup=markup,
+    )
+
+
+def _scanner_keyboard():
+    return _mode_keyboard(
+        [SCAN_PREVIEW, SCAN_ADJUST],
+        [SCAN_RESCAN, SCAN_ORIGINAL],
+        [SCAN_SAVE_IMAGE, SCAN_SAVE_PDF],
+        [SCAN_CHANGE, SCAN_CANCEL],
+        ["🔙 PDF Tools", "🏠 Main Menu"],
     )
 
 
@@ -283,6 +304,207 @@ def _images_to_pdf(image_items):
 
 
 def register_pdf_handlers(bot, show_main_menu):
+
+    # V7.16: document scanner (independent from Image Crop and Images → PDF).
+    @bot.message_handler(commands=["scan"])
+    @bot.message_handler(func=lambda m: getattr(m, "text", None) == SCAN_BUTTON)
+    def start_document_scan(message):
+        chat_id = message.chat.id
+        if getattr(message.chat, "type", "private") != "private":
+            bot.send_message(chat_id, "🔒 Use the scanner in a private chat with the Bot.")
+            return
+        pdf_state[chat_id] = {"mode": SCAN_MODE, "original": None, "corners": None,
+                              "detected": False, "await_corners": False}
+        bot.send_message(chat_id,
+            "📸 Scan Document\n\nSend one photo of a paper (or a JPG/PNG/WEBP document).\n"
+            "I'll detect the four paper corners, straighten the page, and show a preview.\n"
+            "For clear Arabic/Tamil notes, leave a little space around the paper edges.",
+            reply_markup=_scanner_keyboard())
+
+    def _scan_preview(chat_id, state):
+        if not state.get("original"):
+            bot.send_message(chat_id, "❌ Send a paper photo first.")
+            return
+        try:
+            result = create_scan(state["original"], state.get("corners"), preview=True)
+            try:
+                note = ("✅ Paper edges detected and straightened."
+                        if state.get("corners") is not None else
+                        "⚠️ Clear paper edges were not detected. Showing original photo. "
+                        "Use 📐 Adjust Corners for perspective correction.")
+                bot.send_photo(chat_id, result, caption=f"👁 Scan preview\n{note}\n"
+                    "Choose Save as Image/PDF, adjust corners or change photo.",
+                    reply_markup=_scanner_keyboard())
+            finally:
+                result.close()
+        except ScanError as error:
+            bot.send_message(chat_id, str(error))
+        except Exception as error:
+            print("Scan preview error:", type(error).__name__)
+            bot.send_message(chat_id, "❌ Preview failed. Try another photo.")
+
+    @bot.message_handler(
+        func=lambda m: pdf_state.get(m.chat.id, {}).get("mode") == SCAN_MODE
+        and getattr(m, "text", None) in (SCAN_CANCEL, "🔙 PDF Tools"),
+        content_types=["text"])
+    def cancel_document_scan(message):
+        _pdf_tools_menu(bot, message.chat.id)
+
+    @bot.message_handler(
+        func=lambda m: pdf_state.get(m.chat.id, {}).get("mode") == SCAN_MODE
+        and getattr(m, "text", None) == "🏠 Main Menu", content_types=["text"])
+    def scan_main_menu(message):
+        pdf_state.pop(message.chat.id, None)
+        show_main_menu(message.chat.id, message.from_user.first_name or "Friend")
+
+    @bot.message_handler(
+        func=lambda m: pdf_state.get(m.chat.id, {}).get("mode") == SCAN_MODE
+        and getattr(m, "text", None) == SCAN_CHANGE, content_types=["text"])
+    def scan_change_photo(message):
+        pdf_state[message.chat.id] = {"mode": SCAN_MODE, "original": None,
+            "corners": None, "detected": False, "await_corners": False}
+        bot.send_message(message.chat.id, "🔁 Send a new paper photo.",
+                         reply_markup=_scanner_keyboard())
+
+    @bot.message_handler(
+        func=lambda m: pdf_state.get(m.chat.id, {}).get("mode") == SCAN_MODE,
+        content_types=["photo", "document"])
+    def scan_receive_photo(message):
+        chat_id = message.chat.id
+        try:
+            if message.content_type == "photo":
+                selected = message.photo[-1]
+            else:
+                selected = message.document
+                ext = Path(selected.file_name or "").suffix.lower()
+                if ext not in SCAN_EXTENSIONS:
+                    bot.send_message(chat_id, "❌ Please send an image (JPG, PNG, WEBP), not a PDF.")
+                    return
+            if (getattr(selected, "file_size", 0) or 0) > SCAN_MAX_SOURCE_BYTES:
+                bot.send_message(chat_id, "❌ Photo is too large (12 MB maximum).")
+                return
+            photo_bytes = _download_telegram_file(bot, selected.file_id)
+            with scan_read_photo(photo_bytes) as verified:
+                corners = detect_corners(verified)
+            state = pdf_state[chat_id]
+            state.update(original=photo_bytes, corners=corners,
+                         detected=corners is not None, await_corners=False)
+            _scan_preview(chat_id, state)
+        except ScanError as error:
+            bot.send_message(chat_id, str(error))
+        except Exception as error:
+            print("Scan upload error:", type(error).__name__)
+            bot.send_message(chat_id, "❌ Could not scan that photo. Try again in brighter light.")
+
+    @bot.message_handler(
+        func=lambda m: pdf_state.get(m.chat.id, {}).get("mode") == SCAN_MODE
+        and getattr(m, "text", None) == SCAN_ADJUST, content_types=["text"])
+    def scan_adjust_corners(message):
+        state = pdf_state[message.chat.id]
+        if not state.get("original"):
+            bot.send_message(message.chat.id, "❌ Send a photo first.")
+            return
+        state["await_corners"] = True
+        bot.send_message(message.chat.id,
+            "📐 Adjust Four Corners\n\nSend EIGHT percentages in this order:\n"
+            "Top-left X Y, Top-right X Y, Bottom-right X Y, Bottom-left X Y.\n\n"
+            "Example:\n5 5 95 5 95 95 5 95\n\n"
+            "0 0 is the top-left of your original photo; 100 100 is bottom-right.\n"
+            "Allow a little space outside the handwriting. Then I'll show a new preview.")
+
+    @bot.message_handler(
+        func=lambda m: pdf_state.get(m.chat.id, {}).get("mode") == SCAN_MODE
+        and getattr(m, "text", None) == SCAN_RESCAN, content_types=["text"])
+    def scan_again(message):
+        state = pdf_state[message.chat.id]
+        if not state.get("original"):
+            bot.send_message(message.chat.id, "❌ Send a photo first.")
+            return
+        try:
+            with scan_read_photo(state["original"]) as verified:
+                state["corners"] = detect_corners(verified)
+            state["detected"] = state["corners"] is not None
+            state["await_corners"] = False
+            _scan_preview(message.chat.id, state)
+        except ScanError as error:
+            bot.send_message(message.chat.id, str(error))
+
+    @bot.message_handler(
+        func=lambda m: pdf_state.get(m.chat.id, {}).get("mode") == SCAN_MODE
+        and getattr(m, "text", None) == SCAN_ORIGINAL, content_types=["text"])
+    def scan_choose_original(message):
+        state = pdf_state[message.chat.id]
+        state["corners"] = None
+        state["detected"] = False
+        state["await_corners"] = False
+        _scan_preview(message.chat.id, state)
+
+    @bot.message_handler(
+        func=lambda m: pdf_state.get(m.chat.id, {}).get("mode") == SCAN_MODE
+        and getattr(m, "text", None) == SCAN_PREVIEW, content_types=["text"])
+    def scan_show_preview(message):
+        _scan_preview(message.chat.id, pdf_state[message.chat.id])
+
+    @bot.message_handler(
+        func=lambda m: pdf_state.get(m.chat.id, {}).get("mode") == SCAN_MODE
+        and getattr(m, "text", None) in (SCAN_SAVE_IMAGE, SCAN_SAVE_PDF), content_types=["text"])
+    def scan_save_result(message):
+        chat_id = message.chat.id
+        state = pdf_state[chat_id]
+        if not state.get("original"):
+            bot.send_message(chat_id, "❌ Send a photo first.")
+            return
+        try:
+            if message.text == SCAN_SAVE_IMAGE:
+                result = create_scan(state["original"], state["corners"])
+                caption = "✅ Your scanned JPG is ready."
+            else:
+                result = create_scan_pdf(state["original"], state["corners"])
+                caption = "✅ Your scanned A4 PDF is ready (image-based, no OCR)."
+            try:
+                bot.send_document(chat_id, result, caption=caption)
+            finally:
+                result.close()
+        except ScanError as error:
+            bot.send_message(chat_id, str(error))
+            return
+        except Exception as error:
+            print("Scan save error:", type(error).__name__)
+            bot.send_message(chat_id, "❌ Could not save the scan. Please try again.")
+            return
+        _pdf_tools_menu(bot, chat_id)
+
+    @bot.message_handler(
+        func=lambda m: pdf_state.get(m.chat.id, {}).get("mode") == SCAN_MODE
+        and getattr(m, "text", None) not in (SCAN_CANCEL, "🔙 PDF Tools", "🏠 Main Menu")
+        and not should_yield_to_navigation(getattr(m, "text", None)),
+        content_types=["text"])
+    def scan_receive_corners(message):
+        state = pdf_state[message.chat.id]
+        if not state.get("await_corners"):
+            bot.send_message(message.chat.id,
+                "📸 Choose a scan button, or send another paper photo.",
+                reply_markup=_scanner_keyboard())
+            return
+        try:
+            with scan_read_photo(state["original"]) as image:
+                candidate = parse_corners(message.text or "", image.size)
+                with rectify(image, candidate):
+                    pass
+            state.update(corners=candidate, detected=True, await_corners=False)
+            _scan_preview(message.chat.id, state)
+        except ScanError as error:
+            bot.send_message(message.chat.id, str(error))
+
+    @bot.message_handler(
+        func=lambda m: pdf_state.get(m.chat.id, {}).get("mode") == SCAN_MODE
+        and should_yield_to_navigation(getattr(m, "text", None))
+        and getattr(m, "text", None) not in (SCAN_CANCEL, "🔙 PDF Tools", "🏠 Main Menu"),
+        content_types=["text"])
+    def scan_yield_to_navigation(message):
+        pdf_state.pop(message.chat.id, None)
+        return ContinueHandling()
+
 
     # V7.15: standalone photo crop. Registered before the legacy PDF upload
     # handlers; all predicates require this dedicated mode (no OCR interference).

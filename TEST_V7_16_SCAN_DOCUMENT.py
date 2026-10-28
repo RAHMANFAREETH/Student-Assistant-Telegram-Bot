@@ -238,15 +238,17 @@ class ScannerBotTests(unittest.TestCase):
         kb = self.bot.messages[-1][2]['reply_markup']
         items = getattr(kb, "buttons", None)
         if items is None:
-            items = [button for row in kb.keyboard for button in row]
+            rows = getattr(kb, "keyboard", None)
+            if rows is None:
+                rows = getattr(kb, "rows", None)
+            self.assertIsNotNone(rows, "Unknown keyboard markup in test")
+            items = [button for row in rows for button in row]
         
-        self.assertIn(
-    SCAN_BUTTON,
-    [
-        button.get("text") if isinstance(button, dict) else button.text
-        for button in items
-    ],
-)
+        button_texts = [button.get("text")
+                        if isinstance(button, dict)
+                        else getattr(button, "text", None)
+                        for button in items]
+        self.assertIn(SCAN_BUTTON, button_texts)
 
 
     def test_photo_preview_then_save_jpg(self):
