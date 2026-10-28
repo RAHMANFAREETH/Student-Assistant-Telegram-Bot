@@ -19,7 +19,7 @@ from user_help_v79 import build_quick_help_text, register_user_help_v79_handlers
 from revision_hub_v66 import register_revision_hub_v66_handlers
 from achievements_v58 import register_achievements_v58_handlers
 from ai_ops_v60 import register_ai_ops_v60_handlers
-from broadcast_v710 import register_broadcast_handlers
+from broadcast_v710 import register_broadcast_handlers, register_known_broadcast_handlers, track_known_private_user
 
 from navigation import (
     build_main_menu_markup,
@@ -262,7 +262,8 @@ def user_id(message):
 # ==================================================
 
 # V5.7 category handlers MUST come before legacy handlers.
-register_broadcast_handlers(bot)
+broadcast_service = register_broadcast_handlers(bot)
+register_known_broadcast_handlers(bot, broadcast_service)
 register_ui_v57_handlers(bot, show_main_menu)
 # V7.9 finder runs before stateful legacy forms.
 register_user_help_v79_handlers(bot)
@@ -625,6 +626,8 @@ def telegram_webhook():
             "📩 Telegram update received:",
             update.update_id,
         )
+
+        track_known_private_user(update)
 
         bot.process_new_updates(
             [update]

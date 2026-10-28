@@ -52,6 +52,7 @@ class Preview:
     text: str
     user_ids: frozenset[int]
     created: float
+    audience: str = "subscribers"
 
 
 class AnnouncementService:
@@ -60,6 +61,7 @@ class AnnouncementService:
         self.db = db
         self._lock = threading.Lock()
         self._pending: dict[int, Preview] = {}
+        self._pending_all_draft: dict[int, float] = {}
         self._active = False
         self._last = "No broadcast has been started in this process."
 
@@ -90,6 +92,42 @@ class AnnouncementService:
                     .eq("user_id", user_id).eq("subscribed", True).limit(1).execute())
         return bool(response.data)
 
+    def _known_user_rows(self):
+        """Known private-chat IDs; does not require /subscribe.
+
+        Explicit opt-outs, blocked users, and invalid IDs are always excluded.
+        If preferences cannot be checked, abort rather than accidentally sending.
+        """
+        response = (self.db.table("bot_known_users_v712")
+                    .select("user_id,chat_id")
+                    .order("user_id").limit(MAX_RECIPIENTS + 1).execute())
+        rows = response.data or []
+        if len(rows) > MAX_RECIPIENTS:
+            raise ValueError("recipient_limit")
+        result = {}
+        for row in rows:
+            uid, chat_id = int(row["user_id"]), int(row["chat_id"])
+            if uid > 0 and uid == chat_id:
+                result[uid] = chat_id
+        if not result:
+            return result
+        preferences = (self.db.table(TABLE).select("user_id,subscribed")
+                       .in_("user_id", list(result)).execute()).data or []
+        for pref in preferences:
+            if pref.get("subscribed") is False:
+                result.pop(int(pref["user_id"]), None)
+        return result
+
+    def _known_user_eligible(self, user_id):
+        """Fail closed if either the known-user table or preference lookup fails."""
+        known = (self.db.table("bot_known_users_v712").select("user_id")
+                 .eq("user_id", int(user_id)).limit(1).execute()).data or []
+        if not known:
+            return False
+        pref = (self.db.table(TABLE).select("subscribed")
+                .eq("user_id", int(user_id)).limit(1).execute()).data or []
+        return not any(row.get("subscribed") is False for row in pref)
+
     def subscription(self, message, enabled: bool):
         if not is_private(message):
             self.bot.send_message(message.chat.id,
@@ -106,24 +144,43 @@ class AnnouncementService:
             return
         if enabled:
             self.bot.send_message(message.chat.id,
-                "✅ You subscribed to occasional bot announcements. To stop them, send /unsubscribe.")
+                "✅ Announcements enabled. To stop: /announcements off.")
         else:
             self.bot.send_message(message.chat.id,
-                "✅ You unsubscribed from announcements. To rejoin, send /subscribe.")
+                "✅ Bot announcements disabled. To resume: /announcements on.")
 
     def announcements(self, message):
+        # V7.12.1 preference routing: /announcements on|off, no /unsubscribe handler.
         if not is_private(message):
-            self.bot.send_message(message.chat.id, "📢 Use /announcements in a private chat with the bot.")
+            self.bot.send_message(message.chat.id,
+                "📢 Manage announcements in your private chat with the bot.")
+            return
+        parts = (getattr(message, "text", "") or "").strip().split(maxsplit=1)
+        action = parts[1].strip().lower() if len(parts) > 1 else ""
+        if action in ("on", "off"):
+            self.subscription(message, action == "on")
+            return
+        if action:
+            self.bot.send_message(message.chat.id,
+                "📢 Use /announcements, /announcements on, or /announcements off.")
             return
         try:
-            enabled = self._is_subscribed(int(message.from_user.id))
+            rows = (self.db.table(TABLE).select("subscribed")
+                    .eq("user_id", int(message.from_user.id))
+                    .limit(1).execute()).data or []
         except Exception:
             self.bot.send_message(message.chat.id,
                 "⚠️ Announcement preferences are unavailable. Ask the admin to check Supabase setup.")
             return
-        self.bot.send_message(message.chat.id,
-            ("📢 Announcements are ON. Send /unsubscribe to stop them."
-             if enabled else "📢 Announcements are OFF. Send /subscribe to receive updates."))
+        if rows and rows[0].get("subscribed") is False:
+            response = "📢 Bot announcements are OFF. To resume: /announcements on."
+        elif rows and rows[0].get("subscribed") is True:
+            response = "📢 Bot announcements are ON. To stop: /announcements off."
+        else:
+            response = ("📢 No announcement preference set. Subscriber-only messages "
+                        "require /subscribe. To stop other bot announcements: "
+                        "/announcements off.")
+        self.bot.send_message(message.chat.id, response)
 
     def recipients(self, message):
         if not self._admin(message):
@@ -175,6 +232,145 @@ class AnnouncementService:
             "✅ Send: /broadcastconfirm\n❌ Cancel: /broadcastcancel\n"
             "Preview expires in 10 minutes. New subscribers after this preview will not receive it.")
 
+    def preview_all(self, message):
+        """Admin-only service announcement to known existing bot users."""
+        if not self._admin(message):
+            return
+        uid = int(message.from_user.id)
+        text = (getattr(message, "text", "") or "").partition(" ")[2].strip()
+        if not text:
+            with self._lock:
+                self._pending_all_draft[uid] = time.monotonic()
+            self.bot.send_message(message.chat.id,
+                "📢 Send your announcement as the NEXT text message.\n"
+                "Nothing is sent until /broadcastallconfirm.\n"
+                "Cancel: /broadcastallcancel")
+            return
+        self._make_all_preview(message, text)
+
+    def pending_all_text(self, message):
+        """Catch the next plain-text admin message after /broadcastall."""
+        if not is_private(message) or int(message.from_user.id) not in admin_ids():
+            return False
+        text = (getattr(message, "text", "") or "").strip()
+        if not text or text.startswith("/") or text in (
+            "🏠 Main Menu", "⬅️ Back", "❌ Cancel", "📦 More Tools"):
+            return False
+        with self._lock:
+            start = self._pending_all_draft.get(int(message.from_user.id))
+            return start is not None and (time.monotonic() - start <= PREVIEW_TTL_SECONDS)
+
+    def accept_all_text(self, message):
+        with self._lock:
+            self._pending_all_draft.pop(int(message.from_user.id), None)
+        self._make_all_preview(message, (message.text or "").strip())
+
+    def _make_all_preview(self, message, text):
+        uid = int(message.from_user.id)
+        footer = "\n\nTo stop future bot announcements: /announcements off"
+        payload = text if "/announcements off" in text else text + footer
+        if not text or len(payload) > MAX_TEXT:
+            self.bot.send_message(message.chat.id,
+                f"⚠️ Announcement plus preference instructions must fit {MAX_TEXT} characters. Nothing was sent.")
+            return
+        try:
+            users = self._known_user_rows()
+        except ValueError:
+            self.bot.send_message(message.chat.id,
+                "⚠️ More than 100 known users. Nothing was sent. Contact the developer.")
+            return
+        except Exception:
+            self.bot.send_message(message.chat.id,
+                "⚠️ Could not load known users/preferences. Run SQL_V7_12_KNOWN_USERS.sql. Nothing was sent.")
+            return
+        if not users:
+            self.bot.send_message(message.chat.id,
+                "📭 No known eligible users yet. Run the V7.12 SQL migration. Nothing was sent.")
+            return
+        with self._lock:
+            if self._active:
+                self.bot.send_message(message.chat.id,
+                    "⏳ Another broadcast is still running. Check /broadcaststatus.")
+                return
+            self._pending[uid] = Preview(payload, frozenset(users), time.monotonic(), "all")
+            self._pending_all_draft.pop(uid, None)
+        self.bot.send_message(message.chat.id,
+            f"📢 KNOWN USERS ANNOUNCEMENT PREVIEW\n\n{payload}\n\n"
+            f"Recipients: {len(users)} known users (explicit opt-outs excluded).\n\n"
+            "✅ Send: /broadcastallconfirm\n❌ Cancel: /broadcastallcancel\n"
+            "Preview expires in 10 minutes. New users after preview are excluded.\n"
+            "For important bot updates only; recipients can choose /announcements off.")
+
+    def known_count(self, message):
+        if not self._admin(message):
+            return
+        try:
+            n = len(self._known_user_rows())
+        except ValueError:
+            self.bot.send_message(message.chat.id, "⚠️ More than 100 known users; sending is disabled.")
+            return
+        except Exception:
+            self.bot.send_message(message.chat.id,
+                                  "⚠️ Cannot read known users. Run SQL_V7_12_KNOWN_USERS.sql.")
+            return
+        self.bot.send_message(message.chat.id,
+            f"📢 Known eligible private-chat users: {n}. No /subscribe required.")
+
+    def cancel_all(self, message):
+        if not self._admin(message):
+            return
+        uid = int(message.from_user.id)
+        with self._lock:
+            self._pending_all_draft.pop(uid, None)
+            pending = self._pending.get(uid)
+            removed = self._pending.pop(uid, None) if pending and pending.audience == "all" else None
+        self.bot.send_message(message.chat.id,
+            "✅ Known-user draft canceled. Nothing was sent." if removed else
+            "✅ Compose mode canceled. Nothing was sent.")
+
+    def confirm_all(self, message):
+        if not self._admin(message):
+            return
+        uid = int(message.from_user.id)
+        with self._lock:
+            if self._active:
+                self.bot.send_message(message.chat.id, "⏳ A broadcast is already running.")
+                return
+            preview = self._pending.get(uid)
+            if not preview or preview.audience != "all" or time.monotonic() - preview.created > PREVIEW_TTL_SECONDS:
+                if preview and preview.audience == "all":
+                    self._pending.pop(uid, None)
+                self.bot.send_message(message.chat.id,
+                    "No valid known-users preview. Start with /broadcastall Your message.")
+                return
+            self._pending.pop(uid, None)
+            try:
+                current = self._known_user_rows()
+            except Exception:
+                self.bot.send_message(message.chat.id,
+                    "⚠️ Cannot verify known users and opt-outs. Nothing was sent.")
+                return
+            destinations = [current[uid] for uid in sorted(preview.user_ids) if uid in current]
+            if not destinations:
+                self.bot.send_message(message.chat.id, "📭 No eligible users remain. Nothing was sent.")
+                return
+            self._active = True
+            self._last = f"⏳ Sending bot update to {len(destinations)} known users."
+        try:
+            worker = threading.Thread(target=self._send_batch,
+                args=(message.chat.id, preview.text, destinations, "all"),
+                daemon=True, name="known-user-announcement-sender")
+            worker.start()
+        except Exception:
+            with self._lock:
+                self._active = False
+                self._last = "⚠️ Broadcast worker failed to start. Nothing was sent."
+            self.bot.send_message(message.chat.id, self._last)
+            return
+        self.bot.send_message(message.chat.id,
+            f"📤 Sending to {len(destinations)} known users. Check /broadcaststatus.\n"
+            "If Render restarts, delivery may be incomplete. Do not resend blindly.")
+
     def cancel(self, message):
         if not self._admin(message):
             return
@@ -192,11 +388,12 @@ class AnnouncementService:
             if self._active:
                 self.bot.send_message(message.chat.id, "⏳ A broadcast is already running.")
                 return
-            preview = self._pending.pop(uid, None)
-            if preview is None or time.monotonic() - preview.created > PREVIEW_TTL_SECONDS:
+            preview = self._pending.get(uid)
+            if preview is None or preview.audience != "subscribers" or time.monotonic() - preview.created > PREVIEW_TTL_SECONDS:
                 self.bot.send_message(message.chat.id,
                                       "No valid preview. Start with /broadcast Your message.")
                 return
+            self._pending.pop(uid, None)
             try:
                 current = self._subscriber_rows()
             except Exception:
@@ -229,12 +426,14 @@ class AnnouncementService:
             f"📤 Broadcast started for {len(destinations)} subscribers. Check /broadcaststatus shortly."
             "\nIf the Render process restarts mid-send, delivery may be incomplete; do not resend blindly.")
 
-    def _send_batch(self, admin_chat_id, text, destinations):
+    def _send_batch(self, admin_chat_id, text, destinations, audience="subscribers"):
         sent, failed, stopped = 0, 0, 0
         try:
             for chat_id in destinations:
                 try:
-                    if not self._is_subscribed(chat_id):
+                    eligible = (self._known_user_eligible(chat_id) if audience == "all"
+                                else self._is_subscribed(chat_id))
+                    if not eligible:
                         stopped += 1
                         continue
                 except Exception:
@@ -316,6 +515,42 @@ class AnnouncementService:
         self.bot.send_message(message.chat.id, "✅ Private message sent to the subscribed user.")
 
 
+def track_known_private_user(update, db=None):
+    """Register a known private-chat user. Metadata only; never log message text.
+
+    Called from authenticated Telegram webhook before handlers. Database errors
+    must not stop processing an otherwise valid Telegram update.
+    """
+    try:
+        message = getattr(update, "message", None)
+        callback = getattr(update, "callback_query", None)
+        if message is not None:
+            chat, user = getattr(message, "chat", None), getattr(message, "from_user", None)
+        elif callback is not None:
+            chat = getattr(getattr(callback, "message", None), "chat", None)
+            user = getattr(callback, "from_user", None)
+        else:
+            return False
+        if not chat or not user or getattr(chat, "type", None) != "private":
+            return False
+        uid, cid = int(user.id), int(chat.id)
+        if uid <= 0 or cid != uid or getattr(user, "is_bot", False):
+            return False
+        if db is None:
+            from db import supabase
+            db = supabase
+        from datetime import datetime, timezone
+        db.table("bot_known_users_v712").upsert({
+            "user_id": uid, "chat_id": cid,
+            "last_seen_at": datetime.now(timezone.utc).isoformat(),
+            "source": "private_chat",
+        }, on_conflict="user_id").execute()
+        return True
+    except Exception:
+        # Tracking is supplementary; never break /start or the Telegram webhook.
+        return False
+
+
 def register_broadcast_handlers(bot, db=None):
     if db is None:
         from db import supabase
@@ -325,10 +560,6 @@ def register_broadcast_handlers(bot, db=None):
     @bot.message_handler(commands=["subscribe"])
     def subscribe(message):
         service.subscription(message, True)
-
-    @bot.message_handler(commands=["unsubscribe"])
-    def unsubscribe(message):
-        service.subscription(message, False)
 
     @bot.message_handler(commands=["announcements"])
     def announcements(message):
@@ -357,5 +588,39 @@ def register_broadcast_handlers(bot, db=None):
     @bot.message_handler(commands=["messageuser"])
     def messageuser(message):
         service.direct(message)
+
+    return service
+
+
+def register_known_broadcast_handlers(bot, service):
+    """Install V7.12 commands alongside existing V7.10 commands."""
+
+    @bot.message_handler(commands=["broadcastallusers"])
+    def broadcastallusers(message):
+        service.known_count(message)
+
+    @bot.message_handler(commands=["broadcastall"])
+    def broadcastall(message):
+        service.preview_all(message)
+
+    @bot.message_handler(commands=["broadcastallconfirm"])
+    def broadcastallconfirm(message):
+        service.confirm_all(message)
+
+    @bot.message_handler(commands=["broadcastallcancel"])
+    def broadcastallcancel(message):
+        service.cancel_all(message)
+
+    # Registered after the command handlers but before the other bot modules.
+    # Only intercepts the next plain-text admin message in compose mode.
+    # Older V7.10 unit-test bots implement command-only message_handler;
+    # skip this optional text handler only for those limited test doubles.
+    try:
+        next_text_handler = bot.message_handler(
+            func=lambda m: service.pending_all_text(m), content_types=["text"])
+    except TypeError:
+        next_text_handler = None
+    if next_text_handler is not None:
+        next_text_handler(service.accept_all_text)
 
     return service
