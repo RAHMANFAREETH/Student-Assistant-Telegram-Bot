@@ -99,7 +99,7 @@ QUICK_HELP = {
 
 def build_quick_help_text(language="en"):
     base = QUICK_HELP.get(language, QUICK_HELP["en"])
-    return base + "\n\n📢 Bot announcements: /announcements · /subscribe · /unsubscribe"
+    return base + "\n\n📢 Bot announcements: /announcements · /subscribe · /announcements off"
 
 
 def find_tools(query, limit=7):
