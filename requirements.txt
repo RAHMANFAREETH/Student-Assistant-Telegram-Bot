@@ -1,12 +1,7 @@
-pyTelegramBotAPI
-python-dotenv
-PyPDF2[crypto]
-Pillow
-deep-translator
-tzdata
-Flask
-gunicorn
-supabase
-gTTS
-python-docx
-requests
+Flask>=3.0,<4
+pyTelegramBotAPI>=4.20,<5
+gunicorn>=22,<25
+
+# V7.11 Unicode Text -> PDF
+fpdf2>=2.8.5,<3
+uharfbuzz>=0.40,<1

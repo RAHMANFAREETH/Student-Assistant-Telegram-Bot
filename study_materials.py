@@ -850,10 +850,13 @@ def register_study_material_handlers(
                 repr(error),
             )
 
-            bot.send_message(
-                chat_id,
-                f"❌ {str(error)}",
-            )
+            if isinstance(error, ValueError):
+                advice = "This document is unsupported or too large. Please use a smaller PDF, DOCX or TXT file."
+            elif isinstance(error, RuntimeError) and "No readable text" in str(error):
+                advice = "No readable text was found. Scanned PDFs may need OCR."
+            else:
+                advice = "Couldn't save this material. Please retry. If it persists, ask the admin to check Render logs."
+            bot.send_message(chat_id, "⚠️ " + advice)
 
     @bot.message_handler(
         func=lambda m:

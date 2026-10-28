@@ -1,6 +1,12 @@
 .env
-student_bot.db
+.env.*
+!.env.example
 __pycache__/
-*.pyc
+*.py[cod]
 .venv/
-venv/
+.pytest_cache/
+*.db
+*.zip
+.v710_backups/
+pdf_fonts/
+.v711_backup/

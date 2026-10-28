@@ -285,6 +285,18 @@ def register_system_health_handlers(
     def system_health_command(
         message
     ):
+        # Diagnostics reveal infrastructure configuration and table names.
+        # Deny access if no explicit admin IDs have been configured.
+        admins = {
+            int(value.strip())
+            for value in os.getenv("AI_OPS_ADMIN_IDS", "").split(",")
+            if value.strip().isascii() and value.strip().isdigit()
+        }
+        if (getattr(message.chat, "type", None) != "private"
+                or int(message.from_user.id) not in admins):
+            bot.send_message(message.chat.id,
+                "🔒 System diagnostics are available to configured admins only.")
+            return
         status = bot.send_message(
             message.chat.id,
             "🛠 Checking bot system health..."
@@ -316,7 +328,6 @@ def register_system_health_handlers(
                 message.chat.id,
                 (
                     "❌ System health check failed.\n\n"
-                    f"{type(error).__name__}: "
-                    f"{error}"
+                    "Please check the Render logs privately."
                 ),
             )

@@ -136,6 +136,8 @@ GLOBAL_BUTTONS.update({
 # V5.8 achievements navigation
 # Add BEFORE ALL_NAVIGATION_BUTTONS is constructed; preserve older buttons.
 GLOBAL_BUTTONS.update({"🏆 Achievements", "⭐ My Level"})
+# V7.9 finder remains a global navigation action.
+GLOBAL_BUTTONS.add("🔎 Find a Tool")
 
 # V6.6 revision hub global navigation
 # Older stateful handlers must yield when a user taps these buttons.
@@ -143,6 +145,9 @@ GLOBAL_BUTTONS.update({
     "📖 Revision Hub", "📚 My AI Study Library", "🔄 Revise AI Note",
     "🧠 Practice Saved Cards", "📊 Revision Progress", "⏰ Revision Reminders",
 })
+
+GLOBAL_BUTTONS.add("📝 Text → PDF")
+
 
 NAVIGATION_BUTTONS = {
     MAIN_MENU,

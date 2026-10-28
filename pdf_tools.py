@@ -4,6 +4,13 @@ from pathlib import Path
 from PIL import Image
 from PyPDF2 import PdfReader, PdfWriter
 from telebot import types
+from telebot.handler_backends import ContinueHandling
+
+from navigation import should_yield_to_navigation
+from text_pdf_v711 import (
+    create_text_pdf, TextPdfError, MAX_TEXT_CHARS, MAX_TEXT_MESSAGES,
+    PDF_TEXT_MODE, PDF_TEXT_BUTTON, PDF_TEXT_CREATE, PDF_TEXT_CLEAR,
+)
 
 
 # Per-chat PDF tool state.
@@ -51,6 +58,7 @@ def _pdf_tools_menu(bot, chat_id):
         types.KeyboardButton("🔗 Merge PDFs"),
         types.KeyboardButton("✂️ Extract Pages"),
         types.KeyboardButton("🖼 Images → PDF"),
+        types.KeyboardButton(PDF_TEXT_BUTTON),
         types.KeyboardButton("🔄 Rotate PDF"),
         types.KeyboardButton("🔐 Protect PDF"),
         types.KeyboardButton("🏠 Main Menu"),
@@ -64,6 +72,7 @@ def _pdf_tools_menu(bot, chat_id):
             "🔗 Merge PDFs\n"
             "✂️ Extract Pages\n"
             "🖼 Images → PDF\n"
+            "📝 Text → PDF\n"
             "🔄 Rotate PDF\n"
             "🔐 Protect PDF"
         ),
@@ -260,6 +269,123 @@ def register_pdf_handlers(bot, show_main_menu):
             bot,
             message.chat.id,
         )
+
+    # ----------------------------------------------
+    # TEXT TO PDF - private chats and in-memory text only.
+    # ----------------------------------------------
+
+    @bot.message_handler(commands=["textpdf"])
+    @bot.message_handler(func=lambda m: getattr(m, "text", None) == PDF_TEXT_BUTTON)
+    def start_text_to_pdf(message):
+        chat_id = message.chat.id
+        if getattr(message.chat, "type", "private") != "private":
+            bot.send_message(chat_id, "🔒 Please open a private chat with this bot to create a text PDF.")
+            return
+        pdf_state[chat_id] = {"mode": PDF_TEXT_MODE, "parts": [], "length": 0}
+        bot.send_message(
+            chat_id,
+            "📝 Text → PDF\n\n"
+            "Paste or type your notes in one or several messages.\n"
+            "Tamil • English • Sinhala • Arabic supported.\n\n"
+            f"Maximum: {MAX_TEXT_CHARS:,} characters in {MAX_TEXT_MESSAGES} messages.\n"
+            "When ready, tap ✅ Create Text PDF.\n"
+            "The bot does not save this text to your Study Notes database.",
+            reply_markup=_mode_keyboard(
+                [PDF_TEXT_CREATE, PDF_TEXT_CLEAR],
+                ["🔙 PDF Tools", "🏠 Main Menu"],
+                "❌ Cancel",
+            ),
+        )
+
+    @bot.message_handler(
+        func=lambda m: getattr(m, "text", None) == PDF_TEXT_CLEAR
+        and pdf_state.get(m.chat.id, {}).get("mode") == PDF_TEXT_MODE
+    )
+    def clear_text_to_pdf(message):
+        state = pdf_state[message.chat.id]
+        state.update(parts=[], length=0)
+        bot.send_message(message.chat.id, "🧹 Text cleared. Send your new text.")
+
+    @bot.message_handler(
+        func=lambda m: getattr(m, "text", None) == "❌ Cancel"
+        and pdf_state.get(m.chat.id, {}).get("mode") == PDF_TEXT_MODE
+    )
+    def cancel_text_to_pdf(message):
+        _pdf_tools_menu(bot, message.chat.id)
+
+    @bot.message_handler(
+        func=lambda m: getattr(m, "text", None) == PDF_TEXT_CREATE
+        and pdf_state.get(m.chat.id, {}).get("mode") == PDF_TEXT_MODE
+    )
+    def finish_text_to_pdf(message):
+        chat_id = message.chat.id
+        state = pdf_state.get(chat_id, {})
+        parts = state.get("parts") or []
+        if not parts:
+            bot.send_message(chat_id, "❌ First send the text you want in the PDF.")
+            return
+        bot.send_chat_action(chat_id, "upload_document")
+        try:
+            output = create_text_pdf("\n\n".join(parts))
+            bot.send_document(
+                chat_id, output,
+                caption="✅ Your Text PDF is ready! 📄",
+            )
+        except TextPdfError as error:
+            # Configuration errors are safe to explain; never echo user text.
+            bot.send_message(chat_id, "❌ " + str(error))
+            return
+        except Exception as error:
+            print("Text PDF generation error:", type(error).__name__)
+            bot.send_message(chat_id, "❌ PDF creation failed. Please try again.")
+            return
+        finally:
+            # Do not leave the PDF bytes or a file descriptor open.
+            if "output" in locals():
+                output.close()
+        _pdf_tools_menu(bot, chat_id)
+
+    @bot.message_handler(
+        func=lambda m: pdf_state.get(m.chat.id, {}).get("mode") == PDF_TEXT_MODE
+        and should_yield_to_navigation(getattr(m, "text", None)),
+        content_types=["text"],
+    )
+    def text_pdf_other_command(message):
+        pdf_state.pop(message.chat.id, None)
+        return ContinueHandling()
+
+    @bot.message_handler(
+        func=lambda m: pdf_state.get(m.chat.id, {}).get("mode") == PDF_TEXT_MODE,
+        content_types=["text"],
+    )
+    def collect_text_for_pdf(message):
+        chat_id = message.chat.id
+        state = pdf_state.get(chat_id, {})
+        part = (message.text or "").strip()
+        if not part:
+            bot.send_message(chat_id, "Please send text, not an empty message.")
+            return
+        if len(state.get("parts") or []) >= MAX_TEXT_MESSAGES:
+            bot.send_message(chat_id, "⚠️ Message limit reached. Tap ✅ Create Text PDF.")
+            return
+        new_length = state.get("length", 0) + len(part) + (2 if state.get("parts") else 0)
+        if new_length > MAX_TEXT_CHARS:
+            bot.send_message(chat_id, f"⚠️ Too much text. Maximum {MAX_TEXT_CHARS:,} characters.\nTap ✅ Create Text PDF or 🧹 Clear Text.")
+            return
+        state.setdefault("parts", []).append(part)
+        state["length"] = new_length
+        bot.send_message(
+            chat_id,
+            f"✅ Text added! {len(state['parts'])} message(s), {new_length:,}/{MAX_TEXT_CHARS:,} characters.\n"
+            "Send more text or tap ✅ Create Text PDF.",
+        )
+
+    @bot.message_handler(
+        func=lambda m: pdf_state.get(m.chat.id, {}).get("mode") == PDF_TEXT_MODE,
+        content_types=["document", "photo"],
+    )
+    def text_pdf_nontext(message):
+        bot.send_message(message.chat.id, "📝 This tool converts typed/pasted text. Please send text messages, not files or photos.")
 
     # ----------------------------------------------
     # MERGE

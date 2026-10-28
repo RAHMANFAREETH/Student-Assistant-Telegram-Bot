@@ -13,11 +13,13 @@ from config import (
 # CENTRAL NAVIGATION
 # ==================================================
 
-from ui_v57 import greeting, register_ui_v57_handlers
+from ui_v57 import greeting, get_language, register_ui_v57_handlers
+from user_help_v79 import build_quick_help_text, register_user_help_v79_handlers
 # V6.6 Revision Hub integration
 from revision_hub_v66 import register_revision_hub_v66_handlers
 from achievements_v58 import register_achievements_v58_handlers
 from ai_ops_v60 import register_ai_ops_v60_handlers
+from broadcast_v710 import register_broadcast_handlers
 
 from navigation import (
     build_main_menu_markup,
@@ -212,351 +214,12 @@ def start(message):
     commands=["help"]
 )
 def help_command(message):
-    help_text = (
-            "🎓 STUDENT ASSISTANT BOT V5.4\n\n"
-
-            "━━━━━━━━━━━━━━━━━━\n"
-            "🧩 CORE STABILITY\n"
-            "━━━━━━━━━━━━━━━━━━\n"
-            "• Central navigation system\n"
-            "• Shared global menu buttons\n"
-            "• Universal Main Menu / Cancel\n"
-            "• Safer state handling\n"
-            "• System health checker\n\n"
-
-            "━━━━━━━━━━━━━━━━━━\n"
-            "📄 PDF TOOLS\n"
-            "━━━━━━━━━━━━━━━━━━\n"
-            "• Merge PDFs\n"
-            "• Extract pages\n"
-            "• Images → PDF\n"
-            "• Rotate PDF\n"
-            "• Protect PDF\n\n"
-
-            "━━━━━━━━━━━━━━━━━━\n"
-            "📝 NOTES\n"
-            "━━━━━━━━━━━━━━━━━━\n"
-            "• Add notes\n"
-            "• View notes\n"
-            "• Search notes\n"
-            "• Delete notes\n\n"
-
-            "━━━━━━━━━━━━━━━━━━\n"
-            "🌐 TRANSLATOR\n"
-            "━━━━━━━━━━━━━━━━━━\n"
-            "• Tamil\n"
-            "• English\n"
-            "• Sinhala\n"
-            "• Arabic\n"
-            "• Translation history\n"
-            "• Pronunciation\n"
-            "• Document translation\n"
-            "• OCR image translation\n\n"
-
-            "━━━━━━━━━━━━━━━━━━\n"
-            "⏰ STUDY REMINDERS\n"
-            "━━━━━━━━━━━━━━━━━━\n"
-            "• Add reminders\n"
-            "• View reminders\n"
-            "• Delete reminders\n"
-            "• Automatic Telegram alerts\n\n"
-
-            "━━━━━━━━━━━━━━━━━━\n"
-            "📚 SUBJECTS\n"
-            "━━━━━━━━━━━━━━━━━━\n"
-            "• Add subjects\n"
-            "• Subject codes\n"
-            "• View subjects\n"
-            "• Delete subjects\n\n"
-
-            "━━━━━━━━━━━━━━━━━━\n"
-            "📅 ASSIGNMENTS\n"
-            "━━━━━━━━━━━━━━━━━━\n"
-            "• Add assignments\n"
-            "• Description\n"
-            "• Deadline\n"
-            "• Priority\n"
-            "• Subject linking\n"
-            "• Due today\n"
-            "• Due this week\n"
-            "• Mark completed\n"
-            "• Delete assignments\n"
-            "• Deadline alerts\n\n"
-
-            "━━━━━━━━━━━━━━━━━━\n"
-            "📚 STUDY MATERIALS\n"
-            "━━━━━━━━━━━━━━━━━━\n"
-            "• PDF / DOCX / TXT\n"
-            "• OCR scanned PDFs\n"
-            "• Subject linking\n"
-            "• Read extracted text\n"
-            "• Search materials\n"
-            "• Summaries\n"
-            "• Key points\n\n"
-
-            "━━━━━━━━━━━━━━━━━━\n"
-            "🗓 TIMETABLE\n"
-            "━━━━━━━━━━━━━━━━━━\n"
-            "• Weekly classes\n"
-            "• Start/end times\n"
-            "• Subject linking\n"
-            "• Locations\n"
-            "• Today's timetable\n"
-            "• Weekly timetable\n\n"
-
-            "━━━━━━━━━━━━━━━━━━\n"
-            "⏱ STUDY PLANNER\n"
-            "━━━━━━━━━━━━━━━━━━\n"
-            "• 25-minute focus\n"
-            "• 50-minute focus\n"
-            "• Custom sessions\n"
-            "• Subject linking\n"
-            "• Automatic completion alerts\n"
-            "• Weekly analytics\n\n"
-
-            "━━━━━━━━━━━━━━━━━━\n"
-            "🎙 VOICE NOTES\n"
-            "━━━━━━━━━━━━━━━━━━\n"
-            "• Save voice notes\n"
-            "• Organize by subject\n"
-            "• Replay notes\n"
-            "• Optional speech-to-text\n"
-            "• View transcripts\n\n"
-
-            "━━━━━━━━━━━━━━━━━━\n"
-            "🌍 LANGUAGE TOOLS\n"
-            "━━━━━━━━━━━━━━━━━━\n"
-            "🇱🇰 Tamil\n"
-            "🇬🇧 English\n"
-            "🇱🇰 Sinhala\n"
-            "🇸🇦 Arabic\n\n"
-            "• Vocabulary\n"
-            "• Meanings\n"
-            "• Examples\n"
-            "• Practice\n"
-            "• Pronunciation\n"
-            "• Mastery tracking\n"
-            "• Text tools\n\n"
-
-            "━━━━━━━━━━━━━━━━━━\n"
-            "🧠 FLASHCARDS\n"
-            "━━━━━━━━━━━━━━━━━━\n"
-            "• Add flashcards\n"
-            "• Subject-based cards\n"
-            "• Study mode\n"
-            "• Mastery tracking\n"
-            "• V5.4: Due reviews & adaptive scheduling\n"
-            "• Again / Hard / Good / Easy\n\n"
-
-            "━━━━━━━━━━━━━━━━━━\n"
-            "❓ QUIZ\n"
-            "━━━━━━━━━━━━━━━━━━\n"
-            "• MCQ quizzes\n"
-            "• Quiz by subject\n"
-            "• Immediate feedback\n"
-            "• Quiz scores\n"
-            "• Quiz history\n\n"
-
-            "━━━━━━━━━━━━━━━━━━\n"
-            "📝 EXAM PLANNER\n"
-            "━━━━━━━━━━━━━━━━━━\n"
-            "• Add exams\n"
-            "• Exam date/time\n"
-            "• Location\n"
-            "• Notes\n"
-            "• Upcoming exams\n"
-            "• Automatic exam alerts\n\n"
-
-            "━━━━━━━━━━━━━━━━━━\n"
-            "✅ ATTENDANCE\n"
-            "━━━━━━━━━━━━━━━━━━\n"
-            "• Present\n"
-            "• Absent\n"
-            "• Late\n"
-            "• Excused\n"
-            "• Attendance history\n"
-            "• Attendance percentage\n\n"
-
-            "━━━━━━━━━━━━━━━━━━\n"
-            "🎯 STUDY GOALS\n"
-            "━━━━━━━━━━━━━━━━━━\n"
-            "• Create goals\n"
-            "• Link to subject\n"
-            "• Target date\n"
-            "• Active goals\n"
-            "• Completed goals\n\n"
-
-            "━━━━━━━━━━━━━━━━━━\n"
-            "🎓 SEMESTERS\n"
-            "━━━━━━━━━━━━━━━━━━\n"
-            "• Create semesters\n"
-            "• GPA scale\n"
-            "• Start/end dates\n"
-            "• Active semester\n"
-            "• Semester history\n\n"
-
-            "━━━━━━━━━━━━━━━━━━\n"
-            "📊 GRADES & GPA\n"
-            "━━━━━━━━━━━━━━━━━━\n"
-            "• Course credits\n"
-            "• Grade labels\n"
-            "• Grade points\n"
-            "• Percentage scores\n"
-            "• Weighted GPA\n"
-            "• Semester GPA\n"
-            "• Cumulative GPA\n"
-            "• Target GPA calculator\n\n"
-
-            "━━━━━━━━━━━━━━━━━━\n"
-            "☀️ TODAY HUB\n"
-            "━━━━━━━━━━━━━━━━━━\n"
-            "• Today's classes\n"
-            "• Assignments due today\n"
-            "• Exams in next 7 days\n"
-            "• Active goals\n"
-            "• Overdue goals\n"
-            "• Study minutes today\n\n"
-
-            "━━━━━━━━━━━━━━━━━━\n"
-            "🔎 GLOBAL SEARCH\n"
-            "━━━━━━━━━━━━━━━━━━\n"
-            "Search across:\n"
-            "• Notes\n"
-            "• Materials\n"
-            "• Assignments\n"
-            "• Exams\n"
-            "• Goals\n"
-            "• Voice transcripts\n"
-            "• Vocabulary\n"
-            "• Flashcards\n\n"
-
-            "━━━━━━━━━━━━━━━━━━\n"
-            "📚 REVISION PLANNER\n"
-            "━━━━━━━━━━━━━━━━━━\n"
-            "• Create revision plan from exam\n"
-            "• Enter topics one per line\n"
-            "• Auto-distribute topics by day\n"
-            "• Today's revision tasks\n"
-            "• Complete revision tasks\n"
-            "• Revision progress\n\n"
-
-            "━━━━━━━━━━━━━━━━━━\n"
-            "🔥 STUDY STREAK\n"
-            "━━━━━━━━━━━━━━━━━━\n"
-            "• Daily study target\n"
-            "• Today's study minutes\n"
-            "• Current streak\n"
-            "• Best streak\n"
-            "• Last 7 days activity\n\n"
-
-            "━━━━━━━━━━━━━━━━━━\n"
-            "🧠 SMART INSIGHTS\n"
-            "━━━━━━━━━━━━━━━━━━\n"
-            "• Smart Study Insights\n"
-            "• Subject Health scores\n"
-            "• Study priority ranking\n"
-            "• Weekly study review\n"
-            "• Rule-based recommendations\n\n"
-
-            "━━━━━━━━━━━━━━━━━━\n"
-            "🔔 SMART NOTIFICATIONS\n"
-            "━━━━━━━━━━━━━━━━━━\n"
-            "• Daily morning study brief\n"
-            "• Weekly study review\n"
-            "• Custom notification time\n"
-            "• Custom weekly day\n"
-            "• Timezone support\n"
-            "• Supabase Cron delivery\n\n"
-
-            "━━━━━━━━━━━━━━━━━━\n"
-            "📢 STUDENT RESOURCES\n"
-            "━━━━━━━━━━━━━━━━━━\n"
-            "• Tamil-medium courses group\n"
-            "• Tamil-medium A/L & O/L past papers\n"
-            "• Contact Admin on Telegram\n\n"
-
-            "━━━━━━━━━━━━━━━━━━\n"
-            "📦 DATA EXPORT\n"
-            "━━━━━━━━━━━━━━━━━━\n"
-            "• Personal academic backup\n"
-            "• Compressed JSON\n"
-            "• Excludes bot/API secrets\n\n"
-
-            "━━━━━━━━━━━━━━━━━━\n"
-            "📊 DASHBOARD\n"
-            "━━━━━━━━━━━━━━━━━━\n"
-            "• Subjects\n"
-            "• Materials\n"
-            "• Notes\n"
-            "• Reminders\n"
-            "• Flashcards\n"
-            "• Assignments\n"
-            "• Due today\n"
-            "• Completion percentage\n\n"
-
-            "━━━━━━━━━━━━━━━━━━\n"
-            "📈 PROGRESS\n"
-            "━━━━━━━━━━━━━━━━━━\n"
-            "• Flashcard mastery\n"
-            "• Quiz statistics\n"
-            "• Assignment progress\n\n"
-
-            "━━━━━━━━━━━━━━━━━━\n"
-            "🛠 SYSTEM HEALTH\n"
-            "━━━━━━━━━━━━━━━━━━\n"
-            "• Required environment variables\n"
-            "• Optional integration keys\n"
-            "• Expected Supabase tables\n"
-            "• Does not display secret values\n\n"
-
-            "━━━━━━━━━━━━━━━━━━\n"
-            "⌨️ COMMANDS\n"
-            "━━━━━━━━━━━━━━━━━━\n"
-            "/start\n"
-            "/help\n"
-            "/id\n"
-            "/subjects\n"
-            "/assignments\n"
-            "/today\n"
-            "/materials\n"
-            "/timetable\n"
-            "/planner\n"
-            "/voice\n"
-            "/languages\n"
-            "/flashcards\n"
-            "/reviews\n"
-            "/reviewstats\n"
-            "/quiz\n"
-            "/exams\n"
-            "/attendance\n"
-            "/goals\n"
-            "/semesters\n"
-            "/gpa\n"
-            "/todayhub\n"
-            "/search\n"
-            "/revision\n"
-            "/streak\n"
-            "/insights\n"
-            "/notifications\n"
-            "/resources\n"
-            "/export\n"
-            "/dashboard\n"
-            "/progress\n"
-            "/translate\n"
-            "/ai\n"
-            "/aiclear\n"
-            "/aistats\n"
-            "/healthcheck\n"
-            "/systemhealth"
+    """One clear message instead of the obsolete multi-part V5.4 manual."""
+    bot.send_message(
+        message.chat.id,
+        build_quick_help_text(get_language(message.from_user.id)),
+        reply_markup=build_main_menu_markup(),
     )
-
-    for part in split_telegram_text(
-        help_text
-    ):
-        bot.send_message(
-            message.chat.id,
-            part,
-        )
 
 
 # ==================================================
@@ -599,7 +262,10 @@ def user_id(message):
 # ==================================================
 
 # V5.7 category handlers MUST come before legacy handlers.
+register_broadcast_handlers(bot)
 register_ui_v57_handlers(bot, show_main_menu)
+# V7.9 finder runs before stateful legacy forms.
+register_user_help_v79_handlers(bot)
 register_achievements_v58_handlers(bot, show_main_menu)
 register_revision_hub_v66_handlers(bot, show_main_menu)
 register_ai_ops_v60_handlers(bot)
@@ -849,7 +515,7 @@ def home():
     return {
         "status": "ok",
         "bot": "Student Assistant Bot",
-        "version": "6.0",
+        "version": "7.9",
         "database": "Supabase",
         "deployment": "Render",
 
@@ -1010,8 +676,8 @@ def setup_render_webhook():
     )
 
     try:
-        bot.remove_webhook()
-
+        # Re-register directly: avoid a temporary outage caused by deleting
+        # the working webhook on each Render/Gunicorn worker startup.
         result = bot.set_webhook(
             url=webhook_url,
             secret_token=WEBHOOK_SECRET,
@@ -1095,7 +761,7 @@ if __name__ == "__main__":
         )
 
         print(
-            "🎓 Student Assistant Bot V5.5 enabled."
+            "🎓 Student Assistant Bot V7.9 enabled."
         )
 
         print(
