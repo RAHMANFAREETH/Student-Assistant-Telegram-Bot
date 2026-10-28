@@ -1,7 +1,19 @@
+
 Flask>=3.0,<4
 pyTelegramBotAPI>=4.20,<5
 gunicorn>=22,<25
 
-# V7.11 Unicode Text -> PDF
+# Existing Student Assistant Bot dependencies
+python-dotenv
+requests
+supabase
+PyPDF2[crypto]
+Pillow
+python-docx
+deep-translator
+gTTS
+tzdata
+
+# V7.11 Unicode Text to PDF
 fpdf2>=2.8.5,<3
 uharfbuzz>=0.40,<1
