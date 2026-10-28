@@ -8,6 +8,8 @@ from io import BytesIO
 
 from PIL import Image, ImageEnhance, ImageOps, ImageFilter, ImageChops, UnidentifiedImageError
 
+from image_crop_v714 import auto_crop_image
+
 FILTER_BUTTON = "🎨 Choose Filter"
 PREVIEW_BUTTON = "👁 Preview Last"
 REMOVE_BUTTON = "🗑 Remove Last"
@@ -152,10 +154,14 @@ def filter_image(image: Image.Image, filter_code: str) -> Image.Image:
     raise ImageFilterError("❌ Unknown filter.")
 
 
-def make_preview(data: bytes, filter_code: str) -> BytesIO:
+def make_preview(data: bytes, filter_code: str, auto_crop: bool = False) -> BytesIO:
     image = _read_image(data, max_dimension=900)
     try:
-        filtered = filter_image(image, filter_code)
+        crop_source = auto_crop_image(image) if auto_crop else image.copy()
+        try:
+            filtered = filter_image(crop_source, filter_code)
+        finally:
+            crop_source.close()
         try:
             result = BytesIO()
             result.name = "image_filter_preview.jpg"
@@ -168,7 +174,8 @@ def make_preview(data: bytes, filter_code: str) -> BytesIO:
         image.close()
 
 
-def images_to_pdf(image_items: list[bytes], filter_code: str = "original") -> BytesIO:
+def images_to_pdf(image_items: list[bytes], filter_code: str = "original",
+                  auto_crop: bool = False) -> BytesIO:
     if not image_items:
         raise ImageFilterError("❌ Send at least one image first.")
     if len(image_items) > MAX_IMAGES:
@@ -180,7 +187,11 @@ def images_to_pdf(image_items: list[bytes], filter_code: str = "original") -> By
         for data in image_items:
             original = _read_image(data)
             try:
-                converted.append(filter_image(original, filter_code))
+                crop_source = auto_crop_image(original) if auto_crop else original.copy()
+                try:
+                    converted.append(filter_image(crop_source, filter_code))
+                finally:
+                    crop_source.close()
             finally:
                 original.close()
         output = BytesIO()
