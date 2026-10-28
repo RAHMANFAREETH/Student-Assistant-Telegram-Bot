@@ -17,3 +17,6 @@ tzdata
 # V7.11 Unicode Text to PDF
 fpdf2>=2.8.5,<3
 uharfbuzz>=0.40,<1
+
+# V7.16 offline scanner (OpenCV)
+opencv-python-headless>=4.10,<5
