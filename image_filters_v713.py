@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from io import BytesIO
 
-from PIL import Image, ImageEnhance, ImageOps, ImageFilter, UnidentifiedImageError
+from PIL import Image, ImageEnhance, ImageOps, ImageFilter, ImageChops, UnidentifiedImageError
 
 FILTER_BUTTON = "🎨 Choose Filter"
 PREVIEW_BUTTON = "👁 Preview Last"
@@ -91,6 +91,25 @@ def enqueue_image(state: dict, data: bytes) -> int:
     return len(images)
 
 
+def _shadow_normalized_gray(image: Image.Image) -> Image.Image:
+    """Normalize uneven paper illumination without a global threshold.
+
+    Large shadows are treated as local background, not ink.  This uses only
+    Pillow: no cloud service, OpenCV, OCR, or extra native dependencies.
+    """
+    gray = ImageOps.grayscale(image)
+    radius = min(100, max(12, round(min(image.size) / 12)))
+    background = gray.filter(ImageFilter.GaussianBlur(radius=radius))
+    try:
+        # If a pixel is similar to its surrounding paper it becomes light;
+        # text darker than local paper remains visible.  Unlike global
+        # autocontrast+threshold this avoids solid-black shadow regions.
+        return ImageChops.subtract(gray, background, offset=242)
+    finally:
+        background.close()
+        gray.close()
+
+
 def filter_image(image: Image.Image, filter_code: str) -> Image.Image:
     if filter_code not in FILTER_NAMES:
         raise ImageFilterError("❌ Unknown filter. Please select one from the menu.")
@@ -99,11 +118,28 @@ def filter_image(image: Image.Image, filter_code: str) -> Image.Image:
     if filter_code == "gray":
         return ImageOps.grayscale(image).convert("RGB")
     if filter_code == "bw":
-        gray = ImageOps.autocontrast(ImageOps.grayscale(image), cutoff=1)
-        return gray.point(lambda pixel: 255 if pixel >= 165 else 0).convert("RGB")
+        # Local paper contrast rather than one harsh threshold for the
+        # entire page.  This specifically avoids turning phone shadows
+        # into black blocks on handwritten notebook photos.
+        normalized = _shadow_normalized_gray(image)
+        try:
+            return normalized.point(lambda px: 255 if px >= 215 else 0).convert("RGB")
+        finally:
+            normalized.close()
     if filter_code == "scan":
-        gray = ImageOps.autocontrast(ImageOps.grayscale(image), cutoff=2)
-        return ImageEnhance.Contrast(gray).enhance(1.35).filter(ImageFilter.UnsharpMask(radius=1.0, percent=120, threshold=3)).convert("RGB")
+        # Gentle clean: keep a substantial amount of original grayscale
+        # so pale handwriting and ruled lines are not erased.
+        gray = ImageOps.grayscale(image)
+        normalized = _shadow_normalized_gray(image)
+        try:
+            cleaned = Image.blend(gray, normalized, 0.30)
+            try:
+                return ImageEnhance.Contrast(cleaned).enhance(1.08).convert("RGB")
+            finally:
+                cleaned.close()
+        finally:
+            gray.close()
+            normalized.close()
     if filter_code == "auto":
         enhanced = ImageOps.autocontrast(image, cutoff=1, preserve_tone=True)
         return ImageEnhance.Contrast(enhanced).enhance(1.08)

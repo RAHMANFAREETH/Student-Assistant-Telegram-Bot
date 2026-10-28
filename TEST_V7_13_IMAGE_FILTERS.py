@@ -49,6 +49,38 @@ class FilterEngineTests(unittest.TestCase):
                 self.assertEqual(len(set(result.getpixel((20, 20)))), 1)
                 result.close()
 
+    def test_shadow_does_not_become_black_block(self):
+        """Uneven lighting on a notebook must not swallow a page."""
+        from PIL import ImageDraw
+        original = Image.new("RGB", (360, 420), (208, 207, 202))
+        draw = ImageDraw.Draw(original)
+        draw.rectangle((45, 65, 310, 380), fill=(72, 69, 66))
+        draw.line((100, 130, 260, 130), fill=(18, 17, 18), width=4)
+        bw = filters.filter_image(original, "bw")
+        try:
+            core = bw.crop((125, 180, 225, 300)).convert("L")
+            try:
+                hist = core.histogram()
+                dark_fraction = sum(hist[:100]) / (core.width * core.height)
+                self.assertLess(dark_fraction, .12)
+            finally:
+                core.close()
+        finally:
+            original.close()
+            bw.close()
+
+    def test_scan_is_not_binary_or_all_white(self):
+        original = Image.new("RGB", (250, 250), (210, 210, 210))
+        from PIL import ImageDraw
+        ImageDraw.Draw(original).line((20, 50, 230, 50), fill=(35, 35, 35), width=3)
+        scan = filters.filter_image(original, "scan")
+        try:
+            self.assertLess(scan.getpixel((125, 50))[0], 200)
+            self.assertGreater(scan.getpixel((120, 120))[0], 150)
+        finally:
+            original.close()
+            scan.close()
+
     def test_filter_does_not_modify_original(self):
         with Image.open(BytesIO(image_bytes())) as img:
             before = img.getpixel((10, 10))
