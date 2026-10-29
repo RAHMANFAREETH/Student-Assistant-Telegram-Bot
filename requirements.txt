@@ -20,3 +20,4 @@ uharfbuzz>=0.40,<1
 
 # V7.16 offline scanner (OpenCV)
 opencv-python-headless>=4.10,<5
+python-pptx
