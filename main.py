@@ -271,6 +271,10 @@ register_achievements_v58_handlers(bot, show_main_menu)
 register_revision_hub_v66_handlers(bot, show_main_menu)
 register_ai_ops_v60_handlers(bot)
 
+# V8.0 Study Lab — opt-in and registered before stateful legacy workflows.
+from v8_bot import register_v8_handlers
+register_v8_handlers(bot, show_main_menu)
+
 register_study_context_handlers(bot, show_main_menu)
 register_ai_study_assistant_handlers(bot, show_main_menu)
 
@@ -505,6 +509,10 @@ register_navigation_handlers(
 # HEALTH CHECK
 # ==================================================
 
+# V8.0 Mini App: read-only and Telegram-signature protected.
+from v8_miniapp import register_v8_miniapp
+register_v8_miniapp(app)
+
 @app.route(
     "/",
     methods=[
@@ -516,7 +524,7 @@ def home():
     return {
         "status": "ok",
         "bot": "Student Assistant Bot",
-        "version": "7.9",
+        "version": ("8.0-pilot" if os.getenv("V8_ENABLED", "").lower() in ("true", "1", "yes") else "7.9"),
         "database": "Supabase",
         "deployment": "Render",
 

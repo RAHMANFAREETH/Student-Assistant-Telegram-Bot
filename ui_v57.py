@@ -59,6 +59,11 @@ GUIDE_BUTTONS = OrderedDict([
     ("🔒 Privacy Tips", "privacy"),
 ])
 
+# V8.0 option only appears if an administrator enables the pilot.
+import os as _v8_os
+if _v8_os.getenv("V8_ENABLED", "").lower() in ("true", "1", "yes"):
+    CATEGORY_FEATURES[CAT_MORE].insert(0, "🚀 V8 Study Lab")
+
 ALL_UI_BUTTONS = (set(CATEGORY_FEATURES) | set(LANG_BUTTONS) |
                   set(GUIDE_BUTTONS) | {HELP_CENTER, LANGUAGE_MENU, BACK_CATEGORIES, "🔎 Find a Tool"})
 
@@ -100,6 +105,12 @@ TEXT = {
         "back": "اختر قسمًا من القائمة الرئيسية.",
     },
 }
+
+# Keep the multilingual greeting accurate only when V8 is enabled.
+if _v8_os.getenv("V8_ENABLED", "").lower() in ("true", "1", "yes"):
+    for _lang_text in TEXT.values():
+        if "welcome" in _lang_text:
+            _lang_text["welcome"] = _lang_text["welcome"].replace("V7.9", "V8.0 Pilot")
 
 CATEGORY_TEXT = {
     "en": {

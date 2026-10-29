@@ -146,6 +146,15 @@ GLOBAL_BUTTONS.update({
     "🧠 Practice Saved Cards", "📊 Revision Progress", "⏰ Revision Reminders",
 })
 
+# V8 feature selection must not be swallowed by older stateful handlers.
+import os as _v8_os
+if _v8_os.getenv("V8_ENABLED", "").lower() in ("true", "1", "yes"):
+    GLOBAL_BUTTONS.add("🚀 V8 Study Lab")
+    GLOBAL_BUTTONS.update(("📄 Document Chat", "📚 Past Paper Analyzer",
+        "🧠 Auto Flashcards & Quiz", "📅 Smart Exam Planner", "🎙 Lecture → Notes",
+        "📊 Advanced Progress", "📖 Citation Generator", "🏆 Group Quiz Battles",
+        "📱 Mini App", "☁️ Data Backup"))
+
 GLOBAL_BUTTONS.add("📝 Text → PDF")
 
 
