@@ -39,6 +39,7 @@ from text_pdf_v711 import (
     create_text_pdf, TextPdfError, MAX_TEXT_CHARS, MAX_TEXT_MESSAGES,
     PDF_TEXT_MODE, PDF_TEXT_BUTTON, PDF_TEXT_CREATE, PDF_TEXT_CLEAR,
 )
+from office_to_pdf_v713 import register_office_to_pdf_handlers
 
 
 # Per-chat PDF tool state.
@@ -91,8 +92,14 @@ def _pdf_tools_menu(bot, chat_id):
         types.KeyboardButton(PDF_TEXT_BUTTON),
         types.KeyboardButton("🔄 Rotate PDF"),
         types.KeyboardButton("🔐 Protect PDF"),
-        types.KeyboardButton("🏠 Main Menu"),
     )
+
+    # V7.16 Office PDF visibility fix: keep both conversions above Main Menu.
+    markup.row(
+        types.KeyboardButton("📄 DOCX → PDF"),
+        types.KeyboardButton("📊 PPTX → PDF"),
+    )
+    markup.row(types.KeyboardButton("🏠 Main Menu"))
 
     bot.send_message(
         chat_id,
@@ -106,7 +113,9 @@ def _pdf_tools_menu(bot, chat_id):
             f"{SCAN_BUTTON}\n"
             "📝 Text → PDF\n"
             "🔄 Rotate PDF\n"
-            "🔐 Protect PDF"
+            "🔐 Protect PDF\n"
+            "📄 DOCX → PDF\n"
+            "📊 PPTX → PDF"
         ),
         reply_markup=markup,
     )
@@ -306,6 +315,14 @@ def _images_to_pdf(image_items):
 def register_pdf_handlers(bot, show_main_menu):
 
     # V7.16: document scanner (independent from Image Crop and Images → PDF).
+    # V7.13 DOCX/PPTX real LibreOffice conversion
+    register_office_to_pdf_handlers(
+        bot,
+        lambda chat_id: _pdf_tools_menu(bot, chat_id),
+        lambda chat_id: pdf_state.pop(chat_id, None),
+        show_main_menu,
+    )
+
     @bot.message_handler(commands=["scan"])
     @bot.message_handler(func=lambda m: getattr(m, "text", None) == SCAN_BUTTON)
     def start_document_scan(message):
