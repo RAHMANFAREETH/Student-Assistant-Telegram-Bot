@@ -21,3 +21,8 @@ uharfbuzz>=0.40,<1
 # V7.16 offline scanner (OpenCV)
 opencv-python-headless>=4.10,<5
 python-pptx
+
+# V7.17 advanced PDF rendering, optimization, and editable text extraction
+pypdf>=5,<7
+pypdfium2>=4,<6
+reportlab>=4,<6

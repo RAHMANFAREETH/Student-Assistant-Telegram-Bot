@@ -40,6 +40,7 @@ from text_pdf_v711 import (
     PDF_TEXT_MODE, PDF_TEXT_BUTTON, PDF_TEXT_CREATE, PDF_TEXT_CLEAR,
 )
 from office_to_pdf_v713 import register_office_to_pdf_handlers
+from advanced_pdf_v717 import ADVANCED_BUTTONS, register_advanced_pdf_handlers
 
 
 # Per-chat PDF tool state.
@@ -99,6 +100,9 @@ def _pdf_tools_menu(bot, chat_id):
         types.KeyboardButton("📄 DOCX → PDF"),
         types.KeyboardButton("📊 PPTX → PDF"),
     )
+    # V7.17: keep all Advanced PDF Tools above Main Menu.
+    for i in range(0, len(ADVANCED_BUTTONS), 2):
+        markup.row(*[types.KeyboardButton(label) for label in ADVANCED_BUTTONS[i:i + 2]])
     markup.row(types.KeyboardButton("🏠 Main Menu"))
 
     bot.send_message(
@@ -115,7 +119,12 @@ def _pdf_tools_menu(bot, chat_id):
             "🔄 Rotate PDF\n"
             "🔐 Protect PDF\n"
             "📄 DOCX → PDF\n"
-            "📊 PPTX → PDF"
+            "📊 PPTX → PDF\n"
+            "🗜 Compress PDF\n"
+            "📄 PDF → Word\n"
+            "🖼 PDF → Images\n"
+            "🔀 Organize PDF\n"
+            "💧 Add Watermark"
         ),
         reply_markup=markup,
     )
@@ -313,6 +322,12 @@ def _images_to_pdf(image_items):
 
 
 def register_pdf_handlers(bot, show_main_menu):
+    # V7.17: register before Office and legacy PDF document handlers.
+    register_advanced_pdf_handlers(
+        bot, lambda chat_id: _pdf_tools_menu(bot, chat_id),
+        lambda chat_id: pdf_state.pop(chat_id, None), show_main_menu,
+    )
+
 
     # V7.16: document scanner (independent from Image Crop and Images → PDF).
     # V7.13 DOCX/PPTX real LibreOffice conversion
