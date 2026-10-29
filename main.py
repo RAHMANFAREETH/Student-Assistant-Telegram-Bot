@@ -271,6 +271,10 @@ register_achievements_v58_handlers(bot, show_main_menu)
 register_revision_hub_v66_handlers(bot, show_main_menu)
 register_ai_ops_v60_handlers(bot)
 
+# V9.0 optional Academic Toolkit. Register before the older V8 state handlers.
+from v9_bot import register_v9_handlers
+register_v9_handlers(bot, show_main_menu)
+
 # V8.0 Study Lab — opt-in and registered before stateful legacy workflows.
 from v8_bot import register_v8_handlers
 register_v8_handlers(bot, show_main_menu)

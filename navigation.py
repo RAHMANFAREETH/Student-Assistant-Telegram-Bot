@@ -155,6 +155,16 @@ if _v8_os.getenv("V8_ENABLED", "").lower() in ("true", "1", "yes"):
         "📊 Advanced Progress", "📖 Citation Generator", "🏆 Group Quiz Battles",
         "📱 Mini App", "☁️ Data Backup"))
 
+# V9 toolkit navigation: prevent other stateful features from absorbing button taps.
+import os as _v9_os
+if _v9_os.getenv("V9_ENABLED", "").lower() in ("true", "1", "yes"):
+    GLOBAL_BUTTONS.add("🧰 V9 Academic Toolkit")
+    GLOBAL_BUTTONS.update(("📸 Math Solver", "🧠 Mind Map Generator", "📊 Presentation Maker",
+       "🔬 Diagram Label Reader", "📋 Assignment Checker", "📖 Syllabus Tracker",
+       "🧮 Formula Sheet", "🖼 Timetable Photo Import", "🔎 Document Comparison",
+       "📓 Mistake Notebook", "🍅 Focus Timer", "📤 Anki Export",
+       "🔍 Citation Verifier", "👥 Study Rooms"))
+
 GLOBAL_BUTTONS.add("📝 Text → PDF")
 
 

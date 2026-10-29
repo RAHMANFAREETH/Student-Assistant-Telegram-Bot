@@ -64,6 +64,11 @@ import os as _v8_os
 if _v8_os.getenv("V8_ENABLED", "").lower() in ("true", "1", "yes"):
     CATEGORY_FEATURES[CAT_MORE].insert(0, "🚀 V8 Study Lab")
 
+# V9.0 Academic Toolkit — independent pilot; uses the V8-approved allowlist.
+import os as _v9_os
+if _v9_os.getenv("V9_ENABLED", "").lower() in ("true", "1", "yes"):
+    CATEGORY_FEATURES[CAT_MORE].insert(0, "🧰 V9 Academic Toolkit")
+
 ALL_UI_BUTTONS = (set(CATEGORY_FEATURES) | set(LANG_BUTTONS) |
                   set(GUIDE_BUTTONS) | {HELP_CENTER, LANGUAGE_MENU, BACK_CATEGORIES, "🔎 Find a Tool"})
 

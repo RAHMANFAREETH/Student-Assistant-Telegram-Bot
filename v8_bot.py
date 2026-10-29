@@ -43,9 +43,18 @@ def enabled():
 
 
 def allowed(uid):
-    # Fail closed: enabling V8 alone does not expose private data or AI to strangers.
-    ids = {s.strip() for s in os.getenv("V8_ALLOWED_USER_IDS", "").split(",") if s.strip().isdigit()}
-    return enabled() and str(uid) in ids
+    # Pilot remains the default. Verified-adults mode requires independently
+    # established age eligibility stored in server-only Supabase records.
+    if not enabled():
+        return False
+    mode = os.getenv("STUDY_ACCESS_MODE", "pilot").strip().lower()
+    if mode == "pilot":
+        ids = {s.strip() for s in os.getenv("V8_ALLOWED_USER_IDS", "").split(",") if s.strip().isdigit()}
+        return str(uid) in ids
+    if mode == "verified_adults":
+        from study_access_v9 import is_verified_adult
+        return is_verified_adult(uid)
+    return False  # Unknown or misconfigured mode: deny, don't accidentally open access.
 
 
 def _private(m):

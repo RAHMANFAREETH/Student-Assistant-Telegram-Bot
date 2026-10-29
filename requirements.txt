@@ -26,3 +26,6 @@ python-pptx
 pypdf>=5,<7
 pypdfium2>=4,<6
 reportlab>=4,<6
+
+# V9.0 safe symbolic math engine (BSD-3-Clause)
+sympy>=1.13,<2
