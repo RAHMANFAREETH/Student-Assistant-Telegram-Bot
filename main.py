@@ -276,6 +276,10 @@ register_ai_ops_v60_handlers(bot)
 from v91_access_bot import register_v91_access_handlers
 register_v91_access_handlers(bot)
 
+# V9.2 optional, administrator-only dashboard. Register before V9/V8 handlers.
+from v92_admin_bot import register_v92_admin_handlers
+register_v92_admin_handlers(bot)
+
 from v9_bot import register_v9_handlers
 register_v9_handlers(bot, show_main_menu)
 
