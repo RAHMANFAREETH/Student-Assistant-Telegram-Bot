@@ -165,6 +165,11 @@ if _v9_os.getenv("V9_ENABLED", "").lower() in ("true", "1", "yes"):
        "📓 Mistake Notebook", "🍅 Focus Timer", "📤 Anki Export",
        "🔍 Citation Verifier", "👥 Study Rooms"))
 
+# V9.1: preserve the request action while legacy workflows are active.
+import os as _v91_os
+if _v91_os.getenv("V91_ACCESS_REQUESTS_ENABLED", "").lower() in ("true", "1", "yes"):
+    GLOBAL_BUTTONS.add("🔐 Verify Adult Access")
+
 GLOBAL_BUTTONS.add("📝 Text → PDF")
 
 

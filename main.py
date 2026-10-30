@@ -272,6 +272,10 @@ register_revision_hub_v66_handlers(bot, show_main_menu)
 register_ai_ops_v60_handlers(bot)
 
 # V9.0 optional Academic Toolkit. Register before the older V8 state handlers.
+# V9.1 administrator-reviewed age eligibility (before V9 and V8 handlers).
+from v91_access_bot import register_v91_access_handlers
+register_v91_access_handlers(bot)
+
 from v9_bot import register_v9_handlers
 register_v9_handlers(bot, show_main_menu)
 

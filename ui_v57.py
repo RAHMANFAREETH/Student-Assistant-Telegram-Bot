@@ -69,6 +69,11 @@ import os as _v9_os
 if _v9_os.getenv("V9_ENABLED", "").lower() in ("true", "1", "yes"):
     CATEGORY_FEATURES[CAT_MORE].insert(0, "🧰 V9 Academic Toolkit")
 
+# V9.1: verification requests are available even before V8/V9 authorization.
+import os as _v91_os
+if _v91_os.getenv("V91_ACCESS_REQUESTS_ENABLED", "").lower() in ("true", "1", "yes"):
+    CATEGORY_FEATURES[CAT_MORE].insert(0, "🔐 Verify Adult Access")
+
 ALL_UI_BUTTONS = (set(CATEGORY_FEATURES) | set(LANG_BUTTONS) |
                   set(GUIDE_BUTTONS) | {HELP_CENTER, LANGUAGE_MENU, BACK_CATEGORIES, "🔎 Find a Tool"})
 
