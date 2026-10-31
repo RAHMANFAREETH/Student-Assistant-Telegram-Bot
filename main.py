@@ -165,6 +165,10 @@ bot = telebot.TeleBot(
 # FLASK APP
 # ==================================================
 
+# V11.5: group menus are private, and temporary public book links expire.
+from group_ui_v115 import install_group_ui_guard
+install_group_ui_guard(bot)
+
 app = Flask(__name__)
 
 # V11.3 Advanced Library integration
