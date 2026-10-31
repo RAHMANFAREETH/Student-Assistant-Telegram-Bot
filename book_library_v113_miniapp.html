@@ -1,0 +1,8 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="color-scheme" content="light dark"><title>Student Book Library</title><link rel="stylesheet" href="/library/assets/style.css"></head>
+<body><main class="shell"><header><div class="eyebrow">STUDENT ASSISTANT</div><h1>📚 Book Library</h1><p>Find your next great read</p></header>
+<section class="searchbar"><label for="query">Search title, author or ISBN</label><input id="query" type="search" maxlength="100" placeholder="e.g. Ihya Ulumuddin" autocomplete="off"><button id="search">Search</button></section>
+<nav class="tabs"><button id="tab-all" class="active">Books</button><button id="tab-favorites">Favorites</button><button id="tab-reading">Reading</button><button id="tab-collections">Collections</button></nav>
+<section id="filters"><label for="categories">Category</label><select id="categories"><option value="">All categories</option></select></section>
+<div id="notice" role="status" aria-live="polite"></div><section id="books" class="cards" aria-live="polite"></section><div class="pages"><button id="prev">Previous</button><span id="page">1</span><button id="next">Next</button></div><dialog id="details"><h2 id="detail-title"></h2><p id="detail-info"></p><p id="detail-desc"></p><pre id="detail-preview"></pre><button id="detail-close">Close</button></dialog><footer>Books are sent in your private Telegram chat. Share only legally distributable books.</footer></main>
+<script src="https://telegram.org/js/telegram-web-app.js"></script><script src="/library/assets/app.js" defer></script></body></html>

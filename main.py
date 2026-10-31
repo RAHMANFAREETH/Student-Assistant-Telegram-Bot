@@ -167,6 +167,13 @@ bot = telebot.TeleBot(
 
 app = Flask(__name__)
 
+# V11.3 Advanced Library integration
+if os.getenv('BOOK_LIBRARY_V113_ENABLED', 'false').lower() in ('true','1','yes'):
+    from book_library_v113_web import register_book_library_web
+    from book_library_v113_notify import start_worker_if_enabled
+    register_book_library_web(app, bot)
+    start_worker_if_enabled(bot)
+
 
 # ==================================================
 # MAIN MENU

@@ -147,6 +147,9 @@ def _results_markup(bot, books):
 
 
 def _search(bot, chat_id, query, group=False):
+    if _on('BOOK_LIBRARY_V113_ENABLED', False):
+        from book_library_v113_bot import show_smart_search
+        return show_smart_search(bot, chat_id, query, group=group)
     if _on('BOOK_LIBRARY_V112_ENABLED', False):
         from book_library_v112_bot import show_search
         return show_search(bot, chat_id, query, group=group)
@@ -194,6 +197,9 @@ def _menu(bot, m):
     if _on('BOOK_LIBRARY_V112_ENABLED', False):
         from book_library_v112_bot import add_menu_buttons
         add_menu_buttons(kb)
+    if _on('BOOK_LIBRARY_V113_ENABLED', False):
+        from book_library_v113_bot import add_v113_menu_buttons
+        add_v113_menu_buttons(kb)
     bot.send_message(m.chat.id, '📚 Book Library\nSearch by book title, author or language.\n'
                      'You can also send /book Ibn Kathir.', reply_markup=kb)
 
@@ -239,6 +245,13 @@ def handle_library_start(bot, message):
             except Exception:
                 import logging
                 logging.getLogger(__name__).warning('V11.2 delivery count unavailable')
+        if _on('BOOK_LIBRARY_V113_ENABLED', False):
+            try:
+                from book_library_v113_store import record_metric
+                record_metric('deliveries')
+            except Exception:
+                import logging
+                logging.getLogger(__name__).warning('V11.3 delivery metrics unavailable')
         bot.send_message(message.chat.id,
                          f"✅ Sent: {_short(item['title'], 160)}\n"
                          f"✍️ {_short(item['author'], 100)} · {_short(item['language'], 35)}")
@@ -378,6 +391,18 @@ def register_book_library_handlers(bot):
         if file_size < 0 or file_size > limit:
             bot.send_message(m.chat.id, f'⚠️ File exceeds library upload limit ({format_size(limit)}).')
             return
+        # V11.3 checks duplicates before copying the file into Telegram storage.
+        v113_extra = {}
+        if _on('BOOK_LIBRARY_V113_ENABLED', False):
+            from book_library_v113_bot import check_admin_upload
+            try:
+                duplicate, file_unique_id, sha256 = check_admin_upload(
+                    bot, m, isbn=v112_extra.get('isbn'))
+            except Exception:
+                bot.send_message(m.chat.id, '⚠️ Duplicate check is unavailable; upload was not published.')
+                return
+            if duplicate: return
+            v113_extra = dict(file_unique_id=file_unique_id, sha256=sha256)
         raw_channel = os.getenv('BOOK_LIBRARY_CHANNEL_ID', '')
         try:
             channel = int(raw_channel)
@@ -399,7 +424,7 @@ def register_book_library_handlers(bot):
             rec = add_book(title=title, author=author, language=language,
                            channel_id=channel, message_id=storage_mid,
                            file_name=filename, file_size=file_size,
-                           uploaded_by=m.from_user.id, **v112_extra)
+                           uploaded_by=m.from_user.id, **v112_extra, **v113_extra)
         except Exception:
             try:
                 bot.delete_message(channel, storage_mid) # best-effort orphan cleanup
@@ -408,6 +433,9 @@ def register_book_library_handlers(bot):
             bot.send_message(m.chat.id, '⚠️ File copied but the catalog save failed. '
                              'Check Supabase migration and service credentials.')
             return
+        if _on('BOOK_LIBRARY_V113_ENABLED', False):
+            from book_library_v113_bot import post_admin_upload
+            post_admin_upload(bot, rec)
         bot.send_message(m.chat.id,
                          f'✅ Added to Book Library\n📖 {_short(title, 180)}\n'
                          f'✍️ {_short(author, 120)} · {_short(language, 40)}\n'
@@ -457,5 +485,10 @@ def register_book_library_handlers(bot):
     if _on('BOOK_LIBRARY_V112_ENABLED', False):
         from book_library_v112_bot import register_v112_handlers
         register_v112_handlers(bot)
+    if _on('BOOK_LIBRARY_V113_ENABLED', False):
+        from book_library_v113_bot import register_v113_handlers
+        register_v113_handlers(bot)
 
 # V11.2 Advanced Library hooks.
+
+# V11.3 Advanced Library integration
