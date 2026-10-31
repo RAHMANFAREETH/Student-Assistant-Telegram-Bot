@@ -190,6 +190,10 @@ def show_main_menu(chat_id, first_name="Friend"):
     commands=["start"]
 )
 def start(message):
+    # V11.1: deliver a Book Library deep link before the existing /start menu.
+    from book_library_bot import handle_library_start
+    if handle_library_start(bot, message):
+        return
     first_name = (
         message.from_user.first_name
         or "Friend"
@@ -262,6 +266,10 @@ def user_id(message):
 # ==================================================
 
 # V5.7 category handlers MUST come before legacy handlers.
+# V11.1: Book Library handlers must precede older wildcard document/text handlers.
+from book_library_bot import register_book_library_handlers
+register_book_library_handlers(bot)
+
 broadcast_service = register_broadcast_handlers(bot)
 register_known_broadcast_handlers(bot, broadcast_service)
 register_ui_v57_handlers(bot, show_main_menu)

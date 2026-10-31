@@ -108,6 +108,7 @@ MAIN_MENU_ROWS = [
     (UI_PLAN, UI_PRACTICE),
     (UI_LANGUAGES, UI_PROGRESS),
     (UI_FILES, UI_MORE),
+    ("📚 Book Library",),
     (UI_HELP, UI_LANGUAGE),
 ]
 
@@ -185,6 +186,7 @@ import os as _v11_nav_os
 if _v11_nav_os.getenv("V11_ENABLED", "").strip().lower() in ("true", "yes", "1"):
     GLOBAL_BUTTONS.add("🚀 Study Center")
 
+GLOBAL_BUTTONS.add("📚 Book Library")
 GLOBAL_BUTTONS.add("📝 Text → PDF")
 
 
