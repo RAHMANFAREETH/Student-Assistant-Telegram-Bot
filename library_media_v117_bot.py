@@ -502,8 +502,11 @@ def _admin_panel(bot,m):
     kb=_keyboard()
     for label,action in [('📨 Pending Contributions','pending'),('📩 Requests & Status','requests'),
                          ('⭐ Reviews & Reports','moderation'),('📊 Library Analytics','stats'),
+                         ('📁 Manage Library Files','manage'),
                          ('📤 Upload Media','upload'),('📦 Bulk Import','bulk'),
                          ('📚 Existing Book Submissions','legacy'),('🕵️ Audit Commands','audit')]:
+        if action == 'manage' and os.getenv('LIBRARY_MANAGE_V118_ENABLED','false').lower() not in ('true','yes','1','on'):
+            continue
         kb.add(_button(label,data='v117:adm:'+action))
     _message(bot,m.chat.id,'🛡️ Library Administrator Panel\n'
              'Review community files and requests, publish media, and manage rights.\n'
@@ -651,6 +654,9 @@ def register_v117_handlers(bot):
     if getattr(bot,'_library_media_v117_installed',False):return
     bot._library_media_v117_installed=True
     from telebot.handler_backends import ContinueHandling
+    # V11.8: Manage Library Files for older PDFs and new media.
+    from library_manage_v118 import register_manage_handlers
+    register_manage_handlers(bot)
 
     @bot.message_handler(commands=['libraryadmin','mediaadmin'])
     def admin_command(m):
@@ -815,6 +821,10 @@ def register_v117_handlers(bot):
                 action=parts[2]
                 _answer(bot,c)
                 if action=='pending':return _pending_panel(bot,c.message.chat.id)
+                if action=='manage':
+                    from library_manage_v118 import list_panel,enabled as management_enabled
+                    if not management_enabled():return _message(bot,c.message.chat.id,'⚠️ File management is not enabled yet.')
+                    return list_panel(bot,c.from_user.id,c.message.chat.id)
                 if action=='requests':return _requests_panel(bot,c.message.chat.id)
                 if action=='moderation':return _moderation_panel(bot,c.message.chat.id)
                 if action=='stats':return _stats_panel(bot,c.message.chat.id)
