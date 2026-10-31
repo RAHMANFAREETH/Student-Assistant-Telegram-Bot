@@ -286,6 +286,10 @@ register_v93_reliability_handlers(bot)
 
 # V10.0 opt-in Learning Lab. Register before V9/V8 state handlers.
 from v10_bot import register_v10_handlers
+# V10.1 combined study enhancements. Register before V10 and legacy stateful handlers.
+from v101_bot import register_v101_handlers
+register_v101_handlers(bot)
+
 register_v10_handlers(bot)
 
 from v9_bot import register_v9_handlers

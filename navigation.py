@@ -175,6 +175,11 @@ import os as _v10_nav_os
 if _v10_nav_os.getenv("V10_ENABLED", "").strip().lower() in ("true", "yes", "1"):
     GLOBAL_BUTTONS.add("🧠 V10 Learning Lab")
 
+# V10.1 button bypasses older active feature sessions.
+import os as _v101_nav_os
+if _v101_nav_os.getenv("V101_ENABLED", "").strip().lower() in ("true", "yes", "1"):
+    GLOBAL_BUTTONS.add("🧠 V10.1 All Features")
+
 GLOBAL_BUTTONS.add("📝 Text → PDF")
 
 
