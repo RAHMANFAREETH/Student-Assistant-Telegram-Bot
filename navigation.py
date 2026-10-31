@@ -170,6 +170,11 @@ import os as _v91_os
 if _v91_os.getenv("V91_ACCESS_REQUESTS_ENABLED", "").lower() in ("true", "1", "yes"):
     GLOBAL_BUTTONS.add("🔐 Verify Adult Access")
 
+# V10.0 optional Learning Lab button should pass through legacy states.
+import os as _v10_nav_os
+if _v10_nav_os.getenv("V10_ENABLED", "").strip().lower() in ("true", "yes", "1"):
+    GLOBAL_BUTTONS.add("🧠 V10 Learning Lab")
+
 GLOBAL_BUTTONS.add("📝 Text → PDF")
 
 

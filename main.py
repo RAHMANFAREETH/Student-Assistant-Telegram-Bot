@@ -284,6 +284,10 @@ register_v92_admin_handlers(bot)
 from v93_reliability_bot import register_v93_reliability_handlers
 register_v93_reliability_handlers(bot)
 
+# V10.0 opt-in Learning Lab. Register before V9/V8 state handlers.
+from v10_bot import register_v10_handlers
+register_v10_handlers(bot)
+
 from v9_bot import register_v9_handlers
 register_v9_handlers(bot, show_main_menu)
 
