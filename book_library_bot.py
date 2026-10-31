@@ -146,13 +146,13 @@ def _results_markup(bot, books):
     return markup
 
 
-def _search(bot, chat_id, query, group=False):
+def _search(bot, chat_id, query, group=False, requester_id=None):
     if _on('BOOK_LIBRARY_V113_ENABLED', False):
         from book_library_v113_bot import show_smart_search
         return show_smart_search(bot, chat_id, query, group=group)
     if _on('BOOK_LIBRARY_V112_ENABLED', False):
         from book_library_v112_bot import show_search
-        return show_search(bot, chat_id, query, group=group)
+        return show_search(bot, chat_id, query, group=group, requester_id=requester_id)
     query = (query or '').strip()
     if not 2 <= len(query) <= 100:
         bot.send_message(chat_id, '🔎 Enter at least 2 characters. Example: /book Ibn Kathir')
@@ -283,6 +283,16 @@ def register_book_library_handlers(bot):
                 bot.send_message(m.chat.id, '🔒 Book search requires verified-adult access. Use /verify_adult in the bot’s private chat.')
             return
         query = _command_args(m)
+        # Privacy-mode group requests are still subject to per-user cooldowns.
+        from book_library_privacy_v114 import private_group_results
+        if private_group_results(m) and _cooldown(m.chat.id, m.from_user.id, 3):
+            return
+        # Optional group privacy: never expose request-specific search buttons publicly.
+        from book_library_privacy_v114 import route_group
+        if route_group(bot, m, lambda private_id: (
+                _search(bot, private_id, query, group=False) if query
+                else _latest(bot, private_id))):
+            return
         if not query:
             if _is_private(m):
                 _menu(bot, m)
@@ -293,7 +303,19 @@ def register_book_library_handlers(bot):
         else:
             if _cooldown(m.chat.id, m.from_user.id, 3):
                 return
-            _search(bot, m.chat.id, query, group=_is_group(m))
+            _search(bot, m.chat.id, query, group=_is_group(m), requester_id=m.from_user.id)
+
+    # Privacy-mode group handler registers before the legacy public handler.
+    @bot.message_handler(commands=['booklatest', 'latestbooks'],
+                         func=lambda m: _is_group(m) and
+                         __import__('book_library_privacy_v114').private_group_results(m))
+    def library_latest_private_group(m):
+        if not _enabled() or not _allowed_group(m.chat.id) or not _verified(m.from_user.id):
+            return
+        if _cooldown(m.chat.id, m.from_user.id, 3):
+            return
+        from book_library_privacy_v114 import route_group
+        route_group(bot, m, lambda private_id: _latest(bot, private_id))
 
     @bot.message_handler(commands=['booklatest', 'latestbooks'])
     def library_latest_command(m):
@@ -349,6 +371,8 @@ def register_book_library_handlers(bot):
             bot.answer_callback_query(c.id, 'Adult verification required.', show_alert=True)
             return
         bot.answer_callback_query(c.id)
+        from book_library_privacy_v114 import cleanup_menu
+        cleanup_menu(bot, c)
         if c.data == 'lib:search':
             with _lock:
                 if len(_pending) > 2000:
@@ -466,9 +490,20 @@ def register_book_library_handlers(bot):
         if _cooldown(m.chat.id, m.from_user.id, 8):
             return ContinueHandling()
         try:
+            from book_library_privacy_v114 import route_group, private_group_results
+            if private_group_results(m):
+                # Auto-search only when the text matches a book, to avoid private spam.
+                if _on('BOOK_LIBRARY_V113_ENABLED', False):
+                    from book_library_v113_store import smart_search
+                    found = bool(smart_search(m.text, limit=1))
+                else:
+                    found = bool(search_books(m.text, limit=1))
+                if found:
+                    route_group(bot, m, lambda private_id: _search(bot, private_id, m.text))
+                return ContinueHandling()
             if _on('BOOK_LIBRARY_V112_ENABLED', False):
                 from book_library_v112_bot import show_search
-                show_search(bot, m.chat.id, m.text, group=True)
+                show_search(bot, m.chat.id, m.text, group=True, requester_id=m.from_user.id)
                 return ContinueHandling()
             books = search_books(m.text, limit=6)
             if not books:
@@ -492,3 +527,5 @@ def register_book_library_handlers(bot):
 # V11.2 Advanced Library hooks.
 
 # V11.3 Advanced Library integration
+
+# V11.4 Book Library privacy integration

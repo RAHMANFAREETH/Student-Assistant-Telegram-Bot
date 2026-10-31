@@ -227,6 +227,9 @@ def register_v113_handlers(bot):
     def discovery(m):
         if not _allowed(m): return _txt(bot,m,'📚 Library unavailable in this chat.')
         if _limit(m,'discover',2): return
+        from book_library_privacy_v114 import private_target
+        m = private_target(bot, m)
+        if m is None: return
         command=str(m.text or '').split()[0].split('@')[0].lower()
         val=_arg(m)
         if not val: return _txt(bot,m,'Usage: /booksmart TITLE, /bookrelated UUID, /bookseries NAME, /bookinfo UUID')
@@ -477,6 +480,8 @@ def register_v113_handlers(bot):
             bot.answer_callback_query(c.id,'Open the library privately.',show_alert=True);return
         action=str(c.data).split(':',1)[-1]
         bot.answer_callback_query(c.id)
+        from book_library_privacy_v114 import cleanup_menu
+        cleanup_menu(bot,c)
         info={'smart':'🔎 Use /booksmart BOOK TITLE to search with spelling tolerance.',
               'reading':'📖 /bookreading lists progress; /bookprogress UUID | reading | 30 updates it.',
               'collections':'📋 /bookcollections to view, /bookcollection NAME to create.',
@@ -570,3 +575,5 @@ def _book_info(bot,m,value):
     if reviews:info.append('⭐ Approved reviews:\n'+'\n'.join(
         f"{r['rating']}/5 · {r['review_text'][:100]}" for r in reviews[:3]))
     _txt(bot,m,'\n'.join(info))
+
+# V11.4 Book Library privacy integration

@@ -90,6 +90,7 @@ def _session(token, chat_id, user_id):
         item = _sessions.get(token)
         if (not item or item['expires'] < time.monotonic() or
             item['chat_id'] != int(chat_id) or
+            (int(chat_id) < 0 and item['owner'] is None) or
             (item['owner'] is not None and item['owner'] != int(user_id))):
             return None
         return dict(item)
@@ -151,7 +152,7 @@ def _list_page(bot, chat_id, params, *, page=0, token=None, owner=None, group=Fa
     return True
 
 
-def show_search(bot, chat_id, query, *, group=False):
+def show_search(bot, chat_id, query, *, group=False, requester_id=None):
     q = str(query or '').strip()
     if not 2 <= len(q) <= 100:
         if not group:
@@ -160,7 +161,7 @@ def show_search(bot, chat_id, query, *, group=False):
     try:
         return _list_page(bot, chat_id,
                           {'kind':'browse','query':q,'title':f'🔎 Results for: {_short(q,75)}'},
-                          group=group)
+                          group=group, owner=requester_id if group else None)
     except Exception:
         if not group:
             bot.send_message(chat_id, '⚠️ Book search unavailable. Please try again.')
@@ -240,6 +241,9 @@ def register_v112_handlers(bot):
         if not _allowed(m):
             bot.send_message(m.chat.id, '📚 Library not enabled in this chat.')
             return
+        from book_library_privacy_v114 import private_target
+        m = private_target(bot, m)
+        if m is None: return
         command = str(getattr(m, 'text', '') or '').split()[0].split('@')[0].lower()
         val = lib._command_args(m)
         names = {'/bookcat':('category','🗂 Category'), '/bookauthor':('author','✍️ Author'),
@@ -268,6 +272,9 @@ def register_v112_handlers(bot):
         if not _allowed(m):
             bot.send_message(m.chat.id, '📚 Library not enabled in this chat.')
             return
+        from book_library_privacy_v114 import private_target
+        m = private_target(bot, m)
+        if m is None: return
         cmd = str(m.text or '').split()[0].split('@')[0].lower()
         kind = {'/bookcats':'category','/bookauthors':'author','/booklangs':'language'}[cmd]
         _send_facets(bot, m.chat.id, kind)
@@ -422,17 +429,21 @@ def register_v112_handlers(bot):
             return
         parts = str(c.data).split(':')
         action = parts[1] if len(parts)>1 else ''
+        import book_library_bot as lib
+        if lib._is_group(m) and action not in ('pg','filter'):
+            reply('Open the library privately for these options.', True); return
+        from book_library_privacy_v114 import cleanup_menu
         try:
             if action == 'fac' and len(parts)==3:
                 if parts[2] not in ('category','author','language'):
                     reply('Invalid filter.',True); return
-                reply(); _send_facets(bot,m.chat.id,parts[2]); return
+                reply(); _send_facets(bot,m.chat.id,parts[2]); cleanup_menu(bot,c); return
             if action == 'filter' and len(parts)==3:
                 session = _session(parts[2],m.chat.id,c.from_user.id)
                 if not session:
                     reply('Expired. Open the library again.',True); return
                 reply(); _list_page(bot,m.chat.id,session['params'],
-                                    owner=session['owner'],group=lib._is_group(m)); return
+                                    owner=session['owner'],group=lib._is_group(m)); cleanup_menu(bot,c); return
             if action == 'pg' and len(parts)==4:
                 session = _session(parts[2],m.chat.id,c.from_user.id)
                 if not session:
@@ -443,16 +454,16 @@ def register_v112_handlers(bot):
                                     token=parts[2],owner=session['owner'],
                                     group=lib._is_group(m),edit=m.message_id); return
             if action == 'browse' and len(parts)==2:
-                reply(); _list_page(bot,m.chat.id,{'kind':'browse'},group=lib._is_group(m)); return
+                reply(); _list_page(bot,m.chat.id,{'kind':'browse'},group=lib._is_group(m)); cleanup_menu(bot,c); return
             if action == 'favs' and len(parts)==2:
                 if not lib._is_private(m) or m.chat.id != c.from_user.id:
                     reply('Favorites are private.',True); return
-                reply(); _list_page(bot,m.chat.id,{'kind':'favorites'},owner=c.from_user.id); return
+                reply(); _list_page(bot,m.chat.id,{'kind':'favorites'},owner=c.from_user.id); cleanup_menu(bot,c); return
             if action == 'f' and len(parts)==3:
                 if not lib._is_private(m) or m.chat.id != c.from_user.id:
                     reply('Favorites are private.',True); return
                 status = toggle_favorite(c.from_user.id,str(uuid.UUID(hex=parts[2])))
-                reply('❤️ Saved' if status else 'Removed from favorites.'); return
+                reply('❤️ Saved' if status else 'Removed from favorites.'); cleanup_menu(bot,c); return
             reply('This button is no longer valid.',True)
         except Exception:
             log.exception('V11.2 library callback failed')
@@ -488,3 +499,5 @@ def _send_facets(bot, chat_id, kind):
     except Exception:
         log.exception('V11.2 list facets failed')
         bot.send_message(chat_id, '⚠️ Filters currently unavailable.')
+
+# V11.4 Book Library privacy integration
