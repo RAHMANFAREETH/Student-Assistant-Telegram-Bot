@@ -53,7 +53,7 @@ def format_size(n):
 
 
 def add_book(*, title, author, language, channel_id, message_id, file_name,
-             file_size, uploaded_by, db=None):
+             file_size, uploaded_by, db=None, category=None, isbn=None):
     title, author, language = validate_metadata(title, author, language)
     if int(channel_id) >= 0 or int(message_id) <= 0 or int(uploaded_by) <= 0:
         raise ValueError('Invalid Telegram identifiers.')
@@ -61,6 +61,11 @@ def add_book(*, title, author, language, channel_id, message_id, file_name,
                   channel_id=int(channel_id), message_id=int(message_id),
                   file_name=str(file_name or '')[:255], file_size=int(file_size or 0),
                   uploaded_by=int(uploaded_by), active=True)
+    # V11.2 optional fields; omit until migration and feature flag are enabled.
+    if category is not None:
+        from book_library_v112_store import simple_text, normalize_isbn
+        values['category'] = simple_text(category, max_len=60)
+        values['isbn'] = normalize_isbn(isbn)
     rows = _rows((db or _db()).table(TABLE).insert(values).execute())
     if not rows or not rows[0].get('id'):
         raise LibraryError('Catalog record could not be confirmed.')
@@ -102,3 +107,5 @@ def deactivate_book(book_id, *, db=None):
     rows = _rows((db or _db()).table(TABLE).update({'active': False})
                  .eq('id', key).eq('active', True).execute())
     return bool(rows)
+
+# V11.2 Advanced Library hooks.

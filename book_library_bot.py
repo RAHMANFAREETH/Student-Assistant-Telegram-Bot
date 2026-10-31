@@ -147,6 +147,9 @@ def _results_markup(bot, books):
 
 
 def _search(bot, chat_id, query, group=False):
+    if _on('BOOK_LIBRARY_V112_ENABLED', False):
+        from book_library_v112_bot import show_search
+        return show_search(bot, chat_id, query, group=group)
     query = (query or '').strip()
     if not 2 <= len(query) <= 100:
         bot.send_message(chat_id, '🔎 Enter at least 2 characters. Example: /book Ibn Kathir')
@@ -188,6 +191,9 @@ def _menu(bot, m):
     kb = types.InlineKeyboardMarkup(row_width=2)
     kb.add(types.InlineKeyboardButton('🔎 Search a Book', callback_data='lib:search'),
            types.InlineKeyboardButton('🆕 Latest Books', callback_data='lib:latest'))
+    if _on('BOOK_LIBRARY_V112_ENABLED', False):
+        from book_library_v112_bot import add_menu_buttons
+        add_menu_buttons(kb)
     bot.send_message(m.chat.id, '📚 Book Library\nSearch by book title, author or language.\n'
                      'You can also send /book Ibn Kathir.', reply_markup=kb)
 
@@ -197,6 +203,10 @@ def handle_library_start(bot, message):
 
     Returns True only when the deep-link was handled.
     """
+    if _on('BOOK_LIBRARY_V112_ENABLED', False):
+        from book_library_v112_bot import handle_preview_start
+        if handle_preview_start(bot, message):
+            return True
     if not _is_private(message):
         return False
     raw = str(getattr(message, 'text', '') or '').strip()
@@ -221,6 +231,14 @@ def handle_library_start(bot, message):
         bot.copy_message(chat_id=message.chat.id,
                          from_chat_id=int(item['channel_id']),
                          message_id=int(item['message_id']))
+        # V11.2 delivery count is aggregate only; logging failure must not block a file.
+        if _on('BOOK_LIBRARY_V112_ENABLED', False):
+            try:
+                from book_library_v112_store import record_delivery
+                record_delivery(item['id'])
+            except Exception:
+                import logging
+                logging.getLogger(__name__).warning('V11.2 delivery count unavailable')
         bot.send_message(message.chat.id,
                          f"✅ Sent: {_short(item['title'], 160)}\n"
                          f"✍️ {_short(item['author'], 100)} · {_short(item['language'], 35)}")
@@ -330,11 +348,19 @@ def register_book_library_handlers(bot):
     @bot.message_handler(content_types=['document'],
                          func=lambda m: _enabled() and _is_private(m)
                          and _admin(m.from_user.id)
-                         and str(getattr(m, 'caption', '') or '').count('|') == 2)
+                         and str(getattr(m, 'caption', '') or '').count('|') in (2, 3, 4)
+                         and (_on('BOOK_LIBRARY_V112_ENABLED', False) or
+                              str(getattr(m, 'caption', '') or '').count('|') == 2))
     def admin_book_upload(m):
         """An approved admin sends a document with Title | Author | Language."""
         try:
-            title, author, language = parse_caption(m.caption)
+            v112_extra = {}
+            if _on('BOOK_LIBRARY_V112_ENABLED', False):
+                from book_library_v112_store import parse_extended_caption
+                title, author, language, category, isbn = parse_extended_caption(m.caption)
+                v112_extra = dict(category=category, isbn=isbn)
+            else:
+                title, author, language = parse_caption(m.caption)
         except ValueError as exc:
             bot.send_message(m.chat.id, '⚠️ ' + str(exc))
             return
@@ -373,7 +399,7 @@ def register_book_library_handlers(bot):
             rec = add_book(title=title, author=author, language=language,
                            channel_id=channel, message_id=storage_mid,
                            file_name=filename, file_size=file_size,
-                           uploaded_by=m.from_user.id)
+                           uploaded_by=m.from_user.id, **v112_extra)
         except Exception:
             try:
                 bot.delete_message(channel, storage_mid) # best-effort orphan cleanup
@@ -412,6 +438,10 @@ def register_book_library_handlers(bot):
         if _cooldown(m.chat.id, m.from_user.id, 8):
             return ContinueHandling()
         try:
+            if _on('BOOK_LIBRARY_V112_ENABLED', False):
+                from book_library_v112_bot import show_search
+                show_search(bot, m.chat.id, m.text, group=True)
+                return ContinueHandling()
             books = search_books(m.text, limit=6)
             if not books:
                 return ContinueHandling()
@@ -422,3 +452,10 @@ def register_book_library_handlers(bot):
         except Exception:
             # Silent on group auto-search failures; never spam groups with errors.
             return ContinueHandling()
+
+    # Register additional commands/callbacks while V11.2 is enabled.
+    if _on('BOOK_LIBRARY_V112_ENABLED', False):
+        from book_library_v112_bot import register_v112_handlers
+        register_v112_handlers(bot)
+
+# V11.2 Advanced Library hooks.
