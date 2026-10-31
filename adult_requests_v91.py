@@ -75,6 +75,12 @@ def request_status(uid, db=None):
 def create_request(uid, db=None, now=None):
     """Return created/pending/verified/cooldown; fail closed on DB errors."""
     uid = _id(uid)
+    # V9.3: use a single atomic database operation only after its SQL is installed.
+    if os.getenv('V93_REQUEST_RPC_ENABLED', '').strip().lower() in ('true', '1', 'yes'):
+        result = (db or _db()).rpc('v93_submit_adult_request', {'p_user_id': uid}).execute().data
+        if result not in ('created', 'pending', 'verified', 'cooldown'):
+            raise AccessError('Unexpected adult access request result.')
+        return result
     from study_access_v9 import is_verified_adult
     if is_verified_adult(uid):
         return 'verified'

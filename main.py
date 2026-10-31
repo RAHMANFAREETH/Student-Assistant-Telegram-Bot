@@ -280,6 +280,10 @@ register_v91_access_handlers(bot)
 from v92_admin_bot import register_v92_admin_handlers
 register_v92_admin_handlers(bot)
 
+# V9.3 reliability diagnostics, before legacy stateful handlers.
+from v93_reliability_bot import register_v93_reliability_handlers
+register_v93_reliability_handlers(bot)
+
 from v9_bot import register_v9_handlers
 register_v9_handlers(bot, show_main_menu)
 

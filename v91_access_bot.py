@@ -131,8 +131,10 @@ def register_v91_access_handlers(bot):
             send(m.chat.id, f'✅ Request {parts[1]} {result}; access expires in {days} days.')
             try: send(int(parts[1]), '✅ Adult access approved after review. Check /access_status and open /v8 or /v9.')
             except Exception: pass
-        except (AccessError, ValueError):
-            send(m.chat.id, '❌ Invalid request, review confirmation, or expiry (1–365 days).')
+        except AccessError as exc:
+            send(m.chat.id, '❌ Invalid request: ' + str(exc)[:200])
+        except ValueError:
+            send(m.chat.id, '❌ Invalid Telegram ID or expiry days (1–365).')
         except Exception:
             send(m.chat.id, '⚠️ Approval did not complete. Check SQL RPC setup and logs; do not retry blindly.')
 
