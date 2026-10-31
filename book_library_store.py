@@ -78,7 +78,7 @@ def search_books(query, *, limit=8, db=None):
     return [r for r in rows if isinstance(r, dict) and r.get('active', True)]
 
 
-def latest_books(*, limit=8, db=None):
+def latest_books(*, limit=5, db=None):
     return _rows((db or _db()).table(TABLE).select(FIELDS)
                  .eq('active', True).order('added_at', desc=True)
                  .limit(max(1, min(int(limit), 10))).execute())

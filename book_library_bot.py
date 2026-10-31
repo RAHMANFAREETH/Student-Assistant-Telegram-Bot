@@ -45,13 +45,16 @@ def _admin(uid):
 
 
 def _allowed_group(chat_id):
-    # Never search all groups indiscriminately; specify the approved group IDs.
+    # Explicit opt-in: permit /book and /booklatest in any group containing the bot.
+    # Automatic free-text group search remains OFF unless separately enabled.
+    if _on('BOOK_LIBRARY_ALLOW_ALL_GROUPS', False):
+        return True
     ids = _ids('BOOK_LIBRARY_GROUP_IDS')
     return bool(ids) and int(chat_id) in ids
 
 
 def _verified(uid):
-    if not _on('BOOK_LIBRARY_REQUIRE_VERIFIED_ADULT', True):
+    if not _on('BOOK_LIBRARY_REQUIRE_VERIFIED_ADULT', False):
         return True
     try:
         from study_access_v9 import is_verified_adult
@@ -164,9 +167,9 @@ def _search(bot, chat_id, query, group=False):
 
 def _latest(bot, chat_id):
     try:
-        books = latest_books()
+        books = latest_books(limit=5)
         if books:
-            bot.send_message(chat_id, '📚 Recently added books:',
+            bot.send_message(chat_id, f'📚 Latest Books ({len(books)} most recent uploads):',
                              reply_markup=_results_markup(bot, books))
         else:
             bot.send_message(chat_id, '📚 No books have been added yet.')
@@ -176,7 +179,7 @@ def _latest(bot, chat_id):
 
 def _menu(bot, m):
     if not _is_private(m):
-        bot.send_message(m.chat.id, '📚 Search here with /book TITLE. Results link to private delivery.')
+        bot.send_message(m.chat.id, '📚 Search here with /book TITLE or show the newest five with /booklatest. Results link to private delivery.')
         return
     if not _verified(m.from_user.id):
         _adult_notice(bot, m.chat.id)
@@ -253,11 +256,33 @@ def register_book_library_handlers(bot):
             if _is_private(m):
                 _menu(bot, m)
             else:
-                bot.send_message(m.chat.id, 'Usage: /book Book Title or Author')
+                if _cooldown(m.chat.id, m.from_user.id, 3):
+                    return
+                _latest(bot, m.chat.id)
         else:
             if _cooldown(m.chat.id, m.from_user.id, 3):
                 return
             _search(bot, m.chat.id, query, group=_is_group(m))
+
+    @bot.message_handler(commands=['booklatest', 'latestbooks'])
+    def library_latest_command(m):
+        if not _enabled():
+            bot.send_message(m.chat.id, '📚 Book Library is not enabled yet.')
+            return
+        if _is_group(m) and not _allowed_group(m.chat.id):
+            bot.send_message(m.chat.id, '🔒 Book search is not enabled in this group.')
+            return
+        if not (_is_private(m) or _is_group(m)):
+            return
+        if not _verified(m.from_user.id):
+            if _is_private(m):
+                _adult_notice(bot, m.chat.id)
+            else:
+                bot.send_message(m.chat.id, '🔒 Book Library access is restricted.')
+            return
+        if _cooldown(m.chat.id, m.from_user.id, 3):
+            return
+        _latest(bot, m.chat.id)
 
     @bot.message_handler(commands=['bookremove'])
     def library_remove(m):
