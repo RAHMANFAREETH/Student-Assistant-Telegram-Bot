@@ -168,6 +168,10 @@ bot = telebot.TeleBot(
 # V11.5: group menus are private, and temporary public book links expire.
 from group_ui_v115 import install_group_ui_guard
 install_group_ui_guard(bot)
+# V11.6: only public Book Library searches may execute in group chats.
+from group_books_only_v116 import install_book_only_group_gate
+install_book_only_group_gate(bot)
+
 
 app = Flask(__name__)
 
