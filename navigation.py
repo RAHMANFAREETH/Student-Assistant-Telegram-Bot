@@ -139,6 +139,7 @@ GLOBAL_BUTTONS.update({
 GLOBAL_BUTTONS.update({"🏆 Achievements", "⭐ My Level"})
 # V7.9 finder remains a global navigation action.
 GLOBAL_BUTTONS.add("🔎 Find a Tool")
+GLOBAL_BUTTONS.add("🛡️ Library Admin Panel")
 
 # V6.6 revision hub global navigation
 # Older stateful handlers must yield when a user taps these buttons.
@@ -303,3 +304,5 @@ def build_back_markup(
     )
 
     return markup
+
+# V11.7 Media Library + Admin Panel

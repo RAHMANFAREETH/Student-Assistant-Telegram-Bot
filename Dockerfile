@@ -5,6 +5,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libreoffice-writer libreoffice-impress fonts-noto-core fontconfig \
+    tesseract-ocr tesseract-ocr-eng tesseract-ocr-tam tesseract-ocr-ara tesseract-ocr-sin \
     ca-certificates && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY requirements.txt ./

@@ -147,6 +147,9 @@ def _results_markup(bot, books):
 
 
 def _search(bot, chat_id, query, group=False, requester_id=None):
+    if _on('LIBRARY_MEDIA_V117_ENABLED', False):
+        from library_media_v117_bot import unified_search
+        return unified_search(bot, chat_id, query, group=group, requester_id=requester_id)
     if _on('BOOK_LIBRARY_V113_ENABLED', False):
         from book_library_v113_bot import show_smart_search
         return show_smart_search(bot, chat_id, query, group=group)
@@ -172,6 +175,9 @@ def _search(bot, chat_id, query, group=False, requester_id=None):
 
 
 def _latest(bot, chat_id):
+    if _on('LIBRARY_MEDIA_V117_ENABLED', False):
+        from library_media_v117_bot import unified_latest
+        return unified_latest(bot, chat_id)
     try:
         books = latest_books(limit=5)
         if books:
@@ -209,6 +215,10 @@ def handle_library_start(bot, message):
 
     Returns True only when the deep-link was handled.
     """
+    if _on('LIBRARY_MEDIA_V117_ENABLED', False):
+        from library_media_v117_bot import handle_media_start
+        if handle_media_start(bot, message):
+            return True
     if _on('BOOK_LIBRARY_V112_ENABLED', False):
         from book_library_v112_bot import handle_preview_start
         if handle_preview_start(bot, message):
@@ -263,6 +273,9 @@ def handle_library_start(bot, message):
 
 def register_book_library_handlers(bot):
     """Register early, BEFORE old wildcard navigation and document handlers."""
+    if _on('LIBRARY_MEDIA_V117_ENABLED', False):
+        from library_media_v117_bot import register_v117_handlers
+        register_v117_handlers(bot)
     from telebot import types
     from telebot.handler_backends import ContinueHandling
 
@@ -529,3 +542,5 @@ def register_book_library_handlers(bot):
 # V11.3 Advanced Library integration
 
 # V11.4 Book Library privacy integration
+
+# V11.7 Media Library + Admin Panel

@@ -11,8 +11,8 @@ from functools import wraps
 
 LOG = logging.getLogger(__name__)
 BOOK_COMMANDS = frozenset({'book', 'booksearch', 'books', 'booklatest', 'latestbooks',
-                            'booksmart', 'bookbrowse'})
-LATEST_COMMANDS = frozenset({'books', 'booklatest', 'latestbooks'})
+                            'booksmart', 'bookbrowse', 'mediafind', 'medialatest', 'mediapopular'})
+LATEST_COMMANDS = frozenset({'books', 'booklatest', 'latestbooks', 'medialatest'})
 PRIVATE_LIBRARY_COMMANDS = frozenset({
     'bookcats', 'bookauthors', 'booklangs', 'bookcat', 'bookauthor', 'booklang',
     'bookisbn', 'bookdetails', 'bookpreview', 'bookfav', 'bookfavs', 'bookstats',
@@ -97,6 +97,9 @@ def _book_latest(bot, m):
 
 
 def _is_book_match(text):
+    if os.getenv('LIBRARY_MEDIA_V117_ENABLED','false').lower() in ('true','1','yes','on'):
+        from library_media_v117_bot import has_media_match
+        if has_media_match(text): return True
     """Check for an actual catalog match before answering ordinary group chat."""
     from book_library_bot import _on
     if _on('BOOK_LIBRARY_V113_ENABLED', False):
@@ -118,6 +121,11 @@ def route_group_text(bot, m):
             if not _enabled() or not _allowed_group(m.chat.id) or not _verified(m.from_user.id):
                 _ephemeral(bot, m.chat.id, '📚 Book Library is unavailable in this group.')
                 return None
+            if command == 'mediapopular' and active():
+                if os.getenv('LIBRARY_MEDIA_V117_ENABLED','false').lower() in ('true','1','yes','on'):
+                    from library_media_v117_bot import show_popular
+                    show_popular(bot,m.chat.id,group=True)
+                    return None
             if command in LATEST_COMMANDS or not args:
                 _book_latest(bot, m)
             else:
@@ -182,6 +190,9 @@ def install_book_only_group_gate(bot):
         if not active():
             from telebot.handler_backends import ContinueHandling
             return ContinueHandling()
+        if os.getenv('LIBRARY_MEDIA_GROUP_DELETE','false').strip().lower() in ('true','1','yes','on'):
+            try: bot.delete_message(m.chat.id,m.message_id)
+            except Exception: LOG.warning('Cannot delete unauthorized group media',exc_info=True)
         return None
 
     @bot.callback_query_handler(func=lambda c: _group(getattr(c, 'message', None)))
@@ -200,3 +211,5 @@ def install_book_only_group_gate(bot):
         return None
 
     return bot
+
+# V11.7 Media Library + Admin Panel

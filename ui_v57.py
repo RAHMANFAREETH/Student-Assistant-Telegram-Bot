@@ -314,8 +314,15 @@ def register_ui_v57_handlers(bot, show_main_menu):
     def show_category(m, category):
         lng = get_language(m.from_user.id)
         caption = category + "\n\n" + CATEGORY_TEXT[lng][category] + "\n\n" + TEXT[lng]["category"]
-        _menu(bot, m.chat.id, caption,
-              CATEGORY_FEATURES[category] + [BACK_CATEGORIES, HELP_CENTER])
+        options = CATEGORY_FEATURES[category] + [BACK_CATEGORIES, HELP_CENTER]
+        if category == CAT_MORE and getattr(m.chat, 'type', None) == 'private':
+            import os
+            if os.getenv('LIBRARY_MEDIA_V117_ENABLED', 'false').lower() in ('1','true','yes','on'):
+                from book_library_bot import _admin
+                if _admin(m.from_user.id):
+                    options = CATEGORY_FEATURES[category] + ['🛡️ Library Admin Panel',
+                               BACK_CATEGORIES, HELP_CENTER]
+        _menu(bot, m.chat.id, caption, options)
 
     @bot.message_handler(commands=["tutorial", "guide"])
     def command_help(m):
@@ -360,3 +367,5 @@ def register_ui_v57_handlers(bot, show_main_menu):
                   [HELP_CENTER, BACK_CATEGORIES])
 
     return True
+
+# V11.7 Media Library + Admin Panel

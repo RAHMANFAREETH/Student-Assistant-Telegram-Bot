@@ -73,7 +73,7 @@ def book_url_keyboard(markup) -> bool:
     buttons = [button for row in getattr(markup, 'keyboard', []) or
                getattr(markup, 'inline_keyboard', []) or [] for button in row]
     return bool(buttons) and all(
-        bool(re.search(r'(?:\?|&)start=book_[0-9a-fA-F]{32}(?:&|$)',
+        bool(re.search(r'(?:\?|&)start=(?:book|media)_[0-9a-fA-F]{32}(?:&|$)',
                        str(getattr(b, 'url', '') or '')))
         for b in buttons
     )
@@ -348,3 +348,5 @@ def install_group_ui_guard(bot):
 
     _start_worker(bot)
     return bot
+
+# V11.7 Media Library + Admin Panel
