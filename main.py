@@ -166,6 +166,10 @@ bot = telebot.TeleBot(
 # ==================================================
 
 # V11.5: group menus are private, and temporary public book links expire.
+# V11.6.1: Book Library-only group menu before V11.5 navigation guard.
+from group_library_menu_v1161 import install_group_library_menu
+install_group_library_menu(bot)
+
 from group_ui_v115 import install_group_ui_guard
 install_group_ui_guard(bot)
 # V11.6: only public Book Library searches may execute in group chats.
