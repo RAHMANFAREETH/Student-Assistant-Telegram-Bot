@@ -288,6 +288,10 @@ register_v93_reliability_handlers(bot)
 from v10_bot import register_v10_handlers
 # V10.1 combined study enhancements. Register before V10 and legacy stateful handlers.
 from v101_bot import register_v101_handlers
+# V11 Study Center: fast optional navigation before V10.1 and older stateful handlers.
+from v11_center import register_v11_handlers
+register_v11_handlers(bot)
+
 register_v101_handlers(bot)
 
 register_v10_handlers(bot)

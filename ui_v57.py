@@ -84,6 +84,11 @@ import os as _v101_os
 if _v101_os.getenv("V101_ENABLED", "").strip().lower() in ("true", "yes", "1"):
     CATEGORY_FEATURES[CAT_MORE].insert(0, "🧠 V10.1 All Features")
 
+# V11 lightweight Study Center menu entry.
+import os as _v11_os
+if _v11_os.getenv("V11_ENABLED", "").strip().lower() in ("true", "yes", "1"):
+    CATEGORY_FEATURES[CAT_MORE].insert(0, "🚀 Study Center")
+
 ALL_UI_BUTTONS = (set(CATEGORY_FEATURES) | set(LANG_BUTTONS) |
                   set(GUIDE_BUTTONS) | {HELP_CENTER, LANGUAGE_MENU, BACK_CATEGORIES, "🔎 Find a Tool"})
 

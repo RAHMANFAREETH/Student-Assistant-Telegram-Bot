@@ -180,6 +180,11 @@ import os as _v101_nav_os
 if _v101_nav_os.getenv("V101_ENABLED", "").strip().lower() in ("true", "yes", "1"):
     GLOBAL_BUTTONS.add("🧠 V10.1 All Features")
 
+# V11 Study Center must bypass older in-progress text workflows.
+import os as _v11_nav_os
+if _v11_nav_os.getenv("V11_ENABLED", "").strip().lower() in ("true", "yes", "1"):
+    GLOBAL_BUTTONS.add("🚀 Study Center")
+
 GLOBAL_BUTTONS.add("📝 Text → PDF")
 
 
