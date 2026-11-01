@@ -419,13 +419,21 @@ def register_book_library_handlers(bot):
         if not filename.lower().endswith(('.pdf', '.epub', '.docx', '.txt')):
             bot.send_message(m.chat.id, '⚠️ Supported book files: PDF, EPUB, DOCX and TXT.')
             return
+        # V11.8.7: copying existing Telegram messages does not download the file.
+        # A value of 0 (default) disables the *application* upload-size cap.
+        # Positive BOOK_LIBRARY_MAX_BYTES values remain supported by administrators.
         try:
-            limit = max(1, min(int(os.getenv('BOOK_LIBRARY_MAX_BYTES', '52428800')), 2*1024**3))
+            limit = int(os.getenv('BOOK_LIBRARY_MAX_BYTES', '0'))
+            if limit < 0:
+                raise ValueError('negative size cap')
         except ValueError:
             bot.send_message(m.chat.id, '⚠️ Library upload size limit is misconfigured.')
             return
         file_size = int(getattr(doc, 'file_size', 0) or 0)
-        if file_size < 0 or file_size > limit:
+        if file_size < 0:
+            bot.send_message(m.chat.id, '⚠️ Invalid document file size.')
+            return
+        if limit and file_size > limit:
             bot.send_message(m.chat.id, f'⚠️ File exceeds library upload limit ({format_size(limit)}).')
             return
         # V11.3 checks duplicates before copying the file into Telegram storage.

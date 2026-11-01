@@ -443,10 +443,14 @@ def _review_channel():
 
 def _file_meta(bot,m,*,contributor=False):
     info=st.detect_kind(m)
-    maximum=int(os.getenv('LIBRARY_MEDIA_SUBMISSION_MAX_BYTES','20971520') if contributor
-                else os.getenv('LIBRARY_MEDIA_MAX_BYTES','52428800'))
-    maximum=max(1024,min(maximum,100*1024*1024))
-    if info['size']>maximum:raise ValueError('File is too large for this library upload.')
+    # V11.8.7: media is copied inside Telegram, not downloaded by Render.
+    # Zero/default means no *application* size limit; positive values opt in.
+    maximum=int(os.getenv('LIBRARY_MEDIA_SUBMISSION_MAX_BYTES','0') if contributor
+                else os.getenv('LIBRARY_MEDIA_MAX_BYTES','0'))
+    if maximum<0:raise ValueError('Invalid library upload size setting.')
+    if info['size']<0:raise ValueError('Invalid media file size.')
+    if maximum and info['size']>maximum:
+        raise ValueError('File is too large for this library upload.')
     default=info['name'].rsplit('.',1)[0].replace('_',' ')[:175]
     meta=st.parse_caption(getattr(m,'caption','') or '',user=contributor,default_name=default)
     if not contributor and meta['rights_statement']=='other':

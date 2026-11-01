@@ -343,8 +343,13 @@ def register_v113_handlers(bot):
             filename=str(getattr(doc,'file_name','') or '')
             if not filename.lower().endswith(('.pdf','.epub','.docx','.txt')):raise ValueError('Unsupported file type.')
             size=int(getattr(doc,'file_size',0) or 0)
-            if size<1 or size>int(os.getenv('BOOK_LIBRARY_SUBMISSION_MAX_BYTES','20971520')):
-                raise ValueError('Submission too large; default maximum 20 MB.')
+            # V11.8.7: approved Telegram-to-Telegram relay has no default app cap.
+            # Setting a positive cap restores an administrator-chosen limit.
+            maximum=int(os.getenv('BOOK_LIBRARY_SUBMISSION_MAX_BYTES','0'))
+            if maximum<0:raise ValueError('Invalid submission size setting.')
+            if size<1:raise ValueError('Invalid document file size.')
+            if maximum and size>maximum:
+                raise ValueError('Submission exceeds configured size limit.')
             channel=int(os.getenv('BOOK_LIBRARY_REVIEW_CHANNEL_ID','0'))
             if channel>=0 or channel==int(os.getenv('BOOK_LIBRARY_CHANNEL_ID','0')):
                 raise ValueError('Separate private review channel is required.')
