@@ -117,6 +117,35 @@ def _book_markup(bot, books, *, chat_id, token=None, page=0, has_more=False, pri
     return markup
 
 
+def _language_book_markup(bot, books, *, token, page, more):
+    """Compact one-button-per-book delivery list, private deep links only."""
+    import book_library_bot as lib
+    from book_library_store import format_size
+    username = lib._bot_username(bot)
+    kb = _keyboard()
+    for item in books:
+        try:
+            identifier = uuid.UUID(str(item['id'])).hex
+        except (TypeError, ValueError, AttributeError):
+            log.warning('Language result omitted: invalid catalog UUID')
+            continue
+        size = format_size(item.get('file_size')) if item.get('file_size') else 'PDF'
+        head = f'📄 {size} » '
+        title = _short(item.get('title') or item.get('file_name') or 'Untitled',
+                       max(1, 63 - len(head)))
+        kb.add(_button(head + title,
+                       url=f'https://t.me/{username}?start=book_{identifier}'))
+    navigation = []
+    if page > 0:
+        navigation.append(_button('◀ Previous', callback_data=f'lib2:pg:{token}:{page-1}'))
+    if more and page < 99:
+        navigation.append(_button('Next ▶', callback_data=f'lib2:pg:{token}:{page+1}'))
+    if navigation:
+        kb.row(*navigation)
+    kb.add(_button('🌐 Back to Languages', callback_data='lib2:fac:language'))
+    return kb
+
+
 def _list_page(bot, chat_id, params, *, page=0, token=None, owner=None, group=False, edit=None):
     """One page of 5; an extra DB row tells us whether Next is available."""
     kind = params.get('kind', 'browse')
@@ -130,17 +159,35 @@ def _list_page(bot, chat_id, params, *, page=0, token=None, owner=None, group=Fa
                                    author=params.get('author'), language=params.get('language'),
                                    isbn=params.get('isbn'), page=page, page_size=PAGE_SIZE)
         heading = params.get('title', '📚 Browse Books')
+    # V11.8.5: tapping a language now opens its matching file list.
+    language_view = (not group and kind == 'browse' and params.get('language')
+                     and not any(params.get(k) for k in ('query', 'category', 'author', 'isbn')))
     if not books:
         if page == 0 and group and kind == 'browse' and params.get('query'):
             return False   # Avoid spamming groups for unrelated text.
+        if language_view:
+            kb = _keyboard()
+            kb.add(_button('🌐 Back to Languages', callback_data='lib2:fac:language'))
+            bot.send_message(chat_id,
+                f'📭 No indexed {_short(params["language"],40)} books yet.\n'
+                'Please check the book language in the admin catalog.', reply_markup=kb)
+            return True
         bot.send_message(chat_id, '📚 No matching books found.' if page == 0 else '📚 No more books on this page.')
         return True
     if token is None:
         token = _save_session(chat_id, params, owner=owner)
-    text = (f'{heading}\nPage {page+1} · showing {len(books)} books\n'
-            'Tap 📥 to receive a book privately, or 🖼 to preview its cover.')
-    markup = _book_markup(bot, books, chat_id=chat_id, token=token, page=page,
-                          has_more=more, private=not group)
+    if language_view:
+        lang = _short(params['language'], 40)
+        text = (f'📚 {lang.upper()} BOOKS\n'
+                f'📄 {len(books)} books on page {page+1}'
+                + (' · more available' if more else '')
+                + '\nTap a file to receive it privately.')
+        markup = _language_book_markup(bot, books, token=token, page=page, more=more)
+    else:
+        text = (f'{heading}\nPage {page+1} · showing {len(books)} books\n'
+                'Tap 📥 to receive a book privately, or 🖼 to preview its cover.')
+        markup = _book_markup(bot, books, chat_id=chat_id, token=token, page=page,
+                              has_more=more, private=not group)
     if edit is not None:
         try:
             bot.edit_message_text(text, chat_id=chat_id, message_id=edit,
@@ -484,6 +531,24 @@ def _cover_active(user_id):
 def _send_facets(bot, chat_id, kind):
     try:
         values = facets(kind)
+        # V11.8.5 paired private-language menu.
+        if kind == 'language':
+            from library_language_picker_v1185 import language_counts
+            choices = language_counts((v.get('value'),v.get('book_count',0)) for v in values)
+            kb = _keyboard()
+            buttons = []
+            for name,count in choices:
+                context = {'kind':'browse','title':f'🌐 Language: {_short(name,70)}',kind:name}
+                token = _save_session(chat_id,context,owner=int(chat_id))
+                buttons.append(_button(f'{_short(name,28)} ({count})',
+                                       callback_data=f'lib2:filter:{token}'))
+            for i in range(0,len(buttons),2):
+                kb.row(*buttons[i:i+2])
+            kb.add(_button('↩️ Back to Files',callback_data='lib2:browse'))
+            bot.send_message(chat_id,'🌐 SELECT LANGUAGE\n'
+                'Choose a language. Counts include indexed Book Library PDFs only; '
+                'a (0) means no matching books there.',reply_markup=kb)
+            return
         if not values:
             bot.send_message(chat_id,'📚 No entries yet.'); return
         kb = _keyboard()

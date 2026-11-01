@@ -143,7 +143,12 @@ def route_group_text(bot, m):
     if not 3 <= len(text) <= 100 or text.startswith('@') or text.startswith('📚'):
         return None
     try:
-        if _is_book_match(text):
+        # V11.8.6 optionally search unmatched ordinary text in designated groups.
+        # Existing auto-group-search, verified-adult, group allowlist, length,
+        # and cooldown restrictions are still enforced above and in _book_search.
+        all_text=os.getenv('LIBRARY_SEARCH_V1186_ALL_TEXT_ENABLED','false').lower() in (
+            'true','1','yes','on')
+        if all_text or _is_book_match(text):
             _book_search(bot, m, text)
     except Exception:
         LOG.warning('V11.6 group catalog lookup unavailable', exc_info=True)
@@ -200,6 +205,10 @@ def install_book_only_group_gate(bot):
         if not active():
             from telebot.handler_backends import ContinueHandling
             return ContinueHandling()
+        # V11.8.3 group-only search filters.
+        if str(getattr(c, 'data', '') or '').startswith('ls83:'):
+            from library_search_ui_v1183 import handle_callback
+            return handle_callback(bot,c,group=True)
         try:
             bot.answer_callback_query(c.id,
                 '🔐 Use personal buttons in the bot private chat. Book PDF links open privately.',

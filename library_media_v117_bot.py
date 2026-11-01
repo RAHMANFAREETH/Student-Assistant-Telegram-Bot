@@ -123,7 +123,7 @@ def union_search(raw,*,limit=8):
     except Exception:
         LOG.exception('Media catalog lookup unavailable')
         raise
-    old=_legacy_filtered(_book_rows(query,limit=8),filt)
+    old=_legacy_filtered(_book_rows(query,limit=min(10,limit)),filt)
     rows=current+old
     sort=filt.get('sort','relevance')
     if sort=='relevance':rows.sort(key=lambda x:(-x.get('score',0),-int(x.get('download_count') or 0)))
@@ -142,13 +142,26 @@ def _link(bot,row):
     return f'https://t.me/{quote(_username(bot))}?start={prefix}_{bid}'
 
 
+def _result_label(row):
+    """Show language and size without truncating either edition identifier."""
+    from book_library_store import format_size
+    badge=st.BADGES.get(row.get('media_kind','pdf'),'📦')
+    language=' '.join(str(row.get('language') or 'Unknown').split())[:15]
+    kind=str(row.get('media_kind') or 'pdf').upper()[:6]
+    size=format_size(row['file_size']) if row.get('file_size') else ''
+    prefix=f'{badge} {language} · '
+    suffix=f' · {kind}' + (f' · {size}' if size else '')
+    available=max(0,63-len(prefix)-len(suffix))
+    title=' '.join(str(row.get('title') or 'Untitled').split())
+    if len(title)>available:
+        title=title[:max(1,available-1)]+'…' if available>1 else ''
+    return (prefix+title+suffix)[:63]
+
+
 def _markup(bot,rows):
     kb=_keyboard()
     for r in rows:
-        name=' '.join(str(r.get('title','')).split())[:30]
-        badge=st.BADGES.get(r.get('media_kind','pdf'),'📦')
-        typ=str(r.get('media_kind','pdf')).upper()
-        kb.add(_button(f'{badge} {name} · {typ}'[:63],url=_link(bot,r)))
+        kb.add(_button(_result_label(r),url=_link(bot,r)))
     return kb
 
 
@@ -170,25 +183,103 @@ def _send_results(bot,chat_id,text,items,*,group=False):
     return _message(bot,chat_id,text,reply_markup=markup)
 
 
+# V11.8.6 user-visible search progress and zero-results feedback.
+def _remember_search_status(bot, chat_id, sent, *, group):
+    if group and getattr(sent, 'message_id', None):
+        try:
+            from group_ui_v115 import _remember
+            _remember(bot, chat_id, sent.message_id, kind='book_links')
+        except Exception:
+            LOG.warning('Cannot queue search message cleanup', exc_info=True)
+
+
+def _searching_message(bot, chat_id, query, *, group):
+    try:
+        sent=_message(bot, chat_id,
+            '🔎 SEARCHING FOR FILES\n'
+            f'📚 {query[:100]}\n'
+            '⏳ Checking the library catalog…'
+            + ('\nThis message auto-deletes after 5 minutes.' if group else ''))
+    except Exception:
+        LOG.warning('Search progress message could not be sent', exc_info=True)
+        return None
+    _remember_search_status(bot, chat_id, sent, group=group)
+    return sent
+
+
+def _replace_search_status(bot, chat_id, status, text, *, group, markup=None):
+    """Edit progress in place; if unsupported, send final and remove progress."""
+    mid=getattr(status, 'message_id', None)
+    editor=getattr(bot, "edit_message_text", None)  # V11.8.6.1
+    if mid is not None and callable(editor):
+        try:
+            updated=editor(text, chat_id=chat_id, message_id=mid,
+                           reply_markup=markup)
+            if updated is not False:
+                return status
+        except Exception:
+            LOG.warning('Cannot edit search status; using a new message', exc_info=True)
+    try:
+        sent=_message(bot, chat_id, text, reply_markup=markup)
+    except Exception:
+        LOG.exception('Could not send search feedback')
+        return False
+    _remember_search_status(bot, chat_id, sent, group=group)
+    if mid is not None:
+        try: bot.delete_message(chat_id, mid)
+        except Exception: LOG.debug('Search progress cleanup unavailable')
+    return sent
+
+
+def _no_search_results_keyboard(query):
+    from urllib.parse import quote_plus
+    kb=_keyboard()
+    # Spelling lookup only: no third-party downloading or file forwarding.
+    kb.add(_button('🔎 Check spelling on Google',
+                   url='https://www.google.com/search?q='+quote_plus(query[:100])))
+    return kb
+
+
 def unified_search(bot,chat_id,query,group=False,requester_id=None):
     if not enabled():return None
     q=str(query or '').strip()
     if not q or len(q)>180:
         return _message(bot,chat_id,'🔎 Example: /book Arabic grammar type:image lang:Tamil')
     try:
-        items=union_search(q)
+        parse_search_query(q)
+    except ValueError as exc:
+        return _message(bot,chat_id,'⚠️ '+str(exc)[:250])
+    status=_searching_message(bot,chat_id,q,group=group)
+    try:
+        items=union_search(q,limit=30)
         if not items:
-            if not group:return _message(bot,chat_id,'📚 No matching file. Use /bookrequest TITLE privately.')
-            return False
+            note=('😕 NO FILES FOUND\n'
+                  f'🔎 Search: {q[:100]}\n\n'
+                  'Please check your spelling or try a shorter title, author, or another language.\n'
+                  '📚 Example: /book Psychology\n'
+                  '💌 You can request a missing book using /bookrequest TITLE in private.'
+                  + ('\n⏳ This result auto-deletes after 5 minutes.' if group else ''))
+            return _replace_search_status(bot,chat_id,status,note,group=group,
+                                          markup=_no_search_results_keyboard(q))
         heading=('📚 Library results: '+q[:100]+'\n'
                  '📄 PDFs · 🖼️ Images · 🎧 Audio · 🎥 Video · 📦 ZIP\n'
                  '📩 Tap an item to preview it privately.'
                  + ('\n⏳ Auto-delete after 5 minutes.' if group else ''))
-        return _send_results(bot,chat_id,heading,items,group=group)
+        if group and requester_id is None:
+            # Preserve old URL-only keyboard when requester cannot be identified.
+            result=_send_results(bot,chat_id,heading,items,group=group)
+            if status is not None and getattr(status,'message_id',None):
+                try: bot.delete_message(chat_id,status.message_id)
+                except Exception: LOG.debug('Cannot remove search progress')
+            return result
+        from library_search_ui_v1183 import send_search_results
+        return send_search_results(bot,chat_id,heading,items,group=group,
+                                   requester_id=requester_id,status_message=status)
     except Exception:
         LOG.exception('V11.7 unified search failed')
-        if not group:_message(bot,chat_id,'⚠️ Library search temporarily unavailable.')
-        return False
+        note=('⚠️ Library search is temporarily unavailable. Please try again later.'
+              + ('\n⏳ This message auto-deletes after 5 minutes.' if group else ''))
+        return _replace_search_status(bot,chat_id,status,note,group=group)
 
 
 def unified_latest(bot,chat_id):
@@ -657,6 +748,8 @@ def register_v117_handlers(bot):
     # V11.8: Manage Library Files for older PDFs and new media.
     from library_manage_v118 import register_manage_handlers
     register_manage_handlers(bot)
+    from library_search_ui_v1183 import register_private_handlers
+    register_private_handlers(bot)
 
     @bot.message_handler(commands=['libraryadmin','mediaadmin'])
     def admin_command(m):
