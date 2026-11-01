@@ -774,12 +774,33 @@ def register_v117_handlers(bot):
                         'Caption:\nTitle | Author | Language | Category | Permission explanation | Comment | Optional search aliases\n'
                         'The file remains private until admin reviews rights and content.')
 
+    # V11.8.8: explicit bulk metadata/status commands, only in admin private chat.
+    @bot.message_handler(commands=['mediabulkset','mediabulkstatus','mediabulkdone'])
+    def smart_bulk_commands_v1188(m):
+        if not enabled():return ContinueHandling()
+        if not admin(m):return _message(bot,m.chat.id,'🔒 Administrator-only private command.')
+        import library_smart_bulk_v1188 as smart
+        if not smart.enabled():return _message(bot,m.chat.id,'⚠️ Smart bulk upload is disabled.')
+        command=str(getattr(m,'text','') or '').split()[0].split('@')[0].lower()
+        if command=='/mediabulkstatus':return smart.status(bot,m)
+        if command=='/mediabulkdone':return smart.finish(bot,m,api=__import__(__name__))
+        session=_state_get(m.from_user.id)
+        if not session or session[0]!='bulk':
+            return _message(bot,m.chat.id,'⚠️ Start /mediabulk first.')
+        return smart.configure(bot,m)
+
     @bot.message_handler(commands=['mediaupload','mediabulk','mediauploadbulk'])
     def admin_upload_start(m):
         if not enabled():return ContinueHandling()
         if not admin(m):return _message(bot,m.chat.id,'🔒 Administrators only, in private chat.')
         token=str(m.text).split()[0].split('@')[0].lower()
         bulk='bulk' in token
+        if bulk:
+            import library_smart_bulk_v1188 as smart
+            if smart.enabled():
+                _state_set(m.from_user.id,'bulk',seconds=smart.SESSION_SECONDS,
+                           remaining=smart.MAX_ATTEMPTS)
+                return smart.begin(bot,m)
         _state_set(m.from_user.id,'bulk' if bulk else 'upload',seconds=600 if bulk else 300,
                    remaining=30 if bulk else 1)
         _message(bot,m.chat.id,'📦 Bulk upload: send up to 30 separate files or a ZIP (max 20 files / 20 MB).'
@@ -794,6 +815,9 @@ def register_v117_handlers(bot):
     @bot.message_handler(commands=['mediacancel'])
     def stop_upload(m):
         if not enabled():return ContinueHandling()
+        # Closing bulk uploads must not leave stale shared rights metadata.
+        import library_smart_bulk_v1188 as smart
+        smart.cancel(m.from_user.id)
         _state_cancel(m.from_user.id)
         _message(bot,m.chat.id,'✅ Upload session closed.')
 
@@ -882,6 +906,11 @@ def register_v117_handlers(bot):
             _state_cancel(m.from_user.id)
             return _message(bot,m.chat.id,'🔒 Administrator upload permission lost.')
         try:
+            if mode=='bulk':
+                import library_smart_bulk_v1188 as smart
+                if smart.enabled() and smart.accept_file(bot,m,api=__import__(__name__)):
+                    _state_advance(m.from_user.id)
+                    return
             if mode=='bulk' and getattr(m,'document',None) and str(getattr(m.document,'file_name','')).lower().endswith('.zip'):
                 added,failed=bulk_import_zip(bot,m)
                 _message(bot,m.chat.id,f'✅ ZIP imported: {len(added)} files. Failed: {len(failed)}.\n'+
@@ -936,6 +965,12 @@ def register_v117_handlers(bot):
                     _state_set(c.from_user.id,'upload',seconds=300)
                     return _message(bot,c.message.chat.id,'📤 Send one file with: Title | Author | Language | Category | Rights | Comment | Aliases')
                 if action=='bulk':
+                    import library_smart_bulk_v1188 as smart
+                    if smart.enabled():
+                        _state_set(c.from_user.id,'bulk',seconds=smart.SESSION_SECONDS,
+                                   remaining=smart.MAX_ATTEMPTS)
+                        from types import SimpleNamespace
+                        return smart.begin(bot,SimpleNamespace(from_user=c.from_user,chat=c.message.chat))
                     _state_set(c.from_user.id,'bulk',seconds=600,remaining=30)
                     return _message(bot,c.message.chat.id,'📦 Send files in sequence or ZIP (max 20 files / 20 MB). /mediacancel to stop.')
             if len(parts)==3 and parts[1] in ('review','view','approve','reject'):
