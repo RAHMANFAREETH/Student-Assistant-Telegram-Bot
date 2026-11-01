@@ -789,6 +789,23 @@ def register_v117_handlers(bot):
             return _message(bot,m.chat.id,'⚠️ Start /mediabulk first.')
         return smart.configure(bot,m)
 
+    # V11.8.8.2: individual forward-and-review handler.
+    @bot.message_handler(commands=['mediaforward','mediaforwardset','mediaforwardpublish','mediaforwardcancel'])
+    def individual_forward_commands_v11882(m):
+        if not enabled():return ContinueHandling()
+        if not admin(m):return _message(bot,m.chat.id,'🔒 Administrator-only private command.')
+        import library_individual_forward_v11882 as fw
+        if not fw.enabled():return _message(bot,m.chat.id,'⚠️ Individual forwarding is disabled.')
+        cmd=str(getattr(m,'text','') or '').split()[0].split('@')[0].lower()
+        if cmd=='/mediaforward':return fw.start(bot,m,api=__import__(__name__))
+        if cmd=='/mediaforwardset':return fw.configure(bot,m)
+        if cmd=='/mediaforwardcancel':
+            fw.cancel(m.from_user.id)
+            _state_cancel(m.from_user.id)
+            return _message(bot,m.chat.id,'✅ Individual forward session canceled.')
+        try:return fw.publish(bot,m,api=__import__(__name__))
+        except Exception as exc:return _fail(bot,m,exc)
+
     @bot.message_handler(commands=['mediaupload','mediabulk','mediauploadbulk'])
     def admin_upload_start(m):
         if not enabled():return ContinueHandling()
@@ -818,6 +835,8 @@ def register_v117_handlers(bot):
         # Closing bulk uploads must not leave stale shared rights metadata.
         import library_smart_bulk_v1188 as smart
         smart.cancel(m.from_user.id)
+        import library_individual_forward_v11882 as fw
+        fw.cancel(m.from_user.id)
         _state_cancel(m.from_user.id)
         _message(bot,m.chat.id,'✅ Upload session closed.')
 
@@ -906,6 +925,9 @@ def register_v117_handlers(bot):
             _state_cancel(m.from_user.id)
             return _message(bot,m.chat.id,'🔒 Administrator upload permission lost.')
         try:
+            if mode=='forward':
+                import library_individual_forward_v11882 as fw
+                return fw.receive(bot,m,api=__import__(__name__))
             if mode=='bulk':
                 import library_smart_bulk_v1188 as smart
                 if smart.enabled() and smart.accept_file(bot,m,api=__import__(__name__)):
