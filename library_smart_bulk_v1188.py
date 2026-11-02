@@ -20,8 +20,10 @@ LOG = logging.getLogger(__name__)
 _LOCK = threading.RLock()
 _SESSIONS = {}
 _MAX_SESSIONS = 100
-MAX_ATTEMPTS = 100
-SESSION_SECONDS = 7200
+# Unlimited number of files; no fixed session timeout for authenticated admins.
+# Core V11.7 state accepts infinity as both seconds and remaining counter.
+MAX_ATTEMPTS = float('inf')
+SESSION_SECONDS = float('inf')
 RIGHTS = frozenset({'permission', 'public_domain', 'cc0', 'cc_by', 'cc_by_sa'})
 
 
@@ -60,7 +62,7 @@ def _plain(text, maxlen, *, minimum=2):
 def _report(s, *, finished=False):
     prefix = '✅ BULK UPLOAD FINISHED' if finished else '📦 SMART BULK UPLOAD'
     text = (f'{prefix}\n'
-            f'📁 Processed: {s.attempted}/{MAX_ATTEMPTS}\n'
+            f'📁 Processed: {s.attempted}\n'
             f'✅ Published: {s.approved}\n'
             f'⏭️ Duplicates skipped: {s.duplicates}\n'
             f'⚠️ Failed: {s.failed}')
@@ -116,7 +118,7 @@ def begin(bot, m):
         '/mediabulkset Tamil | Education | permission | Unknown | Distribution rights verified\n\n'
         'Step 2: In Telegram Desktop, attach multiple files as Documents and send.\n'
         'Each file receives its own title from its filename. Captions with full metadata override shared values.\n'
-        f'Maximum {MAX_ATTEMPTS} files in one session · 2-hour session.\n'
+        'No per-session file limit or fixed timer. Finish with /mediabulkdone.\n'
         'Duplicates are skipped. Large files are copied inside Telegram.\n'
         'Use /mediabulkstatus or /mediabulkdone when finished.\n'
         '⛔ Only upload files you are authorized to distribute.\n'
@@ -216,9 +218,6 @@ def accept_file(bot, m, *, api):
         return False
     uid = int(m.from_user.id)
     with _LOCK:
-        if s.attempted >= MAX_ATTEMPTS:
-            _send(bot, m.chat.id, '⚠️ Batch full. Send /mediabulkdone and start a new batch.')
-            return True
         s.attempted += 1
     name = 'file'
     try:
@@ -244,8 +243,7 @@ def accept_file(bot, m, *, api):
             s.failed += 1
             s.failures.append(f'{name[:35]}: upload or catalog save failed')
     _update(bot, s)
-    if s.attempted >= MAX_ATTEMPTS:
-        finish(bot, m, api=api)
+    # Keep accepting files until /mediabulkdone or /mediacancel.
     return True
 
 

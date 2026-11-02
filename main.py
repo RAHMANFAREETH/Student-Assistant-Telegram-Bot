@@ -176,6 +176,10 @@ install_group_ui_guard(bot)
 from group_books_only_v116 import install_book_only_group_gate
 install_book_only_group_gate(bot)
 
+# V11.8.8.4: optional group join welcome; search and adult gates unchanged.
+from group_welcome_v11884 import install_group_welcome
+install_group_welcome(bot)
+
 
 app = Flask(__name__)
 
