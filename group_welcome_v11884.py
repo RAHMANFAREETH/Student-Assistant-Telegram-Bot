@@ -58,8 +58,12 @@ def _first_time(chat_id, user_id, now=None):
         return True
 
 def _text(name):
+    # V11.9 Arabic greeting (opt-in; older welcome preserved when disabled).
+    greeting = (f'👋 السَّلَامُ عَلَيْكُمْ وَرَحْمَةُ اللَّهِ وَبَرَكَاتُهُ\n'
+                f'Welcome to Student Assistant! 📚\n👤 {name}\n\n') if _on('FRIENDLY_V119_ENABLED') else (
+                f'👋 Welcome to our Digital Library, {name}! 📚\n\n')
     return (
-        f'👋 Welcome to our Digital Library, {name}! 📚\n\n'
+        greeting +
         '🔎 HOW TO SEARCH FOR BOOKS\n'
         '1️⃣ Send /book Quran to search by title.\n'
         '2️⃣ If plain-text search is enabled, you can also type Quran.\n'

@@ -173,6 +173,10 @@ install_group_library_menu(bot)
 from group_ui_v115 import install_group_ui_guard
 install_group_ui_guard(bot)
 # V11.6: only public Book Library searches may execute in group chats.
+# V11.9 Friendly Student Assistant — all-in-one, opt-in.
+from friendly_v119 import register as register_friendly_v119
+register_friendly_v119(bot)
+
 from group_books_only_v116 import install_book_only_group_gate
 install_book_only_group_gate(bot)
 
@@ -197,6 +201,12 @@ if os.getenv('BOOK_LIBRARY_V113_ENABLED', 'false').lower() in ('true','1','yes')
 
 def show_main_menu(chat_id, first_name="Friend"):
     """V5.7 compact menu; existing modules still receive original button text."""
+    # V11.9 greeting and new inline home; retain original reply keyboard.
+    from friendly_v119 import enabled as friendly_v119_enabled, home as v119_home, welcome_text as v119_welcome
+    if friendly_v119_enabled():
+        bot.send_message(chat_id, v119_welcome(first_name), reply_markup=build_main_menu_markup())
+        v119_home(bot, chat_id, first_name, send_welcome=False)
+        return
     bot.send_message(
         chat_id,
         greeting(first_name, chat_id),
@@ -216,6 +226,10 @@ def start(message):
     # V11.1: deliver a Book Library deep link before the existing /start menu.
     from book_library_bot import handle_library_start
     if handle_library_start(bot, message):
+        return
+    # V11.9 opt-in referral deep-link, after existing Book Library deep-links.
+    from friendly_v119 import handle_start as handle_v119_referral_start
+    if handle_v119_referral_start(bot, message):
         return
     first_name = (
         message.from_user.first_name
