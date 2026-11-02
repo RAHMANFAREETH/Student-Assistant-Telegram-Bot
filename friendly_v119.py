@@ -475,7 +475,13 @@ def feedback(uid,text,kind='suggestion',item_kind=None,item_id=None):
     if item_id and not _item(item_kind,item_id):raise ValueError('Book is unavailable.')
     entry={'user_id':int(uid),'kind':kind,'message':text,'item_kind':item_kind,
            'item_id':str(uuid.UUID(str(item_id))) if item_id else None,'status':'pending'}
-    return _rows(_db().table(FEEDBACK).insert(entry).execute())
+    saved=_rows(_db().table(FEEDBACK).insert(entry).execute())
+    # Optional best-effort alert AFTER a successful database write.
+    try:
+        from group_admin_helper_v1191 import publish_feedback_event
+        publish_feedback_event(saved)
+    except Exception:LOG.debug("Optional admin feedback alert unavailable",exc_info=True)
+    return saved
 
 
 def rate(uid,kind,identifier,stars,text=''):

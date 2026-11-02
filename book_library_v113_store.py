@@ -266,8 +266,14 @@ def add_book_request(user_id,title,author='', *, db=None):
     items=_rows(d.table('book_library_requests').select('id').eq('user_id',user_id)
                 .eq('status','pending').limit(6).execute())
     if len(items)>=5: raise ValueError('Limit: five open requests per person.')
-    return _rows(d.table('book_library_requests').insert({'user_id':user_id,'title':title,
+    saved=_rows(d.table('book_library_requests').insert({'user_id':user_id,'title':title,
         'author':author,'status':'pending'}).execute())[0]
+    # Admin alert is optional; database save must not depend on Telegram delivery.
+    try:
+        from group_admin_helper_v1191 import publish_book_request
+        publish_book_request(saved)
+    except Exception:pass
+    return saved
 
 
 def pending_requests(*,db=None):

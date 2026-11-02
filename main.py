@@ -176,6 +176,9 @@ install_group_ui_guard(bot)
 # V11.9 Friendly Student Assistant — all-in-one, opt-in.
 from friendly_v119 import register as register_friendly_v119
 register_friendly_v119(bot)
+# V11.9.1: private admin hub, approved-group helper and lightweight moderation.
+from group_admin_helper_v1191 import install as install_group_admin_helper_v1191
+install_group_admin_helper_v1191(bot)
 
 from group_books_only_v116 import install_book_only_group_gate
 install_book_only_group_gate(bot)
@@ -186,6 +189,9 @@ install_group_welcome(bot)
 
 
 app = Flask(__name__)
+# V11.9.1: process-local webhook timings; no change to Telegram acknowledgement.
+from group_admin_helper_v1191 import install_metrics as install_helper_metrics_v1191
+install_helper_metrics_v1191(app)
 
 # V11.3 Advanced Library integration
 if os.getenv('BOOK_LIBRARY_V113_ENABLED', 'false').lower() in ('true','1','yes'):
@@ -725,6 +731,8 @@ def telegram_webhook():
         )
 
     except Exception as error:
+        from group_admin_helper_v1191 import record_error as record_helper_error_v1191
+        record_helper_error_v1191("webhook", error)
         print(
             "❌ Webhook processing error:"
         )

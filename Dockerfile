@@ -16,4 +16,4 @@ RUN if [ -f INSTALL_TEXT_PDF_FONTS.py ]; then python INSTALL_TEXT_PDF_FONTS.py; 
 RUN useradd --create-home --uid 10001 bot && chown -R bot:bot /app
 USER bot
 ENV SAL_USE_VCLPLUGIN=svp
-CMD ["sh", "-c", "exec gunicorn main:app --bind 0.0.0.0:${PORT:-10000} --workers 1 --threads 4 --timeout 180"]
+CMD ["sh", "-c", "exec gunicorn main:app --bind 0.0.0.0:${PORT:-10000} --workers 1 --threads ${BOT_WEB_THREADS:-8} --timeout 180"]
