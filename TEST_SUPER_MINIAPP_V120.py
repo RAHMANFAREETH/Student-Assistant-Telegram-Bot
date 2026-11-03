@@ -40,6 +40,8 @@ class FakeApp:
             self.view_functions[endpoint or func.__name__] = func
             return func
         return deco
+    def post(self, path, endpoint=None):
+        return self.route(path, methods=["POST"], endpoint=endpoint)
     def route(self, path, methods=None, endpoint=None):
         return self.get(path, endpoint=endpoint)
     def after_request(self, fn): self.after.append(fn); return fn
@@ -52,7 +54,10 @@ class TestSuperMiniApp(unittest.TestCase):
         for n in names: self.assertIn(n,self.app.view_functions)
     def test_registration_idempotent(self):
         module.register_super_miniapp(self.app)
-        self.assertEqual(len(self.app.view_functions),9)
+        # V12.0.2: nine existing endpoints plus POST export and GET download.
+        self.assertEqual(len(self.app.view_functions),11)
+        self.assertIn('v120_export_create', self.app.view_functions)
+        self.assertIn('v120_export_fetch', self.app.view_functions)
     def test_feature_off_by_default(self):
         # Assert that the view aborts with 404 independently of Flask exception types.
         with patch.dict(os.environ, {'SUPER_MINIAPP_V120_ENABLED':'false'}):

@@ -4,12 +4,12 @@ import {TOOLS,CATEGORIES,compute,displayToolName,TOOL_NAME_TRANSLATIONS,wordCoun
  percentChange,salesTax,profitMargin,averageSpeed,gradePercentage,deviation,quadratic,
  factorial,combinations,findReplace,wordFrequency,studySessions} from './super_miniapp_v120_tools.mjs';
 
-test('all 62 tool IDs are unique and categorized',()=>{
- assert.equal(TOOLS.length,62);
- assert.equal(new Set(TOOLS.map(x=>x.id)).size,62);
+test('all 68 tool IDs are unique and categorized',()=>{
+ assert.equal(TOOLS.length,68);
+ assert.equal(new Set(TOOLS.map(x=>x.id)).size,68);
  assert.ok(TOOLS.every(x=>CATEGORIES.includes(x.category)));
  for(const lang of ['ta','si']) {
-  assert.equal(Object.keys(TOOL_NAME_TRANSLATIONS[lang]).length,62);
+  assert.equal(Object.keys(TOOL_NAME_TRANSLATIONS[lang]).length,68);
   assert.ok(TOOLS.every(t=>displayToolName(t,lang)!==t.name));
  }
 });

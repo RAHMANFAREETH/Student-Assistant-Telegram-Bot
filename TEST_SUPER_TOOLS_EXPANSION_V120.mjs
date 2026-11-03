@@ -2,14 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {TOOLS,CATEGORIES,compute,weekdayOf,monthShift,timeDuration,fractionReduce,ratioReduce,meanMedian,weightedGpa,billSplit,simpleInterest,compoundInterest,loanPayment,isPrimeNumber,squareRoot,sortLines,uniqueLines,readingTime,reverseText,urlComponent,colorContrast,translateUI,translateCategory,displayToolName,UI_TRANSLATIONS,TOOL_NAME_TRANSLATIONS} from './super_miniapp_v120_tools.mjs';
 
-test('exactly 50 unique tools and no missing categories',()=>{
- assert.equal(TOOLS.length,50);assert.equal(new Set(TOOLS.map(t=>t.id)).size,50);
+test('exactly 68 unique tools and no missing categories',()=>{
+ assert.equal(TOOLS.length,68);assert.equal(new Set(TOOLS.map(t=>t.id)).size,68);
  assert.ok(TOOLS.every(t=>CATEGORIES.includes(t.category)));
  assert.equal(TOOLS.filter(t=>t.id==='gpa').length,1);
 });
-test('locales translate all 50 tool names, and core UI keys',()=>{
+test('locales translate all 68 tool names, and core UI keys',()=>{
  for(const lang of ['ta','si']){
-  assert.equal(Object.keys(TOOL_NAME_TRANSLATIONS[lang]).length,50);
+  assert.equal(Object.keys(TOOL_NAME_TRANSLATIONS[lang]).length,68);
   assert.ok(TOOLS.every(t=>displayToolName(t,lang)!==t.name));
   for(const key of Object.keys(UI_TRANSLATIONS.en))assert.ok(translateUI(key,lang)!==key);
   for(const c of CATEGORIES)assert.ok(translateCategory(c,lang));

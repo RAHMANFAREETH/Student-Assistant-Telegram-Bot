@@ -7,10 +7,10 @@ const js=fs.readFileSync(new URL('./super_miniapp_v120.js',import.meta.url),'utf
 const html=fs.readFileSync(new URL('./super_miniapp_v120.html',import.meta.url),'utf8');
 const api=fs.readFileSync(new URL('./super_miniapp_v120.py',import.meta.url),'utf8');
 
-test('50 tool entries preserved',()=>assert.equal(TOOLS.length,50));
-test('67 form labels are localized for Tamil and Sinhala',()=>{
+test('68 tool entries preserved',()=>assert.equal(TOOLS.length,68));
+test('76 form labels are localized for Tamil and Sinhala',()=>{
   const keys=Object.keys(FIELD_LABEL_TRANSLATIONS.ta);
-  assert.equal(keys.length,67);
+  assert.equal(keys.length,76);
   for(const lang of ['ta','si'])for(const k of keys){
     assert.ok(localField(k,lang).length>0);
     assert.notEqual(localField(k,lang),k,`${lang}: missing ${k}`);

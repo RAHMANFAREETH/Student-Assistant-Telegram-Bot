@@ -61,6 +61,11 @@ def register_super_miniapp(app):
     if "v120_super_home" in app.view_functions:
         return
 
+    # >>> V12.0.2 optional temporary exports >>>
+    from super_miniapp_v120_exports import register_v120_exports
+    register_v120_exports(app)
+    # <<< V12.0.2 optional temporary exports <<<
+
     @app.after_request
     def v120_security_headers(response):
         if request.path == "/app" or request.path.startswith("/app/"):

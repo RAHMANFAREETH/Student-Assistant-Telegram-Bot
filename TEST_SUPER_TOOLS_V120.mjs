@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {TOOLS,dateDifference,ageAt,addDays,dayOfYear,temperatureConvert,baseConvert,unitConvert,calculate,discount,bmi,securePassword,secureRandom,wordCount,textCase,compute} from './super_miniapp_v120_tools.mjs';
-test('tool ids unique, 50 working tool entries',()=>{assert.equal(TOOLS.length,50);assert.equal(new Set(TOOLS.map(x=>x.id)).size,TOOLS.length);});
+test('tool ids unique, 68 working tool entries',()=>{assert.equal(TOOLS.length,68);assert.equal(new Set(TOOLS.map(x=>x.id)).size,TOOLS.length);});
 test('20 days between 3 Nov and 23 Nov 2026',()=>{const r=dateDifference('2026-11-03','2026-11-23');assert.equal(r.days,20);assert.equal(r.weeks,2);assert.equal(r.remaining,6);assert.equal(r.business,14);assert.equal(r.weekends,6);});
 test('inclusive date difference',()=>{assert.equal(dateDifference('2026-11-03','2026-11-23',true).days,21);});
 test('same date inclusive',()=>{assert.equal(dateDifference('2026-11-03','2026-11-03',true).days,1);});

@@ -33,6 +33,8 @@ class FakeApp:
     def __init__(self):self.view_functions={};self.logger=logging.getLogger('test-v120-public');self.after=[]
     def after_request(self,fn):self.after.append(fn);return fn
     def get(self,path,endpoint=None):return self.route(path,endpoint=endpoint)
+    def post(self,path,endpoint=None):
+        return self.route(path,methods=["POST"],endpoint=endpoint)
     def route(self,path,methods=None,endpoint=None):
         def deco(fn):self.view_functions[endpoint or fn.__name__]=fn;return fn
         return deco

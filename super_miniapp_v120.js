@@ -1,4 +1,4 @@
-import {TOOLS,CATEGORIES,UNITS,compute,securePassword,secureRandom,FORMAT,translateUI,translateCategory,displayToolName,localUI,localField} from '/app/assets/tools.mjs';
+import {TOOLS,CATEGORIES,UNITS,compute,securePassword,secureRandom,FORMAT,translateUI,translateCategory,displayToolName,localUI,localField,WORLD_CLOCK_ENTRIES} from '/app/assets/tools.mjs';
 import {translateResult,translateError} from '/app/assets/results.mjs';
 
 // No tracking, analytics or external APIs. All utility calculations run locally.
@@ -22,6 +22,12 @@ function clearCleanup(){if(state.cleanup){try{state.cleanup();}catch{}state.clea
 function applyTheme(theme){document.documentElement.dataset.theme=theme==='light'?'light':'dark';}
 function localISO(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
 const specs = {
+ 'json-pretty':[['text','JSON text','textarea','{"student":"assistant","tools":68}'],['mode','Action','select','format',['format','compact']]],
+ 'base64-text':[['text','UTF-8 text or Base64','textarea','வணக்கம்'],['mode','Action','select','encode',['encode','decode']]],
+ 'text-diff':[['before','Original text','textarea','First line\nSecond line'],['after','Updated text','textarea','First line\nChanged line']],
+ 'attendance':[['attended','Classes attended','number',34],['total','Classes held','number',40],['target','Target attendance %','number',90]],
+ 'weighted-grade':[['rows','Score,weight (one per line)','textarea','85,30\n90,20\n75,50']],
+ 'csv-inspect':[['text','CSV text','textarea','name,score\nAmina,80\nSalman,92']],
  'weekday':[['date','Date','date',localISO()]],
  'days-until':[['start','Start date','date',localISO()],['end','Target date','date',localISO()]],
  'month-shift':[['date','Date','date',localISO()],['offset','Months (+ or -)','number',3]],
@@ -103,8 +109,59 @@ function genericForm(panel,id){let cfg=specs[id];if(id==='unit'){cfg=[['category
  form.addEventListener('input',run);form.addEventListener('change',run);run();
 }
 function localDateTime(zone){return new Intl.DateTimeFormat('en-GB',{timeZone:zone,weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).format(new Date());}
-function worldClock(panel){const zones={'Sri Lanka':'Asia/Colombo','New York':'America/New_York','London':'Europe/London','Dubai':'Asia/Dubai','Tokyo':'Asia/Tokyo','Paris':'Europe/Paris','Sydney':'Australia/Sydney','Mumbai':'Asia/Kolkata'};
- const out=el('div');panel.append(out);let timer=null;const render=()=>{out.replaceChildren(...Object.entries(zones).map(([name,z])=>el('div',{class:'result'},`${name} · ${localDateTime(z)}`)));};render();timer=setInterval(render,1000);state.cleanup=()=>clearInterval(timer);}
+function worldClock(panel){
+ const initial=['Asia/Colombo','America/New_York','Europe/London','Asia/Dubai','Asia/Tokyo'];
+ const known=new Map(WORLD_CLOCK_ENTRIES.map(([cc,country,zone])=>[zone,{cc,country,zone,city:zone.split('/').slice(1).join(' / ').replaceAll('_',' ')}]));
+ const safeZones=()=>{const saved=readStored('world_zones',initial);const arr=Array.isArray(saved)?saved:initial;return [...new Set(arr)].filter(x=>known.has(x)).slice(0,30);};
+ let selected=safeZones();
+ const wrapper=el('div',{class:'world-clock-picker'}),head=el('div',{class:'clock-instructions'});
+ head.textContent=`Choose from ${new Set(WORLD_CLOCK_ENTRIES.map(x=>x[0])).size} countries/territories and ${WORLD_CLOCK_ENTRIES.length} time zones. Search by country, city, or time-zone name.`;
+ const search=el('input',{type:'search',placeholder:'Search country or city (e.g. Sri Lanka, Japan, New York)',autocomplete:'off','aria-label':'Search countries and time zones'});
+ const controls=el('div',{class:'toolbar'}),fmt=actionButton('Use 12-hour clock',()=>{is24=!is24;fmt.textContent=is24?'Use 12-hour clock':'Use 24-hour clock';render();},'secondary');
+ let is24=readStored('world_clock_24h',true)!==false;
+ fmt.textContent=is24?'Use 12-hour clock':'Use 24-hour clock';
+ const reset=actionButton('Reset clocks',()=>{selected=[...initial];saveStored('world_zones',selected);render();},'secondary');
+ controls.append(fmt,reset);const results=el('div',{class:'clock-search-results'});
+ const note=el('p',{class:'muted'},'Your selected clocks are stored on this device. Guest choices last only for this browser session.');
+ const cards=el('div',{class:'clock-cards'});
+ wrapper.append(head,search,controls,results,note,cards);panel.append(wrapper);
+ const flag=cc=>cc.replace(/./g,c=>String.fromCodePoint(127397+c.charCodeAt(0)));
+ const label=z=>{const e=known.get(z);return `${flag(e.cc)} ${e.country} · ${e.city}`;};
+ function render(){
+  cards.replaceChildren(...selected.map(z=>{
+   const d=el('div',{class:'clock-card'}),row=el('div',{class:'clock-card-head'}),
+       name=el('strong',{},label(z)),del=actionButton('Remove',()=>{selected=selected.filter(v=>v!==z);saveStored('world_zones',selected);render();},'secondary');
+   const clock=el('div',{class:'clock-value'});
+   try{clock.textContent=new Intl.DateTimeFormat('en-GB',{timeZone:z,weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:is24?'h23':'h12'}).format(new Date());}
+   catch{clock.textContent='Time zone unsupported on this device.';}
+   row.append(name,del);d.append(row,clock);return d;
+  }));
+ }
+ function renderOptions(){
+  const q=search.value.trim().toLocaleLowerCase();
+  const items=WORLD_CLOCK_ENTRIES.filter(([cc,country,zone])=>{
+   const record=known.get(zone);return !selected.includes(zone)&&(!q||`${country} ${record.city} ${zone} ${cc}`.toLocaleLowerCase().includes(q));
+  });
+  const view=items.slice(0,35);
+  results.replaceChildren(...view.map(([cc,country,zone])=>{
+   const btn=actionButton(`${flag(cc)} ${country} — ${known.get(zone).city}`,()=>{
+     if(selected.length>=30){status('Maximum 30 clocks. Remove a clock before adding another.');return;}
+     selected=[...selected,zone];saveStored('world_zones',selected);search.value='';render();renderOptions();
+   },'secondary');
+   btn.classList.add('clock-option');return btn;
+  }));
+  if(items.length>35)results.append(el('p',{class:'muted'},`Showing 35 of ${items.length} matching zones. Type a country or city to narrow the list.`));
+  if(!items.length)results.append(el('p',{class:'muted'},'No more matching time zones.'));
+ }
+ search.addEventListener('input',renderOptions);
+ fmt.addEventListener('click',()=>saveStored('world_clock_24h',is24));
+ render();renderOptions();
+ const tick=setInterval(()=>{
+  // Redraw the small selected list; search input and scroll position remain intact.
+  render();
+ },1000);
+ state.cleanup=()=>clearInterval(tick);
+}
 function timeText(ms){const sec=Math.max(0,Math.floor(ms/1000));return `${String(Math.floor(sec/3600)).padStart(2,'0')}:${String(Math.floor(sec%3600/60)).padStart(2,'0')}:${String(sec%60).padStart(2,'0')}`;}
 function runningClock(panel,mode){const form=el('form',{class:'form-grid'});let duration=mode==='pomodoro'?25:5;if(mode!=='stopwatch'){form.append(makeField(['minutes','Minutes','number',duration]));panel.append(form);}const digits=el('div',{class:'live-digits'},mode==='stopwatch'?'00:00:00':timeText(duration*60000));panel.append(digits);const tb=el('div',{class:'toolbar'});panel.append(tb);
  let target=0,elapsed=0,started=0,interval=null,remaining=duration*60000,hasStarted=false;
@@ -174,19 +231,75 @@ async function importDeviceTasks(){if(state.tasksMode!=='remote'||state.syncBusy
  finally{state.syncBusy=false;try{const fresh=await taskRequest('GET','/app/api/tasks');if(Array.isArray(fresh.tasks))state.tasks=fresh.tasks.slice(0,100);}catch{}renderTasks();}
 }
 function taskTool(panel){messagePanel(panel,i18n('taskHelp'));const b=actionButton(i18n('openPlanner'),()=>switchTab('planner'));panel.append(b);}
-function downloadBlob(blob,filename){const url=URL.createObjectURL(blob);const a=el('a',{href:url,download:filename});document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);}
+// V12.0.2: A click on blob: URLs often fails silently inside Telegram WebViews.
+// Prepare a persistent preview and multiple explicit save options instead.
+function presentExport(panel,blob,filename){
+ const previous=panel.querySelector('.v120-export');
+ if(previous){if(previous.dataset.objectUrl)URL.revokeObjectURL(previous.dataset.objectUrl);previous.remove();}
+ const url=URL.createObjectURL(blob), box=el('section',{class:'v120-export'});
+ box.dataset.objectUrl=url;
+ const title=el('strong',{},`File ready: ${filename} (${Math.max(1,Math.ceil(blob.size/1024))} KiB)`);
+ const preview=el('img',{src:url,alt:`Preview of ${filename}`,class:'v120-export-preview'});
+ const tips=el('p',{class:'muted'},'Select a save method below. A file preview does not mean a download succeeded.');
+ const buttons=el('div',{class:'toolbar'}),response=el('p',{class:'muted'});
+ const link=el('a',{href:url,download:filename,class:'v120-download-link'},'Open / save local file');
+ const saveLocal=actionButton('Download to device',()=>{
+  const a=el('a',{href:url,download:filename});document.body.append(a);a.click();a.remove();
+  response.textContent='Download requested. If it does not appear in Telegram, use Share or Save via Telegram below.';
+ });
+ const share=actionButton('Share / Save to Files',async()=>{
+  try{
+   const file=new File([blob],filename,{type:blob.type||'image/png'});
+   if(!navigator.share||!navigator.canShare?.({files:[file]}))throw Error('File sharing is not supported in this browser.');
+   await navigator.share({files:[file],title:filename});
+   response.textContent='Share dialog closed. Check the destination you selected.';
+  }catch(e){response.textContent=e?.name==='AbortError'?'Sharing cancelled.':String(e.message||'Sharing unavailable.');}
+ },'secondary');
+ const telegram=actionButton('Save via Telegram (temporary upload)',async()=>{
+  telegram.disabled=true;
+  response.textContent='Uploading an encrypted HTTPS copy temporarily to the bot server for Telegram download…';
+  try{
+   if(!['image/png','image/jpeg','image/webp'].includes(blob.type))throw Error('Unsupported export format.');
+   const res=await fetch('/app/api/export',{method:'POST',headers:{
+    'Content-Type':blob.type,'X-V120-Export-Intent':'1','X-V120-Export-Name':filename},body:blob,credentials:'omit',cache:'no-store'});
+   const data=await res.json();
+   if(!res.ok||data.ok!==true||typeof data.path!=='string')throw Error(data.error||'Unable to prepare download.');
+   const endpoint=new URL(data.path,window.location.origin);
+   if(endpoint.protocol!=='https:')throw Error('HTTPS required for Telegram downloads.');
+   const serverLink=el('a',{href:endpoint.href,target:'_blank',rel:'noopener noreferrer',class:'v120-download-link'},'Open short-lived download link');
+   box.querySelector('.v120-server-link')?.remove();
+   const serverArea=el('div',{class:'v120-server-link'});serverArea.append(serverLink);
+   box.append(serverArea);
+   if(typeof tg?.downloadFile==='function'){
+    tg.downloadFile({url:endpoint.href,file_name:filename},accepted=>{
+     response.textContent=accepted?'Telegram accepted the download request. Check your Downloads folder.':'Telegram download was declined. Try the link below.';
+    });
+    response.textContent='Choose Download in Telegram’s native prompt.';
+   }else{
+    response.textContent='Telegram native download is unavailable here. Open the temporary link below (expires in about 5 minutes).';
+   }
+  }catch(e){response.textContent=String(e.message||'Download unavailable.');}
+  finally{telegram.disabled=false;}
+ },'secondary');
+ buttons.append(saveLocal,share,telegram);
+ const disclosure=el('p',{class:'muted'},'Privacy: Local and Share options do not upload the image. Only Save via Telegram sends it to this bot’s Render server; the link expires in about 5 minutes; the in-memory copy is cleared by subsequent cache cleanup or a server restart.');
+ box.append(title,preview,tips,buttons,link,disclosure,response);
+ panel.append(box);
+ const oldCleanup=state.cleanup;
+ state.cleanup=()=>{URL.revokeObjectURL(url);oldCleanup?.();};
+}
 async function imgLoad(file){if(!file||!file.type.startsWith('image/'))throw Error('Select an image file.');if(file.size>15*1024*1024)throw Error('Use an image under 15 MB for this browser tool.');const img=el('img');const url=URL.createObjectURL(file);try{await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(Error('Image could not be decoded.'));img.src=url;});if(img.naturalWidth*img.naturalHeight>25000000)throw Error('Image dimensions are too large for this device.');return img;}finally{URL.revokeObjectURL(url);}}
 function toBlob(canvas,type='image/png',quality=0.8){return new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(Error('Image export failed.')),type,quality));}
-function imageTool(panel,mode){const form=el('form',{class:'form-grid'});form.append(makeField(['photo','Select photo','file','']));const input=form.elements.photo;input.type='file';input.accept='image/*';if(mode==='image-compress')form.append(makeField(['quality','JPEG quality 0.1–1','number',0.72]));if(mode==='image-watermark')form.append(makeField(['watermark','Watermark text','text','Student Assistant']));panel.append(form);messagePanel(panel,'Your image stays in this browser. Exported images are re-encoded, so most original metadata is not retained. Always verify the output.');const out=outputBox(panel);
- panel.insertBefore(actionButton('Process & download',async()=>{try{out.textContent='Processing locally…';const img=await imgLoad(input.files?.[0]);const maxSide=mode==='image-compress'?1600:3000,scale=Math.min(1,maxSide/Math.max(img.naturalWidth,img.naturalHeight)),can=el('canvas');can.width=Math.round(img.naturalWidth*scale);can.height=Math.round(img.naturalHeight*scale);const ctx=can.getContext('2d');if(!ctx)throw Error('Canvas unavailable.');ctx.drawImage(img,0,0,can.width,can.height);
+function imageTool(panel,mode){const form=el('form',{class:'form-grid'});form.append(makeField(['photo','Select photo','file','']));const input=form.elements.photo;input.type='file';input.accept='image/*';if(mode==='image-compress')form.append(makeField(['quality','JPEG quality 0.1–1','number',0.72]));if(mode==='image-watermark')form.append(makeField(['watermark','Watermark text','text','Student Assistant']));panel.append(form);messagePanel(panel,'Processed locally. Most original metadata is not retained. Only the optional Save via Telegram button sends a short-lived copy to your bot server.');const out=outputBox(panel);
+ panel.insertBefore(actionButton('Process image',async()=>{try{out.textContent='Processing locally…';const img=await imgLoad(input.files?.[0]);const maxSide=mode==='image-compress'?1600:3000,scale=Math.min(1,maxSide/Math.max(img.naturalWidth,img.naturalHeight)),can=el('canvas');can.width=Math.round(img.naturalWidth*scale);can.height=Math.round(img.naturalHeight*scale);const ctx=can.getContext('2d');if(!ctx)throw Error('Canvas unavailable.');ctx.drawImage(img,0,0,can.width,can.height);
  if(mode==='image-watermark'){const w=String(form.elements.watermark.value||'').slice(0,120);if(!w)throw Error('Enter watermark text.');ctx.font=`bold ${Math.max(16,Math.round(can.width/24))}px sans-serif`;ctx.textAlign='center';ctx.fillStyle='rgba(255,255,255,.65)';ctx.strokeStyle='rgba(0,0,0,.7)';ctx.lineWidth=3;ctx.strokeText(w,can.width/2,can.height*0.9,can.width*0.95);ctx.fillText(w,can.width/2,can.height*0.9,can.width*0.95);}
- const isJpg=mode==='image-compress';const q=isJpg?Number(form.elements.quality.value):1;if(!Number.isFinite(q)||q<0.1||q>1)throw Error('Quality must be 0.1–1.');const blob=await toBlob(can,isJpg?'image/jpeg':'image/png',q);downloadBlob(blob,isJpg?'student-compressed.jpg':'student-export.png');out.textContent=`Exported ${can.width} × ${can.height} · ${Math.round(blob.size/1024)} KiB`;}
+ const isJpg=mode==='image-compress';const q=isJpg?Number(form.elements.quality.value):1;if(!Number.isFinite(q)||q<0.1||q>1)throw Error('Quality must be 0.1–1.');const blob=await toBlob(can,isJpg?'image/jpeg':'image/png',q);presentExport(panel,blob,isJpg?'student-compressed.jpg':'student-export.png');out.textContent=`Image ready: ${can.width} × ${can.height} · ${Math.round(blob.size/1024)} KiB. Choose how to save below.`;}
  catch(e){out.textContent=e.message;}},'primary'),out);
 }
 function signatureTool(panel){messagePanel(panel,'Draw your signature with your finger or mouse. Image is generated locally.');const canvas=el('canvas',{class:'canvas-preview',width:'640',height:'250','aria-label':'Drawing canvas'});panel.append(canvas);const ctx=canvas.getContext('2d');if(!ctx){messagePanel(panel,'Canvas unavailable.');return;}ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.strokeStyle='#121827';ctx.lineWidth=3;ctx.lineCap='round';let drawing=false;
  function pos(e){const r=canvas.getBoundingClientRect();return {x:(e.clientX-r.left)*canvas.width/r.width,y:(e.clientY-r.top)*canvas.height/r.height};}
  const down=e=>{drawing=true;canvas.setPointerCapture(e.pointerId);const p=pos(e);ctx.beginPath();ctx.moveTo(p.x,p.y);};const move=e=>{if(!drawing)return;const p=pos(e);ctx.lineTo(p.x,p.y);ctx.stroke();};const up=()=>{drawing=false;};canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointermove',move);canvas.addEventListener('pointerup',up);canvas.addEventListener('pointercancel',up);
- const actions=el('div',{class:'toolbar'});actions.append(actionButton('Clear',()=>{ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);},'secondary'));actions.append(actionButton('Save PNG',async()=>downloadBlob(await toBlob(canvas),'signature.png')));panel.append(actions);}
+ const actions=el('div',{class:'toolbar'});actions.append(actionButton('Clear',()=>{ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);},'secondary'));actions.append(actionButton('Prepare PNG',async()=>{try{presentExport(panel,await toBlob(canvas),'signature.png');}catch(e){status(String(e.message||'Cannot export signature.'));}}));panel.append(actions);}
 function routeTool(id,panel){if(specs[id]||id==='unit'){genericForm(panel,id);return;}if(id==='world-clock'){worldClock(panel);return;}if(['timer','stopwatch','pomodoro'].includes(id)){runningClock(panel,id);return;}if(id==='password'||id==='uuid'){cryptoTool(panel,id);return;}if(id==='coin'||id==='dice'){funRoll(panel,id);return;}if(id==='reaction'){reaction(panel);return;}if(id==='todo'){taskTool(panel);return;}if(['image-compress','image-strip','image-watermark'].includes(id)){imageTool(panel,id);return;}if(id==='signature'){signatureTool(panel);return;}messagePanel(panel,'Tool is unavailable.');}
 function getResults(){const q=$('tool-search').value.toLocaleLowerCase().trim();let tools=TOOLS;
  if(state.category==='Favorites')tools=tools.filter(t=>state.favorites.includes(t.id));else if(state.category!=='All')tools=tools.filter(t=>t.category===state.category);
