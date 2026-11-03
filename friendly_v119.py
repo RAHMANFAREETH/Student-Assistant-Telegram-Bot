@@ -195,7 +195,22 @@ def home(bot,cid,name='Friend',*,send_welcome=True):
     rows=[]
     for i in range(0,len(actions),2):
         rows.append([(labels[j],'v119:'+actions[j],None) for j in range(i,min(i+2,len(actions)))])
-    return _msg(bot,cid,'🏠 Student Assistant — Friendly Home Menu',reply_markup=_keyboard(rows))
+    # >>> V12.0 SUPER MINI APP FRIENDLY BUTTON >>>
+    kb = _keyboard(rows)
+    try:
+        from super_miniapp_v120_launch import can_launch, mini_app_url
+        url = mini_app_url()
+        # Friendly Home is private; never show a personalized WebApp button
+        # in a group or for an unverified user.
+        if url and can_launch(int(cid)):
+            from telebot import types
+            kb.row(types.InlineKeyboardButton(
+                "🎓 Super Mini App", web_app=types.WebAppInfo(url=url)))
+    except Exception:
+        # Preserve the older Friendly Home if V12 is missing/unavailable.
+        pass
+    # <<< V12.0 SUPER MINI APP FRIENDLY BUTTON <<<
+    return _msg(bot,cid,'🏠 Student Assistant — Friendly Home Menu',reply_markup=kb)
 
 
 def _cmd(text):

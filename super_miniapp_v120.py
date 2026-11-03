@@ -14,6 +14,23 @@ from flask import abort, jsonify, make_response, request, send_file
 ASSETS = Path(__file__).resolve().parent
 _TRUE = {"1", "true", "yes", "on"}
 
+# >>> V12 PUBLIC UTILITY ACCESS >>>
+def public_tools_enabled():
+    """Public, browser-only calculators; never a replacement for signed identity."""
+    return os.getenv('SUPER_MINIAPP_V120_PUBLIC_TOOLS', 'false').strip().lower() in _TRUE
+
+
+def adult_verification_required():
+    """Opt out ONLY for the V12 benign Mini App, not for other bot/AI features."""
+    return os.getenv('SUPER_MINIAPP_V120_REQUIRE_ADULT', 'true').strip().lower() not in ('0', 'false', 'no', 'off')
+
+
+def _guest_session():
+    return jsonify({'ok': True, 'guest': True, 'user_id': None,
+                    'private_features': False, 'version': '12.0-development-preview'})
+
+# <<< V12 PUBLIC UTILITY ACCESS <<<
+
 
 def enabled():
     return os.getenv("SUPER_MINIAPP_V120_ENABLED", "false").strip().lower() in _TRUE
@@ -28,9 +45,10 @@ def verify_super_session(raw: str):
     if not raw or len(raw) > 6000:
         raise MiniAppAuthError("Missing Telegram login.")
     uid = validate_init_data(raw, os.getenv("BOT_TOKEN", ""))
-    from study_access_v9 import is_verified_adult
-    if not is_verified_adult(uid):
-        raise PermissionError("Verified adult access required.")
+    if adult_verification_required():
+        from study_access_v9 import is_verified_adult
+        if not is_verified_adult(uid):
+            raise PermissionError("Verified adult access required.")
     # V12.0 optional server-side pilot gate; HMAC and adult checks run first.
     from super_miniapp_v120_launch import pilot_access_allowed
     if not pilot_access_allowed(uid):
@@ -92,13 +110,33 @@ def register_super_miniapp(app):
     def session():
         if not enabled():
             abort(404)
+        raw = request.headers.get('X-Telegram-Init-Data', '')
+        if public_tools_enabled() and not raw:
+            return _guest_session()
         try:
-            uid = verify_super_session(request.headers.get("X-Telegram-Init-Data", ""))
+            uid = verify_super_session(raw)
         except PermissionError:
-            return jsonify({"error": "Verified 18+ access is required."}), 403
-        except (ValueError, TypeError):
-            return jsonify({"error": "Open the app from Telegram and sign in again."}), 401
-        return jsonify({"ok": True, "user_id": uid, "version": "12.0-development-preview"})
+            # Anonymous utilities are safe; private endpoints still check HMAC.
+            if public_tools_enabled():
+                return _guest_session()
+            return jsonify({'error': 'Verified 18+ access is required.'}), 403
+        # >>> V12.0 SESSION FAILURE DIAGNOSTIC >>>
+        except (ValueError, TypeError) as exc:
+            # Do not log initData, user ID or the bot token.
+            detail = str(exc).lower()
+            if 'expired' in detail:
+                reason = 'expired_telegram_login'
+            elif 'signature' in detail:
+                reason = 'invalid_telegram_signature'
+            else:
+                reason = 'invalid_telegram_login'
+            app.logger.warning('V12 login denied: %s (no sensitive data logged)', reason)
+            if public_tools_enabled():
+                return _guest_session()
+            return jsonify({'error':'Open the app from Telegram and sign in again.', 'code': reason}), 401
+        # <<< V12.0 SESSION FAILURE DIAGNOSTIC <<<
+        return jsonify({'ok': True, 'user_id': uid,
+                        'private_features': True, 'version': '12.0-development-preview'})
 
     @app.route("/app/api/tasks", methods=["GET", "POST"], endpoint="v120_super_tasks")
     def tasks():

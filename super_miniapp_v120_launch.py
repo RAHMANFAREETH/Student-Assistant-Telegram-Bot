@@ -73,6 +73,14 @@ def can_launch(uid: int) -> bool:
         return False
     if not (_on('SUPER_MINIAPP_V120_LAUNCH_PUBLIC') or uid in pilot_user_ids()):
         return False
+    # >>> V12 PUBLIC LAUNCH MODE >>>
+    # Public V12 launcher permits calculators for all users. Other bot/AI gates
+    # are untouched. Private V12 endpoints independently validate Telegram HMAC.
+    if _on('SUPER_MINIAPP_V120_PUBLIC_TOOLS'):
+        return True
+    if os.getenv('SUPER_MINIAPP_V120_REQUIRE_ADULT', 'true').strip().lower() in ('false', '0', 'no', 'off'):
+        return True
+    # <<< V12 PUBLIC LAUNCH MODE <<<
     try:
         from study_access_v9 import is_verified_adult
         return is_verified_adult(uid) is True
@@ -104,3 +112,13 @@ def register_super_app_launcher(bot):
                                               web_app=types.WebAppInfo(url=url)))
         bot.send_message(chat_id, 'Open your secure Student Assistant Super Mini App:',
                          reply_markup=keyboard)
+
+    # >>> V12.0 SUPER MINI APP TEXT BUTTON >>>
+    @bot.message_handler(content_types=['text'],
+                         func=lambda m: getattr(getattr(m, 'chat', None), 'type', None) == 'private' and
+                         str(getattr(m, 'text', '') or '').strip() == '🎓 Super Mini App')
+    def v120_super_app_text_button(message):
+        # The reply-keyboard button simply triggers the same verified
+        # inline-WebApp launch as /superapp; do NOT use unsigned web_app reply buttons.
+        return v120_super_app_command(message)
+    # <<< V12.0 SUPER MINI APP TEXT BUTTON <<<

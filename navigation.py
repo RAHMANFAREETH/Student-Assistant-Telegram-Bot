@@ -114,6 +114,17 @@ MAIN_MENU_ROWS = [
 
 # V5.7 CATEGORY MENU END
 
+# >>> V12.0 SUPER MINI APP REPLY BUTTON >>>
+# Add a text-trigger button; it will reply with a SIGNED inline WebApp button.
+# ReplyKeyboardButton(web_app=...) does not provide signed initData.
+import os as _v120_button_os
+V120_SUPER_MINI_APP_BUTTON = "🎓 Super Mini App"
+if (_v120_button_os.getenv("SUPER_MINIAPP_V120_ENABLED", "").strip().lower() in ("true", "1", "yes", "on")
+    and _v120_button_os.getenv("SUPER_MINIAPP_V120_LAUNCH_ENABLED", "").strip().lower() in ("true", "1", "yes", "on")):
+    MAIN_MENU_ROWS.insert(-1, (V120_SUPER_MINI_APP_BUTTON,))
+# <<< V12.0 SUPER MINI APP REPLY BUTTON <<<
+
+
 
 GLOBAL_BUTTONS = {
     button

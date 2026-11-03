@@ -8,9 +8,14 @@ const state={user:null,tab:'home',category:'All',tool:null,favorites:[],recent:[
 const i18n=key=>localUI(key,state.lang);
 const displayName=tool=>displayToolName(tool,state.lang);
 function applyLanguage(){document.documentElement.lang=state.lang;document.querySelectorAll('[data-i18n]').forEach(e=>{e.textContent=i18n(e.dataset.i18n);});document.querySelectorAll('[data-i18n-placeholder]').forEach(e=>{e.placeholder=i18n(e.dataset.i18nPlaceholder);});$('language-select').value=state.lang;document.querySelectorAll('[data-v120-label]').forEach(e=>{e.textContent=localField(e.dataset.v120Label,state.lang);});document.querySelectorAll('[data-v120-ui]').forEach(e=>{e.textContent=i18n(e.dataset.v120Ui);});renderCategories();renderGrid();renderTasks();renderTaskSyncStatus();renderPlannerOverview();if(state.tool){const tool=TOOLS.find(t=>t.id===state.tool);if(tool)$('tool-heading').textContent=displayName(tool);}}
-const storePrefix=()=>`studentassistant_v120_${state.user}_`;
-function readStored(key,fallback){try{const v=JSON.parse(localStorage.getItem(storePrefix()+key));return v??fallback;}catch{return fallback;}}
-function saveStored(key,val){try{localStorage.setItem(storePrefix()+key,JSON.stringify(val));}catch{status('Local storage unavailable. Your changes will not be saved.');}}
+// >>> V12 PUBLIC UTILITY ACCESS >>>
+// Guest preferences and quick tasks live in sessionStorage, never in shared
+// cross-account localStorage. Private data never comes from unsigned user IDs.
+const storage=()=>state.user===null?sessionStorage:localStorage;
+const storePrefix=()=>`studentassistant_v120_${state.user===null?'guest_session':state.user}_`;
+// <<< V12 PUBLIC UTILITY ACCESS <<<
+function readStored(key,fallback){try{const v=JSON.parse(storage().getItem(storePrefix()+key));return v??fallback;}catch{return fallback;}}
+function saveStored(key,val){try{storage().setItem(storePrefix()+key,JSON.stringify(val));}catch{status('Local storage unavailable. Your changes will not be saved.');}}
 function status(message){$('status').textContent=message||'';}
 function el(tag,attrs={},txt){const x=document.createElement(tag);for(const [k,v] of Object.entries(attrs)){if(k==='class')x.className=v;else if(k==='dataset')for(const [n,b] of Object.entries(v))x.dataset[n]=b;else if(k==='value')x.value=v;else x.setAttribute(k,v);}if(txt!==undefined)x.textContent=txt;return x;}
 function clearCleanup(){if(state.cleanup){try{state.cleanup();}catch{}state.cleanup=null;}}
@@ -102,7 +107,7 @@ function renderPlannerOverview(){const assignments=$('planner-assignments'),exam
  if(state.plannerLoaded){build(d.assignments,assignments,'due_at','plannerNoAssignments');build(d.exams,exams,'exam_at','plannerNoExams');}
  const msg=state.plannerLoading?'plannerLoading':state.plannerError?'plannerUnavailable':state.plannerLoaded?'plannerReadOnly':'plannerLoading';$('planner-remote-status').textContent=i18n(msg);
 }
-async function loadPlannerOverview(force=false){if(state.plannerLoading||(!force&&state.plannerLoaded))return;if(!tg?.initData)return;
+async function loadPlannerOverview(force=false){if(state.plannerLoading||(!force&&state.plannerLoaded))return;if(state.user===null||!tg?.initData)return;
  state.plannerLoading=true;state.plannerError='';renderPlannerOverview();
  try{const response=await fetch('/app/api/planner',{headers:{'X-Telegram-Init-Data':tg.initData},cache:'no-store',credentials:'omit'});
  const data=await response.json();if(!response.ok||data.ok!==true||!Array.isArray(data.assignments)||!Array.isArray(data.exams))throw Error('Read-only planner unavailable');
@@ -185,9 +190,15 @@ function start(){state.favorites=readStored('favorites',[]).filter(x=>typeof x==
  $('task-import-local').onclick=importDeviceTasks;
  $('task-form').onsubmit=e=>{e.preventDefault();const value=$('task-input').value.trim();if(value)submitQuickTask(value);};
  document.querySelectorAll('[data-copy]').forEach(b=>b.onclick=()=>{navigator.clipboard?.writeText(b.dataset.copy).then(()=>status('Command copied.')).catch(()=>status('Unable to copy.'));});
- $('theme-toggle').onclick=()=>{state.manuallySetTheme=true;applyTheme(document.documentElement.dataset.theme==='light'?'dark':'light');};switchTab('home');loadSyncedTasks();}
+ $('theme-toggle').onclick=()=>{state.manuallySetTheme=true;applyTheme(document.documentElement.dataset.theme==='light'?'dark':'light');};switchTab('home');if(state.user===null){state.tasksMode='local';state.tasks=getTasks();state.plannerError='unavailable';renderTasks();renderPlannerOverview();status('Public tools are available. Private sync needs a valid Telegram session. Guest tasks last for this browser session.');}else{loadSyncedTasks();}}
 async function boot(){if(tg){tg.ready();tg.expand();applyTheme(tg.colorScheme);tg.onEvent?.('themeChanged',()=>{if(!state.manuallySetTheme)applyTheme(tg.colorScheme);});}
- if(!tg?.initData){$('auth-wall').querySelector('h2').textContent=localUI('openFromTelegram',state.lang);$('auth-wall').querySelector('p').textContent=localUI('sessionRequired',state.lang);return;}
- try{const response=await fetch('/app/api/session',{headers:{'X-Telegram-Init-Data':tg.initData},cache:'no-store',credentials:'omit'});const data=await response.json();if(!response.ok||data.ok!==true||!Number.isSafeInteger(data.user_id))throw Error(data.error||'Access denied.');state.user=data.user_id;start();}
- catch(e){$('auth-wall').querySelector('h2').textContent=localUI('authUnavailable',state.lang);$('auth-wall').querySelector('p').textContent=e.message||localUI('authRetry',state.lang);}}
+ try{
+  const headers=tg?.initData?{'X-Telegram-Init-Data':tg.initData}:{};
+  const response=await fetch('/app/api/session',{headers,cache:'no-store',credentials:'omit'});
+  const data=await response.json();
+  if(!response.ok||data.ok!==true)throw Error(data.error||'Access denied.');
+  if(data.guest===true && data.private_features===false){state.user=null;start();return;}
+  if(!Number.isSafeInteger(data.user_id)||data.user_id<=0||data.private_features!==true)throw Error('Invalid session.');
+  state.user=data.user_id;start();
+ }catch(e){$('auth-wall').querySelector('h2').textContent=localUI('authUnavailable',state.lang);$('auth-wall').querySelector('p').textContent=e.message||localUI('authRetry',state.lang);}}
 boot();
