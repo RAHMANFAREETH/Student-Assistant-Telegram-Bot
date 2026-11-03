@@ -253,6 +253,12 @@ def start(message):
     )
 
 
+# >>> V12.0 PRIVATE SUPER APP LAUNCH >>>
+# Opt-in /superapp and /app commands. Do not replace current BotFather menu.
+from super_miniapp_v120_launch import register_super_app_launcher
+register_super_app_launcher(bot)
+# <<< V12.0 PRIVATE SUPER APP LAUNCH <<<
+
 # ==================================================
 # /HELP
 # ==================================================
@@ -591,6 +597,11 @@ register_navigation_handlers(
 # V8.0 Mini App: read-only and Telegram-signature protected.
 from v8_miniapp import register_v8_miniapp
 register_v8_miniapp(app)
+
+# >>> V12.0 SUPER MINI APP integration (opt-in) >>>
+from super_miniapp_v120 import register_super_miniapp
+register_super_miniapp(app)
+# <<< V12.0 SUPER MINI APP integration <<<
 
 @app.route(
     "/",
