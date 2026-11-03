@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ta"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark"><title>Font & Writing Studio · Student Assistant</title>
+<link rel="stylesheet" href="/app/assets/fontstudio.css">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script type="module" src="/app/assets/fontstudio.js"></script>
+</head><body><div class="shell">
+<header class="top"><a class="back" href="/app" aria-label="Back to Mini App">← Mini App</a><span>STUDENT ASSISTANT · V12.2</span></header>
+<main>
+<section class="hero"><div class="mini">✍️ தமிழ் எழுத்துரு மாற்றி</div><h1>Font &amp; Writing Studio</h1><p>Unicode ↔ Bamini ↔ SunTommy, plus private writing utilities.</p><span class="private">🔒 Processes text on your device · no text upload</span></section>
+<div id="auth-state" class="state" role="status" aria-live="polite">Checking Mini App access…</div>
+<div id="studio" hidden>
+<div id="studio-feedback" class="note" role="status" aria-live="polite" hidden></div>
+<nav class="tabs" aria-label="Writing tools">
+<button data-panel="convert" aria-current="page">🔄 Font converter</button>
+<button data-panel="cleanup">🧹 Text cleaner</button>
+<button data-panel="inspect">🔎 Unicode inspector</button>
+<button data-panel="digits">🔢 Tamil digits</button>
+</nav>
+<section id="convert" class="pane" aria-label="Convert Tamil legacy fonts">
+ <h2>Unicode / Bamini / SunTommy</h2><p class="hint">This is a character-encoding converter, not merely a font-family switch.</p>
+ <div class="two-cols"><label>From<select id="font-from"><option>Unicode</option><option>Bamini</option><option>SunTommy</option></select></label><label>To<select id="font-to"><option>Bamini</option><option>Unicode</option><option>SunTommy</option></select></label></div>
+ <div class="toolbar"><button id="swap" class="secondary">⇄ Swap &amp; use result</button><button id="sample" class="secondary">Sample</button></div>
+ <label for="font-input">Input text</label><textarea id="font-input" spellcheck="false" placeholder="தமிழ் அல்லது Bamini/SunTommy குறியீடுகளை இங்கே ஒட்டுங்கள்" rows="6" maxlength="120000">வணக்கம்</textarea>
+ <div class="label-row"><label for="font-output">Converted result</label><span id="font-count">0 characters</span></div>
+ <textarea id="font-output" spellcheck="false" rows="6" readonly aria-live="polite"></textarea>
+ <div class="toolbar"><button id="font-copy">Copy result</button><button id="font-download" class="secondary">Download .txt</button><button id="font-clear" class="ghost">Clear</button></div>
+ <div id="font-status" class="note" role="status" aria-live="polite"></div>
+ <details><summary>Important: legacy font compatibility</summary><p>Bamini and SunTommy encode Tamil glyphs in Latin characters. Encoded results may look like English until you choose the matching font in Word or design software. Some rare glyph combinations are ambiguous, and ordinary English embedded in legacy text may convert incorrectly. Proofread before publishing. This tool does not install or provide a font file.</p></details>
+</section>
+<section id="cleanup" class="pane" aria-label="Clean Tamil text" hidden>
+ <h2>Text &amp; Unicode cleaner</h2><p class="hint">Normalize Unicode and remove invisible characters introduced by copied text. Keep your original as a backup.</p>
+ <label for="clean-input">Text to clean</label><textarea id="clean-input" rows="6" maxlength="120000" placeholder="Paste text here"></textarea>
+ <label class="tick"><input type="checkbox" id="clean-zero" checked> Remove zero-width/invisible formatting characters</label>
+ <label class="tick"><input type="checkbox" id="clean-space" checked> Normalize non-breaking and repeated spaces</label>
+ <label class="tick"><input type="checkbox" id="clean-trim"> Trim each line</label>
+ <label for="clean-output">Clean text</label><textarea id="clean-output" rows="6" readonly></textarea>
+ <div class="toolbar"><button data-copy="clean-output">Copy clean text</button><button data-download="clean-output">Download .txt</button></div>
+ <p class="hint">Removing joiners can change the appearance of some Indic sequences; compare results before replacing an original.</p>
+</section>
+<section id="inspect" class="pane" aria-label="Inspect Unicode characters" hidden>
+ <h2>Unicode inspector</h2><p class="hint">See the code point of each character, invisible marks, and suspicious combining signs.</p>
+ <label for="inspect-input">Text to inspect</label><textarea id="inspect-input" rows="5" maxlength="120000" placeholder="தமிழ் · Paste text here"></textarea>
+ <div id="inspect-summary" class="note" role="status"></div><label for="inspect-output">Character details (first 70)</label><textarea id="inspect-output" rows="10" readonly></textarea>
+ <div class="toolbar"><button data-copy="inspect-output">Copy report</button></div>
+</section>
+<section id="digits" class="pane" aria-label="Tamil digit converter" hidden>
+ <h2>Tamil digit converter</h2><p class="hint">Convert 0–9 ⇄ ௦–௯. Only digits change; other text is preserved.</p>
+ <label for="digits-direction">Direction</label><select id="digits-direction"><option value="toTamil">0–9 → ௦–௯</option><option value="toWestern">௦–௯ → 0–9</option></select>
+ <label for="digits-input">Text with numbers</label><textarea id="digits-input" rows="5" maxlength="120000">2026 நவம்பர் 04</textarea>
+ <label for="digits-output">Converted text</label><textarea id="digits-output" rows="5" readonly></textarea>
+ <div class="toolbar"><button data-copy="digits-output">Copy result</button><button data-download="digits-output">Download .txt</button></div>
+</section>
+</div>
+</main><footer>Existing Book Library and Arcade are unchanged · Conversion is on-device</footer>
+</div></body></html>

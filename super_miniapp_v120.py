@@ -66,6 +66,8 @@ def register_super_miniapp(app):
     register_v120_exports(app)
     from super_miniapp_v121 import register_v121_arcade
     register_v121_arcade(app)
+    from super_miniapp_v122_fonts import register_v122_fontstudio
+    register_v122_fontstudio(app)
     # <<< V12.0.2 optional temporary exports <<<
 
     @app.after_request
