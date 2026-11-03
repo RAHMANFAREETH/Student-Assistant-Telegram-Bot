@@ -1,0 +1,194 @@
+    # V7.15: standalone photo crop. Registered before the legacy PDF upload
+    # handlers; all predicates require this dedicated mode (no OCR interference).
+    @bot.message_handler(commands=["cropimage", "imagecrop"])
+    @bot.message_handler(func=lambda m: getattr(m, "text", None) == PHOTO_CROP_BUTTON)
+    def start_photo_crop(message):
+        chat_id = message.chat.id
+        if getattr(message.chat, "type", "private") != "private":
+            bot.send_message(chat_id, "🔒 Please open the bot in a private chat to crop photos.")
+            return
+        pdf_state[chat_id] = {"mode": PHOTO_CROP_MODE, "image": None,
+                              "selection": ORIGINAL_BUTTON, "edges": None,
+                              "await_edges": False}
+        bot.send_message(chat_id,
+            "✂️ Photo/Image Crop\n\n"
+            "Send one photo, or a JPG/PNG/WEBP file as a document for best quality.\n"
+            "Then choose Square, Portrait, Story, Landscape, Auto Page or Custom Edges.\n"
+            "Your original is not changed. No PDF is required.",
+            reply_markup=_photo_crop_keyboard())
+
+    @bot.message_handler(
+        func=lambda m: pdf_state.get(m.chat.id, {}).get("mode") == PHOTO_CROP_MODE
+        and getattr(m, "text", None) == CANCEL_CROP_BUTTON,
+        content_types=["text"])
+    def cancel_photo_crop(message):
+        _pdf_tools_menu(bot, message.chat.id)
+
+    @bot.message_handler(
+        func=lambda m: pdf_state.get(m.chat.id, {}).get("mode") == PHOTO_CROP_MODE
+        and getattr(m, "text", None) == "🔙 PDF Tools",
+        content_types=["text"])
+    def back_from_photo_crop(message):
+        _pdf_tools_menu(bot, message.chat.id)
+
+    @bot.message_handler(
+        func=lambda m: pdf_state.get(m.chat.id, {}).get("mode") == PHOTO_CROP_MODE
+        and getattr(m, "text", None) == CHANGE_PHOTO_BUTTON,
+        content_types=["text"])
+    def replace_photo_crop(message):
+        state = pdf_state[message.chat.id]
+        state.update(image=None, selection=ORIGINAL_BUTTON, edges=None, await_edges=False)
+        bot.send_message(message.chat.id, "🔄 Send another photo or image document.",
+                         reply_markup=_photo_crop_keyboard())
+
+    @bot.message_handler(
+        func=lambda m: pdf_state.get(m.chat.id, {}).get("mode") == PHOTO_CROP_MODE
+        and getattr(m, "text", None) == CUSTOM_CROP_BUTTON,
+        content_types=["text"])
+    def start_custom_crop(message):
+        state = pdf_state[message.chat.id]
+        if not state.get("image"):
+            bot.send_message(message.chat.id, "❌ Send a photo first.")
+            return
+        state["await_edges"] = True
+        bot.send_message(message.chat.id,
+            "📐 Custom Edges\n\nSend 4 percentages: LEFT TOP RIGHT BOTTOM.\n"
+            "Example: 10 5 90 95 (remove 10% from each side and 5% top/bottom).\n"
+            "Coordinates start at the top-left corner.")
+
+    def _render_crop_preview(chat_id, state):
+        if not state.get("image"):
+            bot.send_message(chat_id, "❌ Send a photo first.")
+            return
+        try:
+            output = create_cropped_image(state["image"], state["selection"],
+                                           state.get("edges"), preview=True)
+            try:
+                bot.send_photo(chat_id, output,
+                    caption=f"👁 Crop preview: {state['selection']}\n"
+                            "Choose another crop or tap ✅ Save Cropped Image.",
+                    reply_markup=_photo_crop_keyboard())
+            finally:
+                output.close()
+        except PhotoCropError as error:
+            bot.send_message(chat_id, str(error))
+        except Exception as error:
+            print("Photo crop preview failed:", type(error).__name__)
+            bot.send_message(chat_id, "❌ Could not preview the crop. Try another photo.")
+
+    @bot.message_handler(
+        func=lambda m: pdf_state.get(m.chat.id, {}).get("mode") == PHOTO_CROP_MODE
+        and getattr(m, "text", None) in (set(PRESETS) | {AUTO_PAGE_BUTTON, ORIGINAL_BUTTON}),
+        content_types=["text"])
+    def select_photo_crop(message):
+        state = pdf_state[message.chat.id]
+        if not state.get("image"):
+            bot.send_message(message.chat.id, "❌ Send a photo first.")
+            return
+        state["selection"] = message.text
+        state["edges"] = None
+        state["await_edges"] = False
+        _render_crop_preview(message.chat.id, state)
+
+    @bot.message_handler(
+        func=lambda m: pdf_state.get(m.chat.id, {}).get("mode") == PHOTO_CROP_MODE
+        and getattr(m, "text", None) == PREVIEW_CROP_BUTTON,
+        content_types=["text"])
+    def preview_photo_crop(message):
+        _render_crop_preview(message.chat.id, pdf_state[message.chat.id])
+
+    @bot.message_handler(
+        func=lambda m: pdf_state.get(m.chat.id, {}).get("mode") == PHOTO_CROP_MODE
+        and getattr(m, "text", None) == SAVE_CROP_BUTTON,
+        content_types=["text"])
+    def save_photo_crop(message):
+        chat_id = message.chat.id
+        state = pdf_state[chat_id]
+        if not state.get("image"):
+            bot.send_message(chat_id, "❌ Send a photo first.")
+            return
+        try:
+            output = create_cropped_image(state["image"], state["selection"],
+                                           state.get("edges"))
+            try:
+                bot.send_document(chat_id, output,
+                    caption="✅ Cropped image ready! Sent as a file to preserve quality.")
+            finally:
+                output.close()
+        except PhotoCropError as error:
+            bot.send_message(chat_id, str(error))
+            return
+        except Exception as error:
+            print("Photo crop save failed:", type(error).__name__)
+            bot.send_message(chat_id, "❌ Could not crop the photo. Try another photo.")
+            return
+        _pdf_tools_menu(bot, chat_id)
+
+    @bot.message_handler(
+        func=lambda m: pdf_state.get(m.chat.id, {}).get("mode") == PHOTO_CROP_MODE,
+        content_types=["photo", "document"])
+    def receive_photo_for_crop(message):
+        chat_id = message.chat.id
+        if getattr(message.chat, "type", "private") != "private":
+            bot.send_message(chat_id, "🔒 Use this tool in a private chat.")
+            return
+        try:
+            if message.content_type == "photo":
+                entry = message.photo[-1]
+            else:
+                entry = message.document
+                ext = Path(entry.file_name or "").suffix.lower()
+                if ext not in VALID_EXTENSIONS:
+                    bot.send_message(chat_id, "❌ Please upload JPG, PNG or WEBP, not PDF/other files.")
+                    return
+            if (getattr(entry, "file_size", 0) or 0) > MAX_SOURCE_BYTES:
+                bot.send_message(chat_id, "❌ Image is larger than 12 MB.")
+                return
+            data = _download_telegram_file(bot, entry.file_id)
+            with read_image(data) as verified:
+                dimensions = verified.size
+            state = pdf_state[chat_id]
+            state.update(image=data, selection=ORIGINAL_BUTTON, edges=None, await_edges=False)
+            bot.send_message(chat_id,
+                f"✅ Photo received ({dimensions[0]} × {dimensions[1]} pixels).\n"
+                "Select a crop style. A preview will appear automatically.",
+                reply_markup=_photo_crop_keyboard())
+        except PhotoCropError as error:
+            bot.send_message(chat_id, str(error))
+        except Exception as error:
+            print("Photo crop upload failed:", type(error).__name__)
+            bot.send_message(chat_id, "❌ Could not open that image. Please try JPG/PNG.")
+
+    @bot.message_handler(
+        func=lambda m: pdf_state.get(m.chat.id, {}).get("mode") == PHOTO_CROP_MODE
+        and getattr(m, "text", None) not in ("🔙 PDF Tools", "🏠 Main Menu")
+        and not should_yield_to_navigation(getattr(m, "text", None)),
+        content_types=["text"])
+    def receive_photo_crop_text(message):
+        state = pdf_state[message.chat.id]
+        if state.get("await_edges"):
+            try:
+                edges = parse_custom_edges(message.text or "")
+                # Preview validation first; only update state on valid crop.
+                output = create_cropped_image(state["image"], CUSTOM_CROP_BUTTON,
+                                               edges, preview=True)
+                output.close()
+            except PhotoCropError as error:
+                bot.send_message(message.chat.id, str(error))
+                return
+            state.update(selection=CUSTOM_CROP_BUTTON, edges=edges, await_edges=False)
+            _render_crop_preview(message.chat.id, state)
+        else:
+            bot.send_message(message.chat.id,
+                "✂️ Choose a crop button, send a photo, or tap 📐 Custom Edges.",
+                reply_markup=_photo_crop_keyboard())
+
+    @bot.message_handler(
+        func=lambda m: pdf_state.get(m.chat.id, {}).get("mode") == PHOTO_CROP_MODE
+        and should_yield_to_navigation(getattr(m, "text", None))
+        and getattr(m, "text", None) not in ("🔙 PDF Tools", "🏠 Main Menu"),
+        content_types=["text"])
+    def crop_yield_to_other_tools(message):
+        pdf_state.pop(message.chat.id, None)
+        return ContinueHandling()
+

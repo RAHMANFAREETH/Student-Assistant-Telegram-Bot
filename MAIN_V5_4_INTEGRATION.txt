@@ -1,0 +1,21 @@
+V5.4 INSTALLATION (ON TOP OF YOUR COMPLETE V5.3 PROJECT)
+========================================================
+
+1. Back up current working code, database and deployment configuration.
+2. Keep your older modules (flashcards.py, db.py, config.py, etc.). The ZIP
+   is an UPGRADE PACKAGE, not a complete standalone copy of your project.
+3. Run SQL_V5_4.sql once in your Supabase SQL Editor.
+4. Copy into existing project, replacing only these files:
+   main.py, navigation.py, system_health.py
+   and adding spaced_repetition.py
+5. Confirm existing flashcards table has a student ID, card ID, front,
+   and back columns. See README_V5_4.txt for mapping overrides.
+6. Test: python -m py_compile main.py navigation.py spaced_repetition.py
+7. Test: python -m unittest TEST_V5_4.py
+8. Start bot, then in Telegram test:
+   /start, 🧠 Flashcards, /reviews, /reviewstats, /healthcheck
+   Rating: 🔴 Again / 🟠 Hard / 🟢 Good / 🔵 Easy.
+9. Commit and deploy only after local tests work.
+
+NO EXTRA PYTHON PACKAGES required beyond existing telebot and Supabase SDK.
+NO PAID AI APIs required.

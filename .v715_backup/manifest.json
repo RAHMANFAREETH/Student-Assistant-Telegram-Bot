@@ -1,0 +1,17 @@
+{
+  "version": "7.15-compat",
+  "pdf_before": "7119c7ef66e7317e17c3ecf3a4972db78af6c0194d07ed3946028c527d6ead46",
+  "pdf_after": "44110c06c24756dbe9a67a466bfa7e7f1f6fdb1de4ea06252a4381484b952f7d",
+  "files": {
+    "photo_crop_v715.py": {
+      "action": "keep",
+      "before": "a57864500bc36f71befa20aabe597961379a4e2915b09c2512adaa0a9373b7fd",
+      "after": "a57864500bc36f71befa20aabe597961379a4e2915b09c2512adaa0a9373b7fd"
+    },
+    "TEST_V7_15_PHOTO_CROP.py": {
+      "action": "keep",
+      "before": "5431757dc3391a139eb3e5c5e81340aa037aa6e1e892bdb5cf901c5bc48e1197",
+      "after": "5431757dc3391a139eb3e5c5e81340aa037aa6e1e892bdb5cf901c5bc48e1197"
+    }
+  }
+}

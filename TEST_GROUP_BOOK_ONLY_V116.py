@@ -67,6 +67,8 @@ class GateTests(unittest.TestCase):
             'BOOK_LIBRARY_ENABLED':'true',
             'BOOK_LIBRARY_V113_ENABLED':'true',
             'BOOK_LIBRARY_AUTO_GROUP_SEARCH':'true',
+            # Legacy group tests use match-only mode even if Render/local env opts in.
+            'LIBRARY_SEARCH_V1186_ALL_TEXT_ENABLED':'false',
             'BOOK_LIBRARY_ALLOW_ALL_GROUPS':'true',
             'BOOK_LIBRARY_REQUIRE_VERIFIED_ADULT':'false',
             'BOOK_LIBRARY_BOT_USERNAME':'StudentExampleBot',
@@ -140,6 +142,17 @@ class GateTests(unittest.TestCase):
         with patch.object(gate,'_is_book_match',return_value=False):
             self.dispatch(msg('Hello my classmates'))
         self.assertEqual(self.bot.sent,[])
+
+    def test_all_text_mode_intentionally_routes_unmatched_text(self):
+        # The optional V11.8.6 behavior is separate from legacy match-only mode.
+        os.environ['LIBRARY_SEARCH_V1186_ALL_TEXT_ENABLED']='true'
+        with patch.object(gate,'_is_book_match',side_effect=AssertionError('should not check catalog')), \
+                patch.object(gate,'_book_search',return_value=None) as search:
+            self.dispatch(msg('Unfindable Book Title'))
+        search.assert_called_once()
+        args, kwargs = search.call_args
+        self.assertIs(args[0], self.bot)
+        self.assertEqual(args[2], 'Unfindable Book Title')
 
     def test_plain_text_not_routed_to_older_handlers(self):
         other=[]

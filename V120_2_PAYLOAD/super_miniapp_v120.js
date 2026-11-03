@@ -1,0 +1,337 @@
+import {TOOLS,CATEGORIES,UNITS,compute,securePassword,secureRandom,FORMAT,translateUI,translateCategory,displayToolName,localUI,localField,WORLD_CLOCK_ENTRIES} from '/app/assets/tools.mjs';
+import {translateResult,translateError} from '/app/assets/results.mjs';
+
+// No tracking, analytics or external APIs. All utility calculations run locally.
+const $ = id=>document.getElementById(id);
+const tg = window.Telegram?.WebApp;
+const state={user:null,tab:'home',category:'All',tool:null,favorites:[],recent:[],tasks:[],clockTimer:null,cleanup:null,manuallySetTheme:false,lang:'en',plannerLoaded:false,plannerLoading:false,plannerData:{assignments:[],exams:[]},plannerError:'',tasksMode:'loading',syncBusy:false,syncMessage:'',localTasksImported:false};
+const i18n=key=>localUI(key,state.lang);
+const displayName=tool=>displayToolName(tool,state.lang);
+function applyLanguage(){document.documentElement.lang=state.lang;document.querySelectorAll('[data-i18n]').forEach(e=>{e.textContent=i18n(e.dataset.i18n);});document.querySelectorAll('[data-i18n-placeholder]').forEach(e=>{e.placeholder=i18n(e.dataset.i18nPlaceholder);});$('language-select').value=state.lang;document.querySelectorAll('[data-v120-label]').forEach(e=>{e.textContent=localField(e.dataset.v120Label,state.lang);});document.querySelectorAll('[data-v120-ui]').forEach(e=>{e.textContent=i18n(e.dataset.v120Ui);});renderCategories();renderGrid();renderTasks();renderTaskSyncStatus();renderPlannerOverview();if(state.tool){const tool=TOOLS.find(t=>t.id===state.tool);if(tool)$('tool-heading').textContent=displayName(tool);}}
+// >>> V12 PUBLIC UTILITY ACCESS >>>
+// Guest preferences and quick tasks live in sessionStorage, never in shared
+// cross-account localStorage. Private data never comes from unsigned user IDs.
+const storage=()=>state.user===null?sessionStorage:localStorage;
+const storePrefix=()=>`studentassistant_v120_${state.user===null?'guest_session':state.user}_`;
+// <<< V12 PUBLIC UTILITY ACCESS <<<
+function readStored(key,fallback){try{const v=JSON.parse(storage().getItem(storePrefix()+key));return v??fallback;}catch{return fallback;}}
+function saveStored(key,val){try{storage().setItem(storePrefix()+key,JSON.stringify(val));}catch{status('Local storage unavailable. Your changes will not be saved.');}}
+function status(message){$('status').textContent=message||'';}
+function el(tag,attrs={},txt){const x=document.createElement(tag);for(const [k,v] of Object.entries(attrs)){if(k==='class')x.className=v;else if(k==='dataset')for(const [n,b] of Object.entries(v))x.dataset[n]=b;else if(k==='value')x.value=v;else x.setAttribute(k,v);}if(txt!==undefined)x.textContent=txt;return x;}
+function clearCleanup(){if(state.cleanup){try{state.cleanup();}catch{}state.cleanup=null;}}
+function applyTheme(theme){document.documentElement.dataset.theme=theme==='light'?'light':'dark';}
+function localISO(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+const specs = {
+ 'json-pretty':[['text','JSON text','textarea','{"student":"assistant","tools":68}'],['mode','Action','select','format',['format','compact']]],
+ 'base64-text':[['text','UTF-8 text or Base64','textarea','வணக்கம்'],['mode','Action','select','encode',['encode','decode']]],
+ 'text-diff':[['before','Original text','textarea','First line\nSecond line'],['after','Updated text','textarea','First line\nChanged line']],
+ 'attendance':[['attended','Classes attended','number',34],['total','Classes held','number',40],['target','Target attendance %','number',90]],
+ 'weighted-grade':[['rows','Score,weight (one per line)','textarea','85,30\n90,20\n75,50']],
+ 'csv-inspect':[['text','CSV text','textarea','name,score\nAmina,80\nSalman,92']],
+ 'weekday':[['date','Date','date',localISO()]],
+ 'days-until':[['start','Start date','date',localISO()],['end','Target date','date',localISO()]],
+ 'month-shift':[['date','Date','date',localISO()],['offset','Months (+ or -)','number',3]],
+ 'time-duration':[['start','Start (24h)','time','09:00'],['end','End (24h)','time','17:30']],
+ 'fraction':[['numerator','Numerator','number',12],['denominator','Denominator','number',18]],
+ 'ratio':[['left','First number','number',12],['right','Second number','number',18]],
+ 'average':[['values','Values (commas or new lines)','textarea','10, 20, 30, 40']],
+ 'gpa':[['rows','Credits,grade points (one course per line)','textarea','3,4.0\n2,3.0\n3,3.7']],
+ 'tip':[['amount','Bill amount','number',2500],['tip','Tip percentage','number',10],['people','Number of people','number',2]],
+ 'simple-interest':[['principal','Principal amount','number',10000],['rate','Annual rate (%)','number',8],['years','Years','number',2]],
+ 'compound-interest':[['principal','Principal amount','number',10000],['rate','Annual rate (%)','number',8],['years','Years','number',2],['times','Compoundings per year','number',12]],
+ 'loan-payment':[['principal','Loan amount','number',100000],['rate','Annual rate (%)','number',8],['years','Loan term (years)','number',5]],
+ 'prime':[['value','Integer (0–10000000)','number',97]],
+ 'square-root':[['value','Nonnegative number','number',144]],
+ 'text-sort':[['text','Lines to sort','textarea','Apple\nOrange\nBanana']],
+ 'text-unique':[['text','Lines','textarea','one\ntwo\none'],['ignoreCase','Ignore capitalization','checkbox',true]],
+ 'reading-time':[['text','Passage','textarea','Type your passage here.'],['speed','Words per minute (80–500)','number',200]],
+ 'text-reverse':[['text','Text','textarea','Student Assistant']],
+ 'url-encode':[['text','Text or URL component','textarea','Hello world?'],['mode','Action','select','encode',['encode','decode']]],
+ 'color-contrast':[['foreground','Foreground hex','text','#FFFFFF'],['background','Background hex','text','#202040']],
+
+ 'date-difference':[['start','Start date','date',localISO()],['end','End date','date',localISO()],['include','Include end date','checkbox',false]],
+ 'date-add':[['date','Start date','date',localISO()],['offset','Days to add (negative to subtract)','number',20]],
+ age:[['birth','Date of birth','date','2000-01-01'],['asof','As of','date',localISO()]],
+ 'day-of-year':[['date','Date','date',localISO()]],
+ epoch:[['timestamp','Unix timestamp','number',1793700000],['unit','Unit','select','seconds',['seconds','milliseconds']]],
+ temperature:[['value','Temperature','number',25],['from','From','select','Celsius',['Celsius','Fahrenheit','Kelvin']],['to','To','select','Fahrenheit',['Celsius','Fahrenheit','Kelvin']]],
+ base:[['value','Integer','text','101011'],['from','From base (2–36)','number',2],['to','To base (2–36)','number',10]],
+ calculator:[['a','First number','number',100],['operator','Operation','select','+',['+','-','×','÷','^']],['b','Second number','number',12]],
+ percent:[['percent','Percentage','number',20],['value','Of number','number',100]],
+ discount:[['price','Original price','number',2500],['percent','Discount %','number',15]],
+ bmi:[['weight','Weight (kg)','number',70],['height','Height (cm)','number',175]],
+ electricity:[['volts','Voltage (V)','number',230],['amps','Current (A)','number',2]],
+ random:[['min','Minimum','number',1],['max','Maximum','number',100]],
+ 'word-count':[['text','Text','textarea','']],
+ 'text-case':[['text','Text','textarea',''],['mode','Change to','select','upper',['upper','lower','title']]],
+};
+
+// Additional self-contained tool forms; same audited submit and live-refresh flow.
+Object.assign(specs,{
+ 'percentage-change':[['before','Original value','number',100],['after','New value','number',120]],
+ 'sales-tax':[['price','Price before tax','number',100],['rate','Tax percentage','number',15]],
+ 'profit-margin':[['cost','Cost price','number',80],['price','Selling price','number',100]],
+ 'speed-calc':[['distance','Distance (km)','number',20],['minutes','Travel time (minutes)','number',30]],
+ 'grade-percent':[['scored','Marks obtained','number',75],['total','Maximum marks','number',100]],
+ 'stddev':[['values','Values (commas or lines)','textarea','1,2,3,4,5']],
+ 'quadratic':[['a','Coefficient a','number',1],['b','Coefficient b','number',-3],['c','Coefficient c','number',2]],
+ 'factorial':[['n','Integer n (0–200)','number',10]],
+ 'combinations':[['n','Population n (0–200)','number',10],['k','Choose k','number',3]],
+ 'text-replace':[['text','Text','textarea','Hello world. Hello again.'],['find','Find','text','Hello'],['replace','Replace with','text','Hi'],['ignoreCase','Ignore capitalization','checkbox',false]],
+ 'word-frequency':[['text','Text','textarea','Apple apple banana. Banana apple!']],
+ 'study-sessions':[['blocks','Study sessions','number',4],['focus','Focus minutes each','number',25],['rest','Break minutes','number',5]]
+});
+
+function makeField([id,label,type,defaultValue,options]){
+ const wrap=el('div',{class:'field'+(type==='textarea'?' full':'')});const lbl=el('label',{for:'v120-'+id,'data-v120-label':label},localField(label,state.lang));
+ let input;
+ if(type==='select'){input=el('select',{id:'v120-'+id,name:id});for(const opt of options||[])input.append(el('option',{value:opt},opt));input.value=defaultValue;}
+ else if(type==='textarea'){input=el('textarea',{id:'v120-'+id,name:id,rows:'5',maxlength:'16000'});input.value=defaultValue;}
+ else {input=el('input',{type,id:'v120-'+id,name:id});if(type==='checkbox')input.checked=Boolean(defaultValue);else input.value=String(defaultValue);if(type==='number')input.step='any';}
+ wrap.append(lbl,input);return wrap;
+}
+function formValues(form){const fields={};for(const e of form.elements){if(!e.name)continue;fields[e.name]=e.type==='checkbox'?e.checked:e.value;}return fields;}
+function messagePanel(panel,t){panel.append(el('p',{class:'muted'},t));}
+function outputBox(panel){const out=el('div',{class:'result',role:'status','aria-live':'polite'});panel.append(out);return out;}
+function actionButton(text,callback,cls='primary'){const b=el('button',{type:'button',class:cls},text);b.onclick=callback;return b;}
+function genericForm(panel,id){let cfg=specs[id];if(id==='unit'){cfg=[['category','Category','select','Length',Object.keys(UNITS)],['value','Value','number',1],['from','From','select','Meters',Object.keys(UNITS.Length)],['to','To','select','Feet',Object.keys(UNITS.Length)]];}
+ const form=el('form',{class:'form-grid',id:'v120-active-tool-form'});for(const entry of cfg)form.append(makeField(entry));panel.append(form);
+ if(id==='unit'){
+  const update=()=>{const c=form.elements.category.value;for(const key of ['from','to']){const sel=form.elements[key],old=sel.value;sel.replaceChildren(...Object.keys(UNITS[c]).map(u=>el('option',{value:u},u)));if(Object.hasOwn(UNITS[c],old))sel.value=old;}if(form.elements.from.value===form.elements.to.value)form.elements.to.selectedIndex=Math.min(1,form.elements.to.length-1);};
+  form.elements.category.addEventListener('change',update);
+ }
+ const out=outputBox(panel),buttons=el('div',{class:'toolbar'}),go=el('button',{type:'submit',class:'primary','data-v120-ui':'calculate',form:'v120-active-tool-form'},i18n('calculate'));buttons.append(go);
+ const copy=actionButton(i18n('copyResult'),()=>navigator.clipboard?.writeText(out.textContent||'').then(()=>status(i18n('resultCopied'))).catch(()=>status(i18n('copyUnavailable'))),'secondary');copy.dataset.v120Ui='copyResult';buttons.append(copy);panel.insertBefore(buttons,out);
+ const run=()=>{try{out.classList.remove('error');out.textContent=translateResult(id,compute(id,formValues(form)),state.lang);}catch(e){out.classList.add('error');out.textContent=translateError(e,state.lang);}};
+ form.addEventListener('submit',e=>{e.preventDefault();run();});
+ // Refresh calculated output when inputs change; the last result must never
+ // be presented as if it belongs to newly entered values.
+ form.addEventListener('input',run);form.addEventListener('change',run);run();
+}
+function localDateTime(zone){return new Intl.DateTimeFormat('en-GB',{timeZone:zone,weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).format(new Date());}
+function worldClock(panel){
+ const initial=['Asia/Colombo','America/New_York','Europe/London','Asia/Dubai','Asia/Tokyo'];
+ const known=new Map(WORLD_CLOCK_ENTRIES.map(([cc,country,zone])=>[zone,{cc,country,zone,city:zone.split('/').slice(1).join(' / ').replaceAll('_',' ')}]));
+ const safeZones=()=>{const saved=readStored('world_zones',initial);const arr=Array.isArray(saved)?saved:initial;return [...new Set(arr)].filter(x=>known.has(x)).slice(0,30);};
+ let selected=safeZones();
+ const wrapper=el('div',{class:'world-clock-picker'}),head=el('div',{class:'clock-instructions'});
+ head.textContent=`Choose from ${new Set(WORLD_CLOCK_ENTRIES.map(x=>x[0])).size} countries/territories and ${WORLD_CLOCK_ENTRIES.length} time zones. Search by country, city, or time-zone name.`;
+ const search=el('input',{type:'search',placeholder:'Search country or city (e.g. Sri Lanka, Japan, New York)',autocomplete:'off','aria-label':'Search countries and time zones'});
+ const controls=el('div',{class:'toolbar'}),fmt=actionButton('Use 12-hour clock',()=>{is24=!is24;fmt.textContent=is24?'Use 12-hour clock':'Use 24-hour clock';render();},'secondary');
+ let is24=readStored('world_clock_24h',true)!==false;
+ fmt.textContent=is24?'Use 12-hour clock':'Use 24-hour clock';
+ const reset=actionButton('Reset clocks',()=>{selected=[...initial];saveStored('world_zones',selected);render();},'secondary');
+ controls.append(fmt,reset);const results=el('div',{class:'clock-search-results'});
+ const note=el('p',{class:'muted'},'Your selected clocks are stored on this device. Guest choices last only for this browser session.');
+ const cards=el('div',{class:'clock-cards'});
+ wrapper.append(head,search,controls,results,note,cards);panel.append(wrapper);
+ const flag=cc=>cc.replace(/./g,c=>String.fromCodePoint(127397+c.charCodeAt(0)));
+ const label=z=>{const e=known.get(z);return `${flag(e.cc)} ${e.country} · ${e.city}`;};
+ function render(){
+  cards.replaceChildren(...selected.map(z=>{
+   const d=el('div',{class:'clock-card'}),row=el('div',{class:'clock-card-head'}),
+       name=el('strong',{},label(z)),del=actionButton('Remove',()=>{selected=selected.filter(v=>v!==z);saveStored('world_zones',selected);render();},'secondary');
+   const clock=el('div',{class:'clock-value'});
+   try{clock.textContent=new Intl.DateTimeFormat('en-GB',{timeZone:z,weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:is24?'h23':'h12'}).format(new Date());}
+   catch{clock.textContent='Time zone unsupported on this device.';}
+   row.append(name,del);d.append(row,clock);return d;
+  }));
+ }
+ function renderOptions(){
+  const q=search.value.trim().toLocaleLowerCase();
+  const items=WORLD_CLOCK_ENTRIES.filter(([cc,country,zone])=>{
+   const record=known.get(zone);return !selected.includes(zone)&&(!q||`${country} ${record.city} ${zone} ${cc}`.toLocaleLowerCase().includes(q));
+  });
+  const view=items.slice(0,35);
+  results.replaceChildren(...view.map(([cc,country,zone])=>{
+   const btn=actionButton(`${flag(cc)} ${country} — ${known.get(zone).city}`,()=>{
+     if(selected.length>=30){status('Maximum 30 clocks. Remove a clock before adding another.');return;}
+     selected=[...selected,zone];saveStored('world_zones',selected);search.value='';render();renderOptions();
+   },'secondary');
+   btn.classList.add('clock-option');return btn;
+  }));
+  if(items.length>35)results.append(el('p',{class:'muted'},`Showing 35 of ${items.length} matching zones. Type a country or city to narrow the list.`));
+  if(!items.length)results.append(el('p',{class:'muted'},'No more matching time zones.'));
+ }
+ search.addEventListener('input',renderOptions);
+ fmt.addEventListener('click',()=>saveStored('world_clock_24h',is24));
+ render();renderOptions();
+ const tick=setInterval(()=>{
+  // Redraw the small selected list; search input and scroll position remain intact.
+  render();
+ },1000);
+ state.cleanup=()=>clearInterval(tick);
+}
+function timeText(ms){const sec=Math.max(0,Math.floor(ms/1000));return `${String(Math.floor(sec/3600)).padStart(2,'0')}:${String(Math.floor(sec%3600/60)).padStart(2,'0')}:${String(sec%60).padStart(2,'0')}`;}
+function runningClock(panel,mode){const form=el('form',{class:'form-grid'});let duration=mode==='pomodoro'?25:5;if(mode!=='stopwatch'){form.append(makeField(['minutes','Minutes','number',duration]));panel.append(form);}const digits=el('div',{class:'live-digits'},mode==='stopwatch'?'00:00:00':timeText(duration*60000));panel.append(digits);const tb=el('div',{class:'toolbar'});panel.append(tb);
+ let target=0,elapsed=0,started=0,interval=null,remaining=duration*60000,hasStarted=false;
+ function update(){const now=Date.now();if(mode==='stopwatch')digits.textContent=timeText(elapsed+(started?now-started:0));else{const left=started?Math.max(0,target-now):remaining;digits.textContent=timeText(left);if(started&&left<=0){stop();remaining=0;digits.textContent='00:00:00';status('Timer completed while the app was open.');}}}
+ function stop(){if(started){if(mode==='stopwatch')elapsed+=Date.now()-started;else remaining=Math.max(0,target-Date.now());started=0;}if(interval){clearInterval(interval);interval=null;}update();}
+ tb.append(actionButton('Start',()=>{if(started)return;if(mode!=='stopwatch' && !started && !hasStarted){const n=Number(form.elements.namedItem('minutes').value);if(!Number.isFinite(n)||n<=0||n>1440){status('Enter 1–1440 minutes.');return;}remaining=n*60000;}if(mode!=='stopwatch'&&remaining<=0){const n=Number(form.elements.namedItem('minutes').value);if(!Number.isFinite(n)||n<=0||n>1440){status('Enter 1–1440 minutes.');return;}remaining=n*60000;}hasStarted=true;started=Date.now();target=started+remaining;interval=setInterval(update,200);update();}));
+ tb.append(actionButton('Pause',stop,'secondary'));
+ tb.append(actionButton('Reset',()=>{stop();hasStarted=false;elapsed=0;remaining=mode==='stopwatch'?0:(Number(form.elements.namedItem('minutes').value)||duration)*60000;update();},'secondary'));
+ if(mode!=='stopwatch'){messagePanel(panel,'Timer alerts only work while this Mini App remains open. Use your bot reminders for later notifications.');}
+ state.cleanup=()=>{if(interval)clearInterval(interval);};}
+function cryptoTool(panel,mode){const form=el('form',{class:'form-grid'});if(mode==='password'){form.append(makeField(['length','Length (8–128)','number',20]));form.append(makeField(['symbols','Include symbols','checkbox',true]));}if(mode==='uuid')form.append(makeField(['count','Number (1–20)','number',5]));panel.append(form);const out=outputBox(panel),bar=el('div',{class:'toolbar'});const go=()=>{try{if(!crypto?.getRandomValues)throw Error('Secure random generator unavailable.');if(mode==='password')out.textContent=securePassword(Number(form.elements.namedItem('length').value),{symbols:form.elements.namedItem('symbols').checked});else{const n=Number(form.elements.count.value);if(!Number.isInteger(n)||n<1||n>20)throw Error('Count must be 1–20.');out.textContent=Array.from({length:n},()=>taskId()).join('\n');}}catch(e){out.textContent=e.message;}};
+ bar.append(actionButton('Generate',go));bar.append(actionButton('Copy',()=>navigator.clipboard?.writeText(out.textContent||'').then(()=>status('Copied.')).catch(()=>status('Copy not supported.')),'secondary'));panel.insertBefore(bar,out);messagePanel(panel,'Generated entirely in this browser; nothing is sent to your server.');form.addEventListener('input',()=>{out.textContent='';});form.addEventListener('change',()=>{out.textContent='';});go();}
+function funRoll(panel,mode){let form=null;if(mode==='dice'){form=el('form',{class:'form-grid'});form.append(makeField(['diceCount','Number of dice (1–5)','number',2]));panel.append(form);}const out=outputBox(panel);const go=()=>{try{if(mode==='coin')out.textContent=secureRandom(0,1)?'Heads 🪙':'Tails 🪙';else{const raw=Number(form.elements.namedItem('diceCount').value);if(!Number.isInteger(raw)||raw<1||raw>5)throw Error('Choose 1–5 dice.');out.textContent=Array.from({length:raw},()=>String(secureRandom(1,6))).join(' + ');}}catch(e){out.textContent=e.message;}};panel.insertBefore(actionButton(mode==='coin'?'Flip coin':'Roll dice',go),out);if(form)form.addEventListener('change',()=>{out.textContent='';});go();}
+function reaction(panel){messagePanel(panel,'Tap Start. When the panel turns green, tap it as quickly as you can.');const pad=el('button',{type:'button',class:'reaction-pad'},'Tap Start');panel.append(pad);const out=outputBox(panel);let stage=0,timeout=null,start=0;pad.onclick=()=>{if(stage===0){stage=1;pad.className='reaction-pad wait';pad.textContent='Wait for green…';timeout=setTimeout(()=>{stage=2;start=performance.now();pad.className='reaction-pad ready';pad.textContent='TAP NOW!';},800+secureRandom(0,2200));}else if(stage===1){clearTimeout(timeout);stage=0;pad.className='reaction-pad';pad.textContent='Too early! Tap to retry';out.textContent='False start';}else{out.textContent=`${Math.round(performance.now()-start)} ms`;stage=0;pad.className='reaction-pad';pad.textContent='Try again';}};state.cleanup=()=>{if(timeout)clearTimeout(timeout);};}
+function planTime(value){if(typeof value!=='string'||!value)return '';const d=new Date(value);if(!Number.isFinite(d.getTime()))return '';try{return new Intl.DateTimeFormat(state.lang==='ta'?'ta-IN':state.lang==='si'?'si-LK':'en-GB',{dateStyle:'medium',timeStyle:'short'}).format(d);}catch{return d.toISOString().slice(0,16);}}
+function renderPlannerOverview(){const assignments=$('planner-assignments'),exams=$('planner-exams');if(!assignments||!exams)return;
+ assignments.replaceChildren();exams.replaceChildren();const d=state.plannerData;
+ const build=(items,root,timeKey,emptyKey)=>{if(!Array.isArray(items)||!items.length){root.append(el('li',{class:'muted'},i18n(emptyKey)));return;}
+ for(const record of items){if(!record||typeof record!=='object')continue;const li=el('li');const title=el('strong',{},String(record.title||'').slice(0,160));const parts=[planTime(record[timeKey]),timeKey==='due_at'?String(record.priority||'').slice(0,32):String(record.location||'').slice(0,120)].filter(Boolean);li.append(title,el('small',{},parts.join(' · ')));root.append(li);}};
+ if(state.plannerLoaded){build(d.assignments,assignments,'due_at','plannerNoAssignments');build(d.exams,exams,'exam_at','plannerNoExams');}
+ const msg=state.plannerLoading?'plannerLoading':state.plannerError?'plannerUnavailable':state.plannerLoaded?'plannerReadOnly':'plannerLoading';$('planner-remote-status').textContent=i18n(msg);
+}
+async function loadPlannerOverview(force=false){if(state.plannerLoading||(!force&&state.plannerLoaded))return;if(state.user===null||!tg?.initData)return;
+ state.plannerLoading=true;state.plannerError='';renderPlannerOverview();
+ try{const response=await fetch('/app/api/planner',{headers:{'X-Telegram-Init-Data':tg.initData},cache:'no-store',credentials:'omit'});
+ const data=await response.json();if(!response.ok||data.ok!==true||!Array.isArray(data.assignments)||!Array.isArray(data.exams))throw Error('Read-only planner unavailable');
+ state.plannerData={assignments:data.assignments.slice(0,30),exams:data.exams.slice(0,30)};state.plannerLoaded=true;
+ }catch{state.plannerError='unavailable';state.plannerLoaded=false;state.plannerData={assignments:[],exams:[]};}
+ finally{state.plannerLoading=false;renderPlannerOverview();}
+}
+function taskId(){
+ if(globalThis.crypto?.randomUUID)return crypto.randomUUID();
+ if(globalThis.crypto?.getRandomValues){const b=new Uint8Array(16);crypto.getRandomValues(b);b[6]=(b[6]&15)|64;b[8]=(b[8]&63)|128;const h=Array.from(b,x=>x.toString(16).padStart(2,'0')).join('');return `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20)}`;}
+ throw Error('Secure random ID unavailable.');
+}
+const TASK_UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function getTasks(){const ts=readStored('tasks',[]);if(!Array.isArray(ts))return [];const valid=ts.filter(t=>t&&typeof t.text==='string'&&t.text.trim()).slice(0,100).map(t=>({id:t.id,text:t.text.slice(0,160),done:t.done===true}));let changed=false;for(const t of valid){if(!TASK_UUID.test(String(t.id||''))){try{t.id=taskId();changed=true;}catch{}}}if(changed)saveStored('tasks',valid);return valid;}
+function updateTasks(){state.localTasksImported=false;saveStored('local_tasks_imported',false);saveStored('tasks',state.tasks);renderTasks();}
+async function taskRequest(method,path,body){
+ if(!tg?.initData)throw Error('Telegram login required');
+ const headers={'X-Telegram-Init-Data':tg.initData};if(body!==undefined)headers['Content-Type']='application/json';
+ const response=await fetch(path,{method,headers,cache:'no-store',credentials:'omit',...(body!==undefined?{body:JSON.stringify(body)}:{})});
+ const data=await response.json();if(!response.ok||data.ok!==true)throw Error(data.error||'Sync failed');return data;
+}
+function renderTaskSyncStatus(){const node=$('task-sync-status'),button=$('task-import-local');if(!node||!button)return;
+ const mode=state.tasksMode;const key=mode==='remote'?'tasksSynced':mode==='local'?'tasksDeviceFallback':mode==='readonly'?'tasksReadOnly':'tasksLoading';
+ node.textContent=i18n(key)+(state.syncMessage?' · '+i18n(state.syncMessage):'');
+ const pending=getTasks();button.hidden=mode!=='remote'||!pending.length||state.localTasksImported;button.disabled=state.syncBusy;
+ button.textContent=i18n('taskImportLocal')+(pending.length?` (${pending.length})`:'');
+ const input=$('task-input'),add=$('task-form')?.querySelector('[type="submit"]');if(input)input.disabled=state.syncBusy||mode==='loading'||mode==='readonly';if(add)add.disabled=state.syncBusy||mode==='loading'||mode==='readonly';
+}
+function renderTasks(){const list=$('task-list');list.replaceChildren();if(!state.tasks.length)list.append(el('li',{},i18n('taskEmpty')));for(const t of state.tasks){const li=el('li',{class:t.done?'done':''}),cb=el('input',{type:'checkbox','aria-label':i18n('markDone')});cb.checked=!!t.done;cb.disabled=state.syncBusy||state.tasksMode==='loading'||state.tasksMode==='readonly';cb.addEventListener('change',async()=>{if(state.tasksMode==='remote'){await remoteChange(t.id,cb.checked,'PATCH');}else if(state.tasksMode==='local'){t.done=cb.checked;updateTasks();}else cb.checked=t.done;});const txt=el('span',{},t.text),del=el('button',{type:'button','aria-label':i18n('deleteTask')},'×');del.disabled=cb.disabled;del.onclick=async()=>{if(state.tasksMode==='remote'){await remoteChange(t.id,null,'DELETE');}else if(state.tasksMode==='local'){state.tasks=state.tasks.filter(x=>x.id!==t.id);updateTasks();}};li.append(cb,txt,del);list.append(li);}renderTaskSyncStatus();}
+async function loadSyncedTasks(){if(state.syncBusy)return;state.syncBusy=true;state.tasksMode='loading';state.syncMessage='';renderTasks();
+ try{const data=await taskRequest('GET','/app/api/tasks');if(!Array.isArray(data.tasks))throw Error('Bad task response');state.tasks=data.tasks.slice(0,100).filter(t=>t&&TASK_UUID.test(String(t.id))&&typeof t.text==='string');state.tasksMode='remote';}
+ catch{state.tasksMode='local';state.tasks=getTasks();state.syncMessage='tasksOffline';}
+ finally{state.syncBusy=false;renderTasks();}
+}
+async function remoteChange(id,done,method){if(state.syncBusy)return;state.syncBusy=true;renderTasks();try{await taskRequest(method,`/app/api/tasks/${encodeURIComponent(id)}`,method==='PATCH'?{done}:undefined);state.tasks=method==='DELETE'?state.tasks.filter(x=>x.id!==id):state.tasks.map(x=>x.id===id?{...x,done}:x);state.syncMessage='';}catch{state.syncMessage='tasksRetry';}finally{state.syncBusy=false;renderTasks();}}
+async function submitQuickTask(value){if(state.syncBusy)return;if(state.tasks.length>=100){status(i18n('taskLimit'));return;}if(state.tasksMode!=='remote'&&state.tasksMode!=='local')return;
+ let id;try{id=taskId();}catch{status(i18n('taskIdUnavailable'));return;}
+ if(state.tasksMode==='local'){state.tasks.push({id,text:value.slice(0,160),done:false});updateTasks();$('task-input').value='';return;}
+ state.syncBusy=true;renderTasks();try{const data=await taskRequest('POST','/app/api/tasks',{id,text:value.slice(0,160),done:false});if(!data.task||!data.task.id)throw Error('Bad server response');state.tasks.push(data.task);$('task-input').value='';state.syncMessage='';}catch{state.syncMessage='tasksRetry';}finally{state.syncBusy=false;renderTasks();}
+}
+async function importDeviceTasks(){if(state.tasksMode!=='remote'||state.syncBusy)return;const list=getTasks();if(!list.length)return;state.syncBusy=true;renderTasks();let done=0;
+ try{for(const t of list){if(!TASK_UUID.test(String(t.id))){state.syncMessage='taskIdUnavailable';break;}await taskRequest('POST','/app/api/tasks',{id:t.id,text:t.text,done:t.done===true});done++;}if(done===list.length){saveStored('tasks_backup_before_import',list);saveStored('tasks',[]);state.localTasksImported=true;saveStored('local_tasks_imported',true);state.syncMessage='tasksImported';}else{state.syncMessage='tasksPartialImport';}}
+ catch{state.syncMessage='tasksPartialImport';}
+ finally{state.syncBusy=false;try{const fresh=await taskRequest('GET','/app/api/tasks');if(Array.isArray(fresh.tasks))state.tasks=fresh.tasks.slice(0,100);}catch{}renderTasks();}
+}
+function taskTool(panel){messagePanel(panel,i18n('taskHelp'));const b=actionButton(i18n('openPlanner'),()=>switchTab('planner'));panel.append(b);}
+// V12.0.2: A click on blob: URLs often fails silently inside Telegram WebViews.
+// Prepare a persistent preview and multiple explicit save options instead.
+function presentExport(panel,blob,filename){
+ const previous=panel.querySelector('.v120-export');
+ if(previous){if(previous.dataset.objectUrl)URL.revokeObjectURL(previous.dataset.objectUrl);previous.remove();}
+ const url=URL.createObjectURL(blob), box=el('section',{class:'v120-export'});
+ box.dataset.objectUrl=url;
+ const title=el('strong',{},`File ready: ${filename} (${Math.max(1,Math.ceil(blob.size/1024))} KiB)`);
+ const preview=el('img',{src:url,alt:`Preview of ${filename}`,class:'v120-export-preview'});
+ const tips=el('p',{class:'muted'},'Select a save method below. A file preview does not mean a download succeeded.');
+ const buttons=el('div',{class:'toolbar'}),response=el('p',{class:'muted'});
+ const link=el('a',{href:url,download:filename,class:'v120-download-link'},'Open / save local file');
+ const saveLocal=actionButton('Download to device',()=>{
+  const a=el('a',{href:url,download:filename});document.body.append(a);a.click();a.remove();
+  response.textContent='Download requested. If it does not appear in Telegram, use Share or Save via Telegram below.';
+ });
+ const share=actionButton('Share / Save to Files',async()=>{
+  try{
+   const file=new File([blob],filename,{type:blob.type||'image/png'});
+   if(!navigator.share||!navigator.canShare?.({files:[file]}))throw Error('File sharing is not supported in this browser.');
+   await navigator.share({files:[file],title:filename});
+   response.textContent='Share dialog closed. Check the destination you selected.';
+  }catch(e){response.textContent=e?.name==='AbortError'?'Sharing cancelled.':String(e.message||'Sharing unavailable.');}
+ },'secondary');
+ const telegram=actionButton('Save via Telegram (temporary upload)',async()=>{
+  telegram.disabled=true;
+  response.textContent='Uploading an encrypted HTTPS copy temporarily to the bot server for Telegram download…';
+  try{
+   if(!['image/png','image/jpeg','image/webp'].includes(blob.type))throw Error('Unsupported export format.');
+   const res=await fetch('/app/api/export',{method:'POST',headers:{
+    'Content-Type':blob.type,'X-V120-Export-Intent':'1','X-V120-Export-Name':filename},body:blob,credentials:'omit',cache:'no-store'});
+   const data=await res.json();
+   if(!res.ok||data.ok!==true||typeof data.path!=='string')throw Error(data.error||'Unable to prepare download.');
+   const endpoint=new URL(data.path,window.location.origin);
+   if(endpoint.protocol!=='https:')throw Error('HTTPS required for Telegram downloads.');
+   const serverLink=el('a',{href:endpoint.href,target:'_blank',rel:'noopener noreferrer',class:'v120-download-link'},'Open short-lived download link');
+   box.querySelector('.v120-server-link')?.remove();
+   const serverArea=el('div',{class:'v120-server-link'});serverArea.append(serverLink);
+   box.append(serverArea);
+   if(typeof tg?.downloadFile==='function'){
+    tg.downloadFile({url:endpoint.href,file_name:filename},accepted=>{
+     response.textContent=accepted?'Telegram accepted the download request. Check your Downloads folder.':'Telegram download was declined. Try the link below.';
+    });
+    response.textContent='Choose Download in Telegram’s native prompt.';
+   }else{
+    response.textContent='Telegram native download is unavailable here. Open the temporary link below (expires in about 5 minutes).';
+   }
+  }catch(e){response.textContent=String(e.message||'Download unavailable.');}
+  finally{telegram.disabled=false;}
+ },'secondary');
+ buttons.append(saveLocal,share,telegram);
+ const disclosure=el('p',{class:'muted'},'Privacy: Local and Share options do not upload the image. Only Save via Telegram sends it to this bot’s Render server; the link expires in about 5 minutes; the in-memory copy is cleared by subsequent cache cleanup or a server restart.');
+ box.append(title,preview,tips,buttons,link,disclosure,response);
+ panel.append(box);
+ const oldCleanup=state.cleanup;
+ state.cleanup=()=>{URL.revokeObjectURL(url);oldCleanup?.();};
+}
+async function imgLoad(file){if(!file||!file.type.startsWith('image/'))throw Error('Select an image file.');if(file.size>15*1024*1024)throw Error('Use an image under 15 MB for this browser tool.');const img=el('img');const url=URL.createObjectURL(file);try{await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(Error('Image could not be decoded.'));img.src=url;});if(img.naturalWidth*img.naturalHeight>25000000)throw Error('Image dimensions are too large for this device.');return img;}finally{URL.revokeObjectURL(url);}}
+function toBlob(canvas,type='image/png',quality=0.8){return new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(Error('Image export failed.')),type,quality));}
+function imageTool(panel,mode){const form=el('form',{class:'form-grid'});form.append(makeField(['photo','Select photo','file','']));const input=form.elements.photo;input.type='file';input.accept='image/*';if(mode==='image-compress')form.append(makeField(['quality','JPEG quality 0.1–1','number',0.72]));if(mode==='image-watermark')form.append(makeField(['watermark','Watermark text','text','Student Assistant']));panel.append(form);messagePanel(panel,'Processed locally. Most original metadata is not retained. Only the optional Save via Telegram button sends a short-lived copy to your bot server.');const out=outputBox(panel);
+ panel.insertBefore(actionButton('Process image',async()=>{try{out.textContent='Processing locally…';const img=await imgLoad(input.files?.[0]);const maxSide=mode==='image-compress'?1600:3000,scale=Math.min(1,maxSide/Math.max(img.naturalWidth,img.naturalHeight)),can=el('canvas');can.width=Math.round(img.naturalWidth*scale);can.height=Math.round(img.naturalHeight*scale);const ctx=can.getContext('2d');if(!ctx)throw Error('Canvas unavailable.');ctx.drawImage(img,0,0,can.width,can.height);
+ if(mode==='image-watermark'){const w=String(form.elements.watermark.value||'').slice(0,120);if(!w)throw Error('Enter watermark text.');ctx.font=`bold ${Math.max(16,Math.round(can.width/24))}px sans-serif`;ctx.textAlign='center';ctx.fillStyle='rgba(255,255,255,.65)';ctx.strokeStyle='rgba(0,0,0,.7)';ctx.lineWidth=3;ctx.strokeText(w,can.width/2,can.height*0.9,can.width*0.95);ctx.fillText(w,can.width/2,can.height*0.9,can.width*0.95);}
+ const isJpg=mode==='image-compress';const q=isJpg?Number(form.elements.quality.value):1;if(!Number.isFinite(q)||q<0.1||q>1)throw Error('Quality must be 0.1–1.');const blob=await toBlob(can,isJpg?'image/jpeg':'image/png',q);presentExport(panel,blob,isJpg?'student-compressed.jpg':'student-export.png');out.textContent=`Image ready: ${can.width} × ${can.height} · ${Math.round(blob.size/1024)} KiB. Choose how to save below.`;}
+ catch(e){out.textContent=e.message;}},'primary'),out);
+}
+function signatureTool(panel){messagePanel(panel,'Draw your signature with your finger or mouse. Image is generated locally.');const canvas=el('canvas',{class:'canvas-preview',width:'640',height:'250','aria-label':'Drawing canvas'});panel.append(canvas);const ctx=canvas.getContext('2d');if(!ctx){messagePanel(panel,'Canvas unavailable.');return;}ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.strokeStyle='#121827';ctx.lineWidth=3;ctx.lineCap='round';let drawing=false;
+ function pos(e){const r=canvas.getBoundingClientRect();return {x:(e.clientX-r.left)*canvas.width/r.width,y:(e.clientY-r.top)*canvas.height/r.height};}
+ const down=e=>{drawing=true;canvas.setPointerCapture(e.pointerId);const p=pos(e);ctx.beginPath();ctx.moveTo(p.x,p.y);};const move=e=>{if(!drawing)return;const p=pos(e);ctx.lineTo(p.x,p.y);ctx.stroke();};const up=()=>{drawing=false;};canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointermove',move);canvas.addEventListener('pointerup',up);canvas.addEventListener('pointercancel',up);
+ const actions=el('div',{class:'toolbar'});actions.append(actionButton('Clear',()=>{ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);},'secondary'));actions.append(actionButton('Prepare PNG',async()=>{try{presentExport(panel,await toBlob(canvas),'signature.png');}catch(e){status(String(e.message||'Cannot export signature.'));}}));panel.append(actions);}
+function routeTool(id,panel){if(specs[id]||id==='unit'){genericForm(panel,id);return;}if(id==='world-clock'){worldClock(panel);return;}if(['timer','stopwatch','pomodoro'].includes(id)){runningClock(panel,id);return;}if(id==='password'||id==='uuid'){cryptoTool(panel,id);return;}if(id==='coin'||id==='dice'){funRoll(panel,id);return;}if(id==='reaction'){reaction(panel);return;}if(id==='todo'){taskTool(panel);return;}if(['image-compress','image-strip','image-watermark'].includes(id)){imageTool(panel,id);return;}if(id==='signature'){signatureTool(panel);return;}messagePanel(panel,'Tool is unavailable.');}
+function getResults(){const q=$('tool-search').value.toLocaleLowerCase().trim();let tools=TOOLS;
+ if(state.category==='Favorites')tools=tools.filter(t=>state.favorites.includes(t.id));else if(state.category!=='All')tools=tools.filter(t=>t.category===state.category);
+ if(q)tools=tools.filter(t=>(t.name+' '+displayName(t)+' '+t.category+' '+translateCategory(t.category,state.lang)+' '+t.summary).toLocaleLowerCase().includes(q));return tools;}
+function renderCategories(){const area=$('category-pills');area.replaceChildren(...CATEGORIES.map(c=>{const btn=el('button',{type:'button',class:'pill'+(c===state.category?' active':''),'aria-pressed':String(c===state.category)},translateCategory(c,state.lang));btn.onclick=()=>{state.category=c;renderCategories();renderGrid();};return btn;}));}
+function renderGrid(){const cards=getResults(),parent=$('tool-grid');parent.replaceChildren(...cards.map(t=>{const btn=el('button',{type:'button',class:'tool-card','aria-label':displayName(t)}),icon=el('span',{class:'tool-icon','aria-hidden':'true'},t.icon),name=el('span',{class:'tool-name'},displayName(t));btn.append(icon,name);btn.onclick=()=>openTool(t.id);return btn;}));$('tool-count').textContent=`${cards.length} ${i18n('toolsUnit')}`;$('category-heading').textContent=state.category==='All'?i18n('explore'):translateCategory(state.category,state.lang);if(!cards.length)parent.append(el('p',{class:'muted'},i18n('empty')));}
+function openTool(id){const tool=TOOLS.find(t=>t.id===id);if(!tool)return;clearCleanup();state.tool=id;state.recent=[id,...state.recent.filter(x=>x!==id)].slice(0,12);saveStored('recent',state.recent);
+ $('dashboard').hidden=true;$('tool-view').hidden=false;$('tool-emoji').textContent=tool.icon;$('tool-heading').textContent=displayName(tool);$('tool-summary').textContent=tool.summary;
+ $('favorite-toggle').textContent=state.favorites.includes(id)?'★':'☆';$('favorite-toggle').setAttribute('aria-pressed',String(state.favorites.includes(id)));$('tool-body').replaceChildren();status('');routeTool(id,$('tool-body'));window.scrollTo({top:0,behavior:'instant'});}
+function showDashboard(){clearCleanup();state.tool=null;$('tool-view').hidden=true;$('dashboard').hidden=false;switchTab(state.tab);}
+function switchTab(tab){clearCleanup();state.tab=tab;state.tool=null;$('tool-view').hidden=true;$('dashboard').hidden=false;
+ const grid=tab==='home'||tab==='tools';$('home-content').hidden=!grid;$('category-pills').hidden=!grid;$('planner-panel').hidden=tab!=='planner';$('profile-panel').hidden=tab!=='profile';$('library-panel').hidden=tab!=='library';
+ if(tab==='home')state.category='All';if(tab==='tools'&&state.category==='All')state.category='All';
+ document.querySelectorAll('[data-tab]').forEach(x=>{x.classList.toggle('active',x.dataset.tab===tab);x.setAttribute('aria-current',x.dataset.tab===tab?'page':'false');});renderCategories();renderGrid();if(tab==='planner'){renderTasks();loadPlannerOverview();}window.scrollTo({top:0,behavior:'instant'});}
+function openBot(){const link='https://t.me/Student_Sl_Assistant_bot';if(tg?.openTelegramLink)tg.openTelegramLink(link);else window.location.assign(link);}
+function start(){state.favorites=readStored('favorites',[]).filter(x=>typeof x==='string');state.recent=readStored('recent',[]).filter(x=>typeof x==='string');state.tasks=getTasks();state.localTasksImported=readStored('local_tasks_imported',false)===true;const savedLang=readStored('language', 'en');state.lang=['en','ta','si'].includes(savedLang)?savedLang:'en';$('language-select').onchange=()=>{state.lang=$('language-select').value;saveStored('language',state.lang);applyLanguage();};applyLanguage();$('auth-wall').hidden=true;$('workspace').hidden=false;$('bottom-nav').hidden=false;
+ $('tool-search').addEventListener('input',()=>{$('clear-search').hidden=!$('tool-search').value;showDashboard();switchTab('tools');});$('clear-search').onclick=()=>{$('tool-search').value='';$('clear-search').hidden=true;renderGrid();};$('back-tools').onclick=showDashboard;
+ $('favorite-toggle').onclick=()=>{const id=state.tool;if(!id)return;state.favorites=state.favorites.includes(id)?state.favorites.filter(x=>x!==id):[...state.favorites,id];saveStored('favorites',state.favorites);$('favorite-toggle').textContent=state.favorites.includes(id)?'★':'☆';$('favorite-toggle').setAttribute('aria-pressed',String(state.favorites.includes(id)));};
+ document.querySelectorAll('[data-tab]').forEach(x=>x.onclick=()=>switchTab(x.dataset.tab));$('open-library').onclick=()=>{window.location.assign('/library');};$('open-bot').onclick=()=>openBot();
+ $('planner-refresh').onclick=()=>{loadPlannerOverview(true);loadSyncedTasks();};$('planner-open-bot').onclick=()=>openBot();
+ $('task-import-local').onclick=importDeviceTasks;
+ $('task-form').onsubmit=e=>{e.preventDefault();const value=$('task-input').value.trim();if(value)submitQuickTask(value);};
+ document.querySelectorAll('[data-copy]').forEach(b=>b.onclick=()=>{navigator.clipboard?.writeText(b.dataset.copy).then(()=>status('Command copied.')).catch(()=>status('Unable to copy.'));});
+ $('theme-toggle').onclick=()=>{state.manuallySetTheme=true;applyTheme(document.documentElement.dataset.theme==='light'?'dark':'light');};switchTab('home');if(state.user===null){state.tasksMode='local';state.tasks=getTasks();state.plannerError='unavailable';renderTasks();renderPlannerOverview();status('Public tools are available. Private sync needs a valid Telegram session. Guest tasks last for this browser session.');}else{loadSyncedTasks();}}
+async function boot(){if(tg){tg.ready();tg.expand();applyTheme(tg.colorScheme);tg.onEvent?.('themeChanged',()=>{if(!state.manuallySetTheme)applyTheme(tg.colorScheme);});}
+ try{
+  const headers=tg?.initData?{'X-Telegram-Init-Data':tg.initData}:{};
+  const response=await fetch('/app/api/session',{headers,cache:'no-store',credentials:'omit'});
+  const data=await response.json();
+  if(!response.ok||data.ok!==true)throw Error(data.error||'Access denied.');
+  if(data.guest===true && data.private_features===false){state.user=null;start();return;}
+  if(!Number.isSafeInteger(data.user_id)||data.user_id<=0||data.private_features!==true)throw Error('Invalid session.');
+  state.user=data.user_id;start();
+ }catch(e){$('auth-wall').querySelector('h2').textContent=localUI('authUnavailable',state.lang);$('auth-wall').querySelector('p').textContent=e.message||localUI('authRetry',state.lang);}}
+boot();

@@ -1,0 +1,1368 @@
+Modules: 99
+Passed modules: 99
+Failed/timeout modules: 0
+Tests run: 1904
+Skipped: 3
+Nonpassing modules: (none)
+
+Student Assistant Bot test-only regression
+Python: 3.14.7 (tags/v3.14.7:823f032, Aug  5 2026, 10:51:32) [MSC v.1944 64 bit (AMD64)]
+Module isolation: each module uses a new Python process
+Application environment: feature flags isolated
+Redacted count of inherited app keys excluded: 44
+Modules: 99
+
+==========================================================================
+[01/99] PASS    TEST_ADMIN_GROUP_PERFORMANCE_V1191              21 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 21 tests in 0.038s
+
+OK
+
+==========================================================================
+[02/99] PASS    TEST_ASSEMBLYAI_V54                             12 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 12 tests in 0.014s
+
+OK
+
+==========================================================================
+[03/99] PASS    TEST_BOOK_LIBRARY                               42 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 42 tests in 0.054s
+
+OK
+
+==========================================================================
+[04/99] PASS    TEST_BOOK_LIBRARY_PRIVACY_V114                  21 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 21 tests in 0.965s
+
+OK
+
+==========================================================================
+[05/99] PASS    TEST_BOOK_LIBRARY_V112                          49 tests
+Exit code: 0
+
+V11.2 delivery count unavailable
+----------------------------------------------------------------------
+Ran 49 tests in 0.091s
+
+OK
+
+==========================================================================
+[06/99] PASS    TEST_BOOK_LIBRARY_V113                          60 tests
+Exit code: 0
+
+C:\Users\Pros\AppData\Roaming\Python\Python314\site-packages\supabase\_sync\client.py:309: DeprecationWarning: The 'timeout' parameter is deprecated. Please configure it in the http client instead.
+  return SyncPostgrestClient(
+C:\Users\Pros\AppData\Roaming\Python\Python314\site-packages\supabase\_sync\client.py:309: DeprecationWarning: The 'verify' parameter is deprecated. Please configure it in the http client instead.
+  return SyncPostgrestClient(
+----------------------------------------------------------------------
+Ran 60 tests in 3.732s
+
+OK
+<sys>:0: ResourceWarning: unclosed <ssl.SSLSocket fd=940, family=2, type=1, proto=0, laddr=('10.62.192.76', 57938), raddr=('172.64.149.246', 443)>
+
+==========================================================================
+[07/99] PASS    TEST_BOOK_PUBLIC_LATEST5                        14 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 14 tests in 0.053s
+
+OK
+
+==========================================================================
+[08/99] PASS    TEST_DOCUMENT_ROUTING_FIX                        5 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.002s
+
+OK
+
+==========================================================================
+[09/99] PASS    TEST_FRIENDLY_V119                              36 tests
+Exit code: 0
+
+C:\Users\Pros\AppData\Roaming\Python\Python314\site-packages\supabase\_sync\client.py:309: DeprecationWarning: The 'timeout' parameter is deprecated. Please configure it in the http client instead.
+  return SyncPostgrestClient(
+C:\Users\Pros\AppData\Roaming\Python\Python314\site-packages\supabase\_sync\client.py:309: DeprecationWarning: The 'verify' parameter is deprecated. Please configure it in the http client instead.
+  return SyncPostgrestClient(
+----------------------------------------------------------------------
+Ran 36 tests in 4.178s
+
+OK
+<sys>:0: ResourceWarning: unclosed <ssl.SSLSocket fd=284, family=2, type=1, proto=0, laddr=('10.62.192.76', 57940), raddr=('172.64.149.246', 443)>
+
+==========================================================================
+[10/99] PASS    TEST_GROUP_BOOK_ONLY_V116                       24 tests
+Exit code: 0
+--- main.py:current
++++ main.py:planned
+@@ -1,3 +1,7 @@
+ from flask import Flask
+ install_group_ui_guard(bot)
++# V11.6: only public Book Library searches may execute in group chats.
++from group_books_only_v116 import install_book_only_group_gate
++install_book_only_group_gate(bot)
++
+ app = Flask(__name__)
+CHECK OK. No files changed.
+V11.6 integrated. Original main.py backed up in: C:\Users\Pros\AppData\Local\Temp\tmpms9mhyff\V116_GROUP_BACKUP_20261103_211914_120366
+V11.6 already integrated. No changes needed.
+
+----------------------------------------------------------------------
+Ran 24 tests in 0.335s
+
+OK
+
+==========================================================================
+[11/99] PASS    TEST_GROUP_LIBRARY_MENU_V1161                   23 tests
+Exit code: 0
+--- main.py:current
++++ main.py:planned
+@@ -1,4 +1,8 @@
+ bot = object()
++# V11.6.1: Book Library-only group menu before V11.5 navigation guard.
++from group_library_menu_v1161 import install_group_library_menu
++install_group_library_menu(bot)
++
+ from group_ui_v115 import install_group_ui_guard
+ install_group_ui_guard(bot)
+ from group_books_only_v116 import install_book_only_group_gate
+CHECK OK. No files changed.
+V11.6.1 integrated. Original main.py backed up to: C:\Users\Pros\AppData\Local\Temp\tmp5xc4kodx\V1161_MENU_BACKUP_20261103_211914_923141
+V11.6.1 group library menu already integrated; no files changed.
+
+----------------------------------------------------------------------
+Ran 23 tests in 0.158s
+
+OK
+
+==========================================================================
+[12/99] PASS    TEST_GROUP_UI_V115                              22 tests
+Exit code: 0
+
+Group-menu cleanup DB queue unavailable (RuntimeError); using process-local fallback
+----------------------------------------------------------------------
+Ran 22 tests in 0.031s
+
+OK (skipped=1)
+
+==========================================================================
+[13/99] PASS    TEST_GROUP_WELCOME_V11884                       12 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 12 tests in 0.018s
+
+OK
+
+==========================================================================
+[14/99] PASS    TEST_IMPORT_LOCAL_BOOK_ZIPS_V1192               20 tests
+Exit code: 0
+PREVIEW ONLY — no Telegram login or uploads.
+There is no fixed ZIP archive size cap. Telegram user upload/disk/security checks remain.
+
+[1/1] sample.zip (0.0 MB)
+  Tamil_Book.pdf — 0.0 MB
+  book2.epub — 0.0 MB
+  Eligible documents: 2; unsafe/oversize skipped: 0; total expanded: 0.00 GB
+  Sent 1: test.pdf
+
+----------------------------------------------------------------------
+Ran 20 tests in 0.423s
+
+OK
+
+==========================================================================
+[15/99] PASS    TEST_IMPORT_TELEGRAM_ZIPS_V11921                14 tests
+Exit code: 0
+Reusing previously downloaded ZIP: C:\Users\Pros\AppData\Local\Temp\tmpbc4l42n7\cache\telegram-bf3e05f303510710b708cdd3.zip
+
+----------------------------------------------------------------------
+Ran 14 tests in 0.095s
+
+OK
+
+==========================================================================
+[16/99] PASS    TEST_INDIVIDUAL_FORWARD_V11882                  16 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 16 tests in 0.017s
+
+OK
+
+==========================================================================
+[17/99] PASS    TEST_INSTALL_V120_PLANNER_LOCALE                 5 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.361s
+
+OK
+
+==========================================================================
+[18/99] PASS    TEST_INSTALL_V120_TASK_SYNC                      5 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.342s
+
+OK
+
+==========================================================================
+[19/99] PASS    TEST_INSTALL_V120_TELEGRAM_LAUNCH                5 tests
+Exit code: 0
+V12 Telegram launch PILOT PATCH (production flags remain OFF)
+UPDATE main.py
+--- main.py (current)
++++ main.py (proposed)
+@@ -1,5 +1,11 @@
+ from super_miniapp_v120 import register_super_miniapp
+ register_super_miniapp(app)
++
++# >>> V12.0 PRIVATE SUPER APP LAUNCH >>>
++# Opt-in /superapp and /app commands. Do not replace current BotFather menu.
++from super_miniapp_v120_launch import register_super_app_launcher
++register_super_app_launcher(bot)
++# <<< V12.0 PRIVATE SUPER APP LAUNCH <<<
+ 
+ # ==================================================
+ # /HELP
+
+UPDATE super_miniapp_v120.py
+--- super_miniapp_v120.py (current)
++++ super_miniapp_v120.py (proposed)
+@@ -1,5 +1,9 @@
+ def verify_super_session(raw):
+     uid = 1
++    # V12.0 optional server-side pilot gate; HMAC and adult checks run first.
++    from super_miniapp_v120_launch import pilot_access_allowed
++    if not pilot_access_allowed(uid):
++        raise PermissionError("V12 pilot access is restricted.")
+     return uid
+ 
+ 
+
+CHECK OK (no files written)
+V12 Telegram launch PILOT PATCH (production flags remain OFF)
+UPDATE main.py
+--- main.py (current)
++++ main.py (proposed)
+@@ -1,5 +1,11 @@
+ from super_miniapp_v120 import register_super_miniapp
+ register_super_miniapp(app)
++
++# >>> V12.0 PRIVATE SUPER APP LAUNCH >>>
++# Opt-in /superapp and /app commands. Do not replace current BotFather menu.
++from super_miniapp_v120_launch import register_super_app_launcher
++register_super_app_launcher(bot)
++# <<< V12.0 PRIVATE SUPER APP LAUNCH <<<
+ 
+ # ==================================================
+ # /HELP
+
+UPDATE super_miniapp_v120.py
+--- super_miniapp_v120.py (current)
++++ super_miniapp_v120.py (proposed)
+@@ -1,5 +1,9 @@
+ def verify_super_session(raw):
+     uid = 1
++    # V12.0 optional server-side pilot gate; HMAC and adult checks run first.
++    from super_miniapp_v120_launch import pilot_access_allowed
++    if not pilot_access_allowed(uid):
++        raise PermissionError("V12 pilot access is restricted.")
+     return uid
+ 
+ 
+
+APPLIED. Backup: C:\Users\Pros\AppData\Local\Temp\tmprts_y2b5\V120_TELEGRAM_LAUNCH_BACKUP_20261103_211919_667286
+Keep SUPER_MINIAPP_V120_ENABLED=false and SUPER_MINIAPP_V120_LAUNCH_ENABLED=false.
+V12 Telegram launch PILOT PATCH (production flags remain OFF)
+NO CHANGES (already applied)
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.032s
+
+OK
+
+==========================================================================
+[20/99] PASS    TEST_LIBRARY_LANGUAGE_PICKER_V1185              10 tests
+Exit code: 0
+V11.8.5 already installed; no changes needed.
+V11.8.5 already installed; no changes needed.
+V11.8.5 already installed; no changes needed.
+
+----------------------------------------------------------------------
+Ran 10 tests in 0.122s
+
+OK
+
+==========================================================================
+[21/99] PASS    TEST_LIBRARY_LARGE_RELAY_V1187                  10 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 10 tests in 0.023s
+
+OK
+
+==========================================================================
+[22/99] PASS    TEST_LIBRARY_LEGACY_TEST_ISOLATION_V11862        4 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.085s
+
+OK
+
+==========================================================================
+[23/99] PASS    TEST_LIBRARY_MANAGE_V118                        28 tests
+Exit code: 0
+
+Telegram cannot delete storage message (-1001,106)
+Traceback (most recent call last):
+  File "C:\Users\Pros\Desktop\StudentAssistantBot\library_manage_v118.py", line 243, in delete
+    raise RuntimeError('Telegram did not confirm deletion.')
+RuntimeError: Telegram did not confirm deletion.
+Telegram cannot delete storage message (-1001,105)
+Traceback (most recent call last):
+  File "C:\Users\Pros\Desktop\StudentAssistantBot\library_manage_v118.py", line 241, in delete
+    result = bot.delete_message(cid, mid)
+  File "C:\Users\Pros\Desktop\StudentAssistantBot\TEST_LIBRARY_MANAGE_V118.py", line 65, in delete_message
+    if isinstance(self.delete_result,Exception):raise self.delete_result
+                                                ^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: too old
+----------------------------------------------------------------------
+Ran 28 tests in 0.193s
+
+OK
+
+==========================================================================
+[24/99] PASS    TEST_LIBRARY_MEDIA_V117                         56 tests
+Exit code: 0
+
+C:\Users\Pros\AppData\Roaming\Python\Python314\site-packages\supabase\_sync\client.py:309: DeprecationWarning: The 'timeout' parameter is deprecated. Please configure it in the http client instead.
+  return SyncPostgrestClient(
+C:\Users\Pros\AppData\Roaming\Python\Python314\site-packages\supabase\_sync\client.py:309: DeprecationWarning: The 'verify' parameter is deprecated. Please configure it in the http client instead.
+  return SyncPostgrestClient(
+<frozen importlib._bootstrap_external>:511: ResourceWarning: unclosed <ssl.SSLSocket fd=960, family=2, type=1, proto=0, laddr=('10.62.192.76', 57959), raddr=('172.64.149.246', 443)>
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+C:\Users\Pros\AppData\Roaming\Python\Python314\site-packages\supabase\_sync\client.py:309: DeprecationWarning: The 'timeout' parameter is deprecated. Please configure it in the http client instead.
+  return SyncPostgrestClient(
+C:\Users\Pros\AppData\Roaming\Python\Python314\site-packages\supabase\_sync\client.py:309: DeprecationWarning: The 'verify' parameter is deprecated. Please configure it in the http client instead.
+  return SyncPostgrestClient(
+----------------------------------------------------------------------
+Ran 56 tests in 3.655s
+
+OK
+
+==========================================================================
+[25/99] PASS    TEST_LIBRARY_SEARCH_FEEDBACK_V1186               8 tests
+Exit code: 0
+
+V11.7 unified search failed
+Traceback (most recent call last):
+  File "C:\Users\Pros\Desktop\StudentAssistantBot\library_media_v117_bot.py", line 254, in unified_search
+    items=union_search(q,limit=30)
+  File "C:\Python314\Lib\unittest\mock.py", line 1176, in __call__
+    return self._mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\unittest\mock.py", line 1180, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\unittest\mock.py", line 1241, in _execute_mock_call
+    raise effect
+RuntimeError: db offline
+Cannot edit search status; using a new message
+Traceback (most recent call last):
+  File "C:\Users\Pros\Desktop\StudentAssistantBot\library_media_v117_bot.py", line 216, in _replace_search_status
+    updated=editor(text, chat_id=chat_id, message_id=mid,
+                   reply_markup=markup)
+  File "C:\Users\Pros\Desktop\StudentAssistantBot\TEST_LIBRARY_SEARCH_FEEDBACK_V1186.py", line 31, in edit_message_text
+    if self.edit_fails:raise RuntimeError('Telegram edit denied')
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: Telegram edit denied
+----------------------------------------------------------------------
+Ran 8 tests in 0.041s
+
+OK
+
+==========================================================================
+[26/99] PASS    TEST_LIBRARY_SEARCH_LABELS_V1182                 4 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.001s
+
+OK
+
+==========================================================================
+[27/99] PASS    TEST_LIBRARY_SEARCH_STABILITY_V11861             3 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.002s
+
+OK
+
+==========================================================================
+[28/99] PASS    TEST_LIBRARY_SEARCH_UI_V1183                    12 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 12 tests in 0.045s
+
+OK
+
+==========================================================================
+[29/99] PASS    TEST_OCR_DOCUMENT_FIX                           12 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 12 tests in 0.018s
+
+OK
+
+==========================================================================
+[30/99] PASS    TEST_OFFICE_MENU_FIX                             6 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.015s
+
+OK
+
+==========================================================================
+[31/99] PASS    TEST_PREVIOUS_CHANNEL_IMPORT_V11881             14 tests
+Exit code: 0
+
+Source: Old Book Channel (ID 1001)
+Destination: @StudyBot (ID 2002)
+Mode: FORWARD DOCUMENTS
+Resume after message: 0 | Max files: 2 | Scan limit: 2000
+The account logged into Telegram MUST be an existing authorized bot administrator.
+You must have legal permission to distribute ALL selected documents.
+Bot acknowledged batch setup. Forwarding historical documents...
+  Forwarded 1/2 — post #1: a.pdf
+  Forwarded 2/2 — post #3: b.epub
+
+Scanned 3 history posts; matching documents 2; forwarded 2; protected/errors 0.
+Check the bot response to /mediabulkstatus. When all files finish processing, send /mediabulkdone.
+Local resume checkpoint: C:\Users\Pros\AppData\Local\Temp\tmp1uyaiqxu\checkpoint-3ba1de95b0b9c301.json
+A checkpoint means forwarded, NOT confirmed published; review failed files before the next run.
+
+Source: Old Book Channel (ID 1001)
+Destination: @StudyBot (ID 2002)
+Mode: FORWARD DOCUMENTS
+Resume after message: 0 | Max files: 2 | Scan limit: 2000
+The account logged into Telegram MUST be an existing authorized bot administrator.
+You must have legal permission to distribute ALL selected documents.
+Canceled. No messages forwarded.
+
+Source: Old Book Channel (ID 1001)
+Destination: @StudyBot (ID 2002)
+Mode: PREVIEW ONLY
+Resume after message: 0 | Max files: 50 | Scan limit: 2000
+  #1: Old_Tamil_Book.pdf
+  #2: note.txt
+
+Scanned 2 history posts; matching documents 2; forwarded 0; protected/errors 0.
+Dry run made no Telegram sends and did not modify the checkpoint.
+
+Source: Old Book Channel (ID 1001)
+Destination: @StudyBot (ID 2002)
+Mode: FORWARD DOCUMENTS
+Resume after message: 2 | Max files: 2 | Scan limit: 2000
+The account logged into Telegram MUST be an existing authorized bot administrator.
+You must have legal permission to distribute ALL selected documents.
+Bot acknowledged batch setup. Forwarding historical documents...
+  Forwarded 1/2 — post #3: Old_Tamil_Book.pdf
+
+Scanned 1 history posts; matching documents 1; forwarded 1; protected/errors 0.
+Check the bot response to /mediabulkstatus. When all files finish processing, send /mediabulkdone.
+Local resume checkpoint: C:\Users\Pros\AppData\Local\Temp\tmp5x57ro9o\checkpoint-3ba1de95b0b9c301.json
+A checkpoint means forwarded, NOT confirmed published; review failed files before the next run.
+
+usage: python.exe -m unittest [-h] (--list-channels | --dry-run | --apply)
+                              [--source SOURCE] [--bot BOT]
+                              [--max-files MAX_FILES]
+                              [--scan-limit SCAN_LIMIT] [--delay DELAY]
+                              [--language LANGUAGE] [--category CATEGORY]
+                              [--author AUTHOR]
+                              [--rights {cc0,cc_by,cc_by_sa,permission,public_domain}]
+                              [--rights-note RIGHTS_NOTE] [--reset-checkpoint]
+python.exe -m unittest: error: one of the arguments --list-channels --dry-run --apply is required
+----------------------------------------------------------------------
+Ran 14 tests in 0.080s
+
+OK
+
+==========================================================================
+[32/99] PASS    TEST_SMART_BULK_V1188                           29 tests
+Exit code: 0
+
+Smart bulk file upload failed
+Traceback (most recent call last):
+  File "C:\Users\Pros\Desktop\StudentAssistantBot\library_smart_bulk_v1188.py", line 229, in accept_file
+    api.submit_media(bot, copied, contributor=False)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\unittest\mock.py", line 1176, in __call__
+    return self._mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\unittest\mock.py", line 1180, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\unittest\mock.py", line 1241, in _execute_mock_call
+    raise effect
+RuntimeError: private database credential
+----------------------------------------------------------------------
+Ran 29 tests in 0.205s
+
+OK
+
+==========================================================================
+[33/99] PASS    TEST_SUPER_MINIAPP_V120                         12 tests
+Exit code: 0
+
+C:\Python314\Lib\unittest\case.py:615: ResourceWarning: unclosed file <_io.BufferedReader name='C:\\Users\\Pros\\Desktop\\StudentAssistantBot\\super_miniapp_v120.html'>
+  result = method()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+----------------------------------------------------------------------
+Ran 12 tests in 0.039s
+
+OK
+
+==========================================================================
+[34/99] PASS    TEST_SUPER_PLANNER_V120                          7 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.014s
+
+OK
+
+==========================================================================
+[35/99] PASS    TEST_SUPER_TASK_SYNC_V120                       16 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 16 tests in 0.009s
+
+OK
+
+==========================================================================
+[36/99] PASS    TEST_TRANSLATOR_AZURE                            6 tests
+Exit code: 0
+Translator provider failure: Azure Translator: RuntimeError
+Translator provider failure: MyMemory: rate limited (HTTP 429)
+Translator provider failure: Google: RuntimeError
+Translator provider failure: MyMemory Direct API: RuntimeError
+Translator provider failure: Google Public Endpoint: RuntimeError
+Translator provider failure: Google: RuntimeError
+Translator provider failure: MyMemory Direct API: RuntimeError
+Translator provider failure: Google Public Endpoint: RuntimeError
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.001s
+
+OK
+
+==========================================================================
+[37/99] PASS    TEST_TRANSLATOR_DIRECT_API                       7 tests
+Exit code: 0
+Translator provider failure: MyMemory: RuntimeError
+Translator provider failure: Google: rate limited (HTTP 429)
+Translation history save failure: RuntimeError
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.001s
+
+OK
+
+==========================================================================
+[38/99] PASS    TEST_TRANSLATOR_FIX                              7 tests
+Exit code: 0
+Translator provider failure: MyMemory: RuntimeError
+Translator provider failure: Google: RuntimeError
+Translator provider failure: MyMemory Direct API: TimeoutError
+Translator provider failure: Google Public Endpoint: TimeoutError
+Translator provider failure: MyMemory: RuntimeError
+Translator provider failure: Google: RuntimeError
+Translator provider failure: MyMemory Direct API: ValueError
+Translator provider failure: MyMemory: RuntimeError
+Telegram inline keyboard error (retrying without it): ValueError('Mock Telegram keyboard rejection')
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.001s
+
+OK
+
+==========================================================================
+[39/99] PASS    TEST_TRANSLATOR_LOCALES                          5 tests
+Exit code: 0
+Translator provider failure: MyMemory: RuntimeError
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.001s
+
+OK
+
+==========================================================================
+[40/99] PASS    TEST_V101_COMBINED                              66 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 66 tests in 0.033s
+
+OK
+
+==========================================================================
+[41/99] PASS    TEST_V10_ADVANCED_STUDY                         60 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 60 tests in 0.126s
+
+OK
+
+==========================================================================
+[42/99] PASS    TEST_V10_GEMINI                                 30 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 30 tests in 0.018s
+
+OK
+
+==========================================================================
+[43/99] PASS    TEST_V11_STUDENT_EXPERIENCE                     52 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 52 tests in 0.109s
+
+OK
+
+==========================================================================
+[44/99] PASS    TEST_V120_SQL_REVIEW                             4 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.000s
+
+OK
+
+==========================================================================
+[45/99] PASS    TEST_V120_TELEGRAM_LAUNCH                        9 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 9 tests in 0.014s
+
+OK
+
+==========================================================================
+[46/99] PASS    TEST_V5_4                                        4 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.000s
+
+OK
+
+==========================================================================
+[47/99] PASS    TEST_V5_4_INTEGRATION                            5 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.001s
+
+OK
+
+==========================================================================
+[48/99] PASS    TEST_V5_5_AI                                    15 tests
+Exit code: 0
+Cloudflare AI diagnostic: Model: @cf/qwen/qwen3-30b-a3b-fp8 HTTP Status: 429
+Cloudflare AI error codes: not_provided Model: @cf/qwen/qwen3-30b-a3b-fp8
+Updated main.py (backup: main.py.before_v55.bak )
+Updated navigation.py (backup: navigation.py.before_v55.bak )
+V5.5 code integrated. Run tests and review git diff before deploying.
+Already integrated; no changes needed.
+Cloudflare AI diagnostic: Model: @cf/qwen/qwen3-30b-a3b-fp8 HTTP Status: 200
+
+----------------------------------------------------------------------
+Ran 15 tests in 0.036s
+
+OK
+
+==========================================================================
+[49/99] PASS    TEST_V5_5_DIAGNOSTICS                            5 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.005s
+
+OK
+
+==========================================================================
+[50/99] PASS    TEST_V5_5_HTTP400                                3 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.004s
+
+OK
+
+==========================================================================
+[51/99] PASS    TEST_V5_5_LLAMAGUARD_FIX                         6 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.001s
+
+OK
+
+==========================================================================
+[52/99] PASS    TEST_V5_6_CONTEXT                               10 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 10 tests in 0.006s
+
+OK
+
+==========================================================================
+[53/99] PASS    TEST_V5_7_UI                                    13 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 13 tests in 0.003s
+
+OK
+
+==========================================================================
+[54/99] PASS    TEST_V5_8_ACHIEVEMENTS                          22 tests
+Exit code: 0
+V5.8 achievements unavailable: RuntimeError
+
+----------------------------------------------------------------------
+Ran 22 tests in 0.213s
+
+OK
+
+==========================================================================
+[55/99] PASS    TEST_V5_9_GEMINI                                27 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 27 tests in 0.008s
+
+OK
+
+==========================================================================
+[56/99] PASS    TEST_V6_0_AI_OPS                                20 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 20 tests in 0.083s
+
+OK
+
+==========================================================================
+[57/99] PASS    TEST_V6_1_GEMINI_RENDER                         25 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 25 tests in 0.052s
+
+OK
+
+==========================================================================
+[58/99] PASS    TEST_V6_2_1_EMPTY_RESPONSE                       5 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.013s
+
+OK
+
+==========================================================================
+[59/99] PASS    TEST_V6_2_2_COMPLETE_ANSWERS                     6 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.012s
+
+OK
+
+==========================================================================
+[60/99] PASS    TEST_V6_2_RELIABILITY                           19 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 19 tests in 0.134s
+
+OK
+
+==========================================================================
+[61/99] PASS    TEST_V6_3_FOLLOW_UPS                            12 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 12 tests in 1.619s
+
+OK
+
+==========================================================================
+[62/99] PASS    TEST_V6_4_STUDY_TOOLS                           17 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 17 tests in 2.219s
+
+OK
+
+==========================================================================
+[63/99] PASS    TEST_V6_5_1_NAVIGATION                           8 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.733s
+
+OK
+
+==========================================================================
+[64/99] PASS    TEST_V6_5_SAVE_STUDY                            25 tests
+Exit code: 0
+V6.5 save failure type: RuntimeError
+
+----------------------------------------------------------------------
+Ran 25 tests in 2.918s
+
+OK
+
+==========================================================================
+[65/99] PASS    TEST_V6_6_REVISION_HUB                          28 tests
+Exit code: 0
+V6.6 progress failed: RuntimeError
+
+----------------------------------------------------------------------
+Ran 28 tests in 0.353s
+
+OK
+
+==========================================================================
+[66/99] PASS    TEST_V6_7_LIBRARY                               17 tests
+Exit code: 0
+V6.7 library query failed: RuntimeError
+V6.7 page load failed: RuntimeError
+
+----------------------------------------------------------------------
+Ran 17 tests in 0.382s
+
+OK
+
+==========================================================================
+[67/99] PASS    TEST_V6_8_FULL_TEXT_SEARCH                      19 tests
+Exit code: 0
+V6.8 private content search failed: RuntimeError
+
+----------------------------------------------------------------------
+Ran 19 tests in 0.416s
+
+OK
+
+==========================================================================
+[68/99] PASS    TEST_V6_9_EXPORT                                20 tests
+Exit code: 0
+V6.9 private export failed: RuntimeError
+
+----------------------------------------------------------------------
+Ran 20 tests in 0.527s
+
+OK
+
+==========================================================================
+[69/99] PASS    TEST_V7_0_MARKDOWN_EXPORT                       24 tests
+Exit code: 0
+V7.0 Markdown export failed: RuntimeError
+V7.0 Markdown export limit: ExportLimitError
+
+----------------------------------------------------------------------
+Ran 24 tests in 0.103s
+
+OK
+
+==========================================================================
+[70/99] PASS    TEST_V7_10_BROADCAST                            21 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 21 tests in 0.018s
+
+OK
+
+==========================================================================
+[71/99] PASS    TEST_V7_11_TEXT_PDF                             21 tests
+Exit code: 0
+
+C:\Users\Pros\AppData\Roaming\Python\Python314\site-packages\PyPDF2\__init__.py:21: DeprecationWarning: PyPDF2 is deprecated. Please move to the pypdf library instead.
+  warnings.warn(
+----------------------------------------------------------------------
+Ran 21 tests in 1.516s
+
+OK
+
+==========================================================================
+[72/99] PASS    TEST_V7_12_1_ANNOUNCEMENT_PREFS                  8 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.002s
+
+OK
+
+==========================================================================
+[73/99] PASS    TEST_V7_12_KNOWN_USERS                          26 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 26 tests in 0.020s
+
+OK
+
+==========================================================================
+[74/99] PASS    TEST_V7_13_IMAGE_FILTERS                        26 tests
+Exit code: 0
+
+C:\Users\Pros\AppData\Roaming\Python\Python314\site-packages\PyPDF2\__init__.py:21: DeprecationWarning: PyPDF2 is deprecated. Please move to the pypdf library instead.
+  warnings.warn(
+----------------------------------------------------------------------
+Ran 26 tests in 0.795s
+
+OK
+
+==========================================================================
+[75/99] PASS    TEST_V7_13_INSTALLER                             3 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.038s
+
+OK
+
+==========================================================================
+[76/99] PASS    TEST_V7_13_OFFICE_PDF                           20 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 20 tests in 1.257s
+
+OK (skipped=2)
+
+==========================================================================
+[77/99] PASS    TEST_V7_14_AUTO_CROP                            35 tests
+Exit code: 0
+
+C:\Users\Pros\AppData\Roaming\Python\Python314\site-packages\PyPDF2\__init__.py:21: DeprecationWarning: PyPDF2 is deprecated. Please move to the pypdf library instead.
+  warnings.warn(
+----------------------------------------------------------------------
+Ran 35 tests in 1.210s
+
+OK
+
+==========================================================================
+[78/99] PASS    TEST_V7_14_ENGINE_COMPAT                         6 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.348s
+
+OK
+
+==========================================================================
+[79/99] PASS    TEST_V7_15_PHOTO_CROP                           28 tests
+Exit code: 0
+
+C:\Users\Pros\AppData\Roaming\Python\Python314\site-packages\PyPDF2\__init__.py:21: DeprecationWarning: PyPDF2 is deprecated. Please move to the pypdf library instead.
+  warnings.warn(
+----------------------------------------------------------------------
+Ran 28 tests in 0.772s
+
+OK
+
+==========================================================================
+[80/99] PASS    TEST_V7_16_DOCUMENT_SCANNER                     21 tests
+Exit code: 0
+
+C:\Users\Pros\AppData\Roaming\Python\Python314\site-packages\PyPDF2\__init__.py:21: DeprecationWarning: PyPDF2 is deprecated. Please move to the pypdf library instead.
+  warnings.warn(
+----------------------------------------------------------------------
+Ran 21 tests in 0.785s
+
+OK
+
+==========================================================================
+[81/99] PASS    TEST_V7_16_SCAN_DOCUMENT                        21 tests
+Exit code: 0
+
+C:\Users\Pros\AppData\Roaming\Python\Python314\site-packages\PyPDF2\__init__.py:21: DeprecationWarning: PyPDF2 is deprecated. Please move to the pypdf library instead.
+  warnings.warn(
+----------------------------------------------------------------------
+Ran 21 tests in 0.748s
+
+OK
+
+==========================================================================
+[82/99] PASS    TEST_V7_17_ADVANCED_PDF                         28 tests
+Exit code: 0
+
+C:\Users\Pros\Desktop\StudentAssistantBot\advanced_pdf_v717.py:156: DeprecationWarning: remove_identicals is deprecated and will be removed in pypdf 7.0.0. Use remove_duplicates instead.
+  writer.compress_identical_objects(remove_identicals=True, remove_orphans=False)
+C:\Users\Pros\Desktop\StudentAssistantBot\advanced_pdf_v717.py:156: DeprecationWarning: remove_orphans is deprecated and will be removed in pypdf 7.0.0. Use remove_unreferenced instead.
+  writer.compress_identical_objects(remove_identicals=True, remove_orphans=False)
+invalid pdf header: b'not a'
+EOF marker not found
+C:\Users\Pros\AppData\Roaming\Python\Python314\site-packages\pypdf\_page.py:1368: DeprecationWarning: Calling `PageObject.replace_contents()` for pages not assigned to a writer is deprecated and will be removed in pypdf 7.0.0. Attach the page to the writer first or use `PdfWriter(clone_from=...)` directly. The existing approach has proved being unreliable.
+  self.replace_contents(ContentStream(new_content_array, self.pdf))
+----------------------------------------------------------------------
+Ran 28 tests in 0.873s
+
+OK
+
+==========================================================================
+[83/99] PASS    TEST_V7_17_IMAGE_CROP_COMPAT                     6 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.210s
+
+OK
+
+==========================================================================
+[84/99] PASS    TEST_V7_1_NOTE_ACTIONS                          19 tests
+Exit code: 0
+V7.1 note export failed: RuntimeError
+
+----------------------------------------------------------------------
+Ran 19 tests in 0.541s
+
+OK
+
+==========================================================================
+[85/99] PASS    TEST_V7_2_ORGANIZER                             19 tests
+Exit code: 0
+V7.2 favorites failed: KeyError
+
+----------------------------------------------------------------------
+Ran 19 tests in 0.529s
+
+OK
+
+==========================================================================
+[86/99] PASS    TEST_V7_3_COLLECTIONS                           22 tests
+Exit code: 0
+V7.3 list failed: RuntimeError
+
+----------------------------------------------------------------------
+Ran 22 tests in 0.455s
+
+OK
+
+==========================================================================
+[87/99] PASS    TEST_V7_4_COLLECTION_TOOLS                      25 tests
+Exit code: 0
+V7.4 statistics failed: RuntimeError
+V7.4 export or callback rejected: ValueError
+V7.4 export or callback rejected: CollectionExportError
+
+----------------------------------------------------------------------
+Ran 25 tests in 0.514s
+
+OK
+
+==========================================================================
+[88/99] PASS    TEST_V7_5_MATERIAL_LIBRARY                      21 tests
+Exit code: 0
+V7.5 material delete failed: RuntimeError
+V7.5 installed into study_materials.py; original backed up as study_materials.py.before_v75.bak
+V7.5 installed into study_materials.py; original backed up as study_materials.py.before_v75.bak
+V7.5 already installed; no files changed.
+
+----------------------------------------------------------------------
+Ran 21 tests in 0.339s
+
+OK
+
+==========================================================================
+[89/99] PASS    TEST_V7_6_MATERIAL_FILTERS                      32 tests
+Exit code: 0
+V7.6 material filter query failed: RuntimeError
+V7.6 installed. Byte-for-byte backup: material_library_v75.py.before_v76.bak
+V7.6 already installed; no files changed.
+V7.6 installed. Byte-for-byte backup: material_library_v75.py.before_v76.bak
+
+----------------------------------------------------------------------
+Ran 32 tests in 0.339s
+
+OK
+
+==========================================================================
+[90/99] PASS    TEST_V7_7_MATERIAL_EXPORT                       27 tests
+Exit code: 0
+V7.7 material export lookup failed: RuntimeError
+V7.7 material export send failed: RuntimeError
+V7.7 installed. Original saved byte-for-byte in material_library_v75.py.before_v77.bak
+V7.7 already installed; no files changed.
+
+----------------------------------------------------------------------
+Ran 27 tests in 0.152s
+
+OK
+
+==========================================================================
+[91/99] PASS    TEST_V7_8_MATERIAL_READER                       23 tests
+Exit code: 0
+V7.8 installed. Original saved byte-for-byte in material_library_v75.py.before_v78.bak
+V7.8 already installed; no files changed.
+V7.8 material read lookup failed: RuntimeError
+
+----------------------------------------------------------------------
+Ran 23 tests in 0.175s
+
+OK
+
+==========================================================================
+[92/99] PASS    TEST_V7_9_AUDIT                                 11 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 11 tests in 0.798s
+
+OK
+
+==========================================================================
+[93/99] PASS    TEST_V8_STUDY_LAB                               45 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 45 tests in 0.802s
+
+OK
+
+==========================================================================
+[94/99] PASS    TEST_V91_AUTO_AGE                               17 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 17 tests in 0.009s
+
+OK
+
+==========================================================================
+[95/99] PASS    TEST_V91_MANUAL_ACCESS                          26 tests
+Exit code: 0
+--- main.py:current
++++ main.py:planned
+@@ -1,2 +1,6 @@
++# V9.1 administrator-reviewed age eligibility (before V9 and V8 handlers).
++from v91_access_bot import register_v91_access_handlers
++register_v91_access_handlers(bot)
++
+ from v9_bot import register_v9_handlers
+ register_v9_handlers(bot, show_main_menu)
+--- ui_v57.py:current
++++ ui_v57.py:planned
+@@ -1 +1,6 @@
++# V9.1: verification requests are available even before V8/V9 authorization.
++import os as _v91_os
++if _v91_os.getenv("V91_ACCESS_REQUESTS_ENABLED", "").lower() in ("true", "1", "yes"):
++    CATEGORY_FEATURES[CAT_MORE].insert(0, "🔐 Verify Adult Access")
++
+ ALL_UI_BUTTONS = (set(CATEGORY_FEATURES)
+--- navigation.py:current
++++ navigation.py:planned
+@@ -1 +1,6 @@
++# V9.1: preserve the request action while legacy workflows are active.
++import os as _v91_os
++if _v91_os.getenv("V91_ACCESS_REQUESTS_ENABLED", "").lower() in ("true", "1", "yes"):
++    GLOBAL_BUTTONS.add("🔐 Verify Adult Access")
++
+ GLOBAL_BUTTONS.add("📝 Text → PDF")
+CHECK OK. No files changed.
+--- main.py:current
++++ main.py:planned
+@@ -1,2 +1,6 @@
++# V9.1 administrator-reviewed age eligibility (before V9 and V8 handlers).
++from v91_access_bot import register_v91_access_handlers
++register_v91_access_handlers(bot)
++
+ from v9_bot import register_v9_handlers
+ register_v9_handlers(bot, show_main_menu)
+--- ui_v57.py:current
++++ ui_v57.py:planned
+@@ -1 +1,6 @@
++# V9.1: verification requests are available even before V8/V9 authorization.
++import os as _v91_os
++if _v91_os.getenv("V91_ACCESS_REQUESTS_ENABLED", "").lower() in ("true", "1", "yes"):
++    CATEGORY_FEATURES[CAT_MORE].insert(0, "🔐 Verify Adult Access")
++
+ ALL_UI_BUTTONS = (set(CATEGORY_FEATURES)
+--- navigation.py:current
++++ navigation.py:planned
+@@ -1 +1,6 @@
++# V9.1: preserve the request action while legacy workflows are active.
++import os as _v91_os
++if _v91_os.getenv("V91_ACCESS_REQUESTS_ENABLED", "").lower() in ("true", "1", "yes"):
++    GLOBAL_BUTTONS.add("🔐 Verify Adult Access")
++
+ GLOBAL_BUTTONS.add("📝 Text → PDF")
+Applied V9.1 request handler integration. Backup: C:\Users\Pros\AppData\Local\Temp\tmpzm2178w0\V91_ACCESS_BACKUP_20261103_212024_986846
+main.py: already installed
+ui_v57.py: already installed
+navigation.py: already installed
+Already installed. No files changed.
+
+----------------------------------------------------------------------
+Ran 26 tests in 0.069s
+
+OK
+
+==========================================================================
+[96/99] PASS    TEST_V92_SMART_ADMIN                            32 tests
+Exit code: 0
+--- main.py:current
++++ main.py:planned
+@@ -1 +1,5 @@
+ register_v91_access_handlers(bot)
++
++# V9.2 optional, administrator-only dashboard. Register before V9/V8 handlers.
++from v92_admin_bot import register_v92_admin_handlers
++register_v92_admin_handlers(bot)
+
+CHECK OK. No files changed.
+--- main.py:current
++++ main.py:planned
+@@ -1 +1,5 @@
+ register_v91_access_handlers(bot)
++
++# V9.2 optional, administrator-only dashboard. Register before V9/V8 handlers.
++from v92_admin_bot import register_v92_admin_handlers
++register_v92_admin_handlers(bot)
+
+V9.2 integrated. Backed up original main.py to: C:\Users\Pros\AppData\Local\Temp\tmp12h79mjj\V92_BACKUP_20261103_212025_586638
+V9.2 already integrated; no files changed.
+
+----------------------------------------------------------------------
+Ran 32 tests in 0.047s
+
+OK
+
+==========================================================================
+[97/99] PASS    TEST_V93_RELIABILITY                            23 tests
+Exit code: 0
+--- main.py:current
++++ main.py:planned
+@@ -1 +1,5 @@
+ register_v92_admin_handlers(bot)
++
++# V9.3 reliability diagnostics, before legacy stateful handlers.
++from v93_reliability_bot import register_v93_reliability_handlers
++register_v93_reliability_handlers(bot)
+
+--- adult_requests_v91.py:current
++++ adult_requests_v91.py:planned
+@@ -1,4 +1,10 @@
+ def create_request(uid, db=None, now=None):
+     uid = _id(uid)
++    # V9.3: use a single atomic database operation only after its SQL is installed.
++    if os.getenv('V93_REQUEST_RPC_ENABLED', '').strip().lower() in ('true', '1', 'yes'):
++        result = (db or _db()).rpc('v93_submit_adult_request', {'p_user_id': uid}).execute().data
++        if result not in ('created', 'pending', 'verified', 'cooldown'):
++            raise AccessError('Unexpected adult access request result.')
++        return result
+     from study_access_v9 import is_verified_adult
+     return 1
+
+--- v91_access_bot.py:current
++++ v91_access_bot.py:planned
+@@ -1,2 +1,4 @@
+-        except (AccessError, ValueError):
+-            send(m.chat.id, '❌ Invalid request, review confirmation, or expiry (1–365 days).')
++        except AccessError as exc:
++            send(m.chat.id, '❌ Invalid request: ' + str(exc)[:200])
++        except ValueError:
++            send(m.chat.id, '❌ Invalid Telegram ID or expiry days (1–365).')
+
+CHECK OK. No files changed.
+--- main.py:current
++++ main.py:planned
+@@ -1 +1,5 @@
+ register_v92_admin_handlers(bot)
++
++# V9.3 reliability diagnostics, before legacy stateful handlers.
++from v93_reliability_bot import register_v93_reliability_handlers
++register_v93_reliability_handlers(bot)
+
+--- adult_requests_v91.py:current
++++ adult_requests_v91.py:planned
+@@ -1,4 +1,10 @@
+ def create_request(uid, db=None, now=None):
+     uid = _id(uid)
++    # V9.3: use a single atomic database operation only after its SQL is installed.
++    if os.getenv('V93_REQUEST_RPC_ENABLED', '').strip().lower() in ('true', '1', 'yes'):
++        result = (db or _db()).rpc('v93_submit_adult_request', {'p_user_id': uid}).execute().data
++        if result not in ('created', 'pending', 'verified', 'cooldown'):
++            raise AccessError('Unexpected adult access request result.')
++        return result
+     from study_access_v9 import is_verified_adult
+     return 1
+
+--- v91_access_bot.py:current
++++ v91_access_bot.py:planned
+@@ -1,2 +1,4 @@
+-        except (AccessError, ValueError):
+-            send(m.chat.id, '❌ Invalid request, review confirmation, or expiry (1–365 days).')
++        except AccessError as exc:
++            send(m.chat.id, '❌ Invalid request: ' + str(exc)[:200])
++        except ValueError:
++            send(m.chat.id, '❌ Invalid Telegram ID or expiry days (1–365).')
+
+V9.3 integrated. Original files backed up to: C:\Users\Pros\AppData\Local\Temp\tmpcar94aok\V93_BACKUP_20261103_212026_099313
+V9.3 already integrated; no files changed.
+
+----------------------------------------------------------------------
+Ran 23 tests in 0.088s
+
+OK
+
+==========================================================================
+[98/99] PASS    TEST_V9_ACADEMIC_TOOLKIT                        38 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 38 tests in 1.332s
+
+OK
+
+==========================================================================
+[99/99] PASS    TEST_V9_ADULT_ACCESS                            16 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 16 tests in 0.199s
+
+OK

@@ -1,0 +1,78 @@
+--- a/main.py
++++ b/main.py
+@@ -271,6 +271,10 @@
+ register_revision_hub_v66_handlers(bot, show_main_menu)
+ register_ai_ops_v60_handlers(bot)
+ 
++# V8.0 Study Lab — opt-in and registered before stateful legacy workflows.
++from v8_bot import register_v8_handlers
++register_v8_handlers(bot, show_main_menu)
++
+ register_study_context_handlers(bot, show_main_menu)
+ register_ai_study_assistant_handlers(bot, show_main_menu)
+ 
+@@ -504,6 +508,10 @@
+ # ==================================================
+ # HEALTH CHECK
+ # ==================================================
++
++# V8.0 Mini App: read-only and Telegram-signature protected.
++from v8_miniapp import register_v8_miniapp
++register_v8_miniapp(app)
+ 
+ @app.route(
+     "/",
+@@ -516,7 +524,7 @@
+     return {
+         "status": "ok",
+         "bot": "Student Assistant Bot",
+-        "version": "7.9",
++        "version": ("8.0-pilot" if os.getenv("V8_ENABLED", "").lower() in ("true", "1", "yes") else "7.9"),
+         "database": "Supabase",
+         "deployment": "Render",
+ 
+--- a/ui_v57.py
++++ b/ui_v57.py
+@@ -59,6 +59,11 @@
+     ("🔒 Privacy Tips", "privacy"),
+ ])
+ 
++# V8.0 option only appears if an administrator enables the pilot.
++import os as _v8_os
++if _v8_os.getenv("V8_ENABLED", "").lower() in ("true", "1", "yes"):
++    CATEGORY_FEATURES[CAT_MORE].insert(0, "🚀 V8 Study Lab")
++
+ ALL_UI_BUTTONS = (set(CATEGORY_FEATURES) | set(LANG_BUTTONS) |
+                   set(GUIDE_BUTTONS) | {HELP_CENTER, LANGUAGE_MENU, BACK_CATEGORIES, "🔎 Find a Tool"})
+ 
+@@ -100,6 +105,12 @@
+         "back": "اختر قسمًا من القائمة الرئيسية.",
+     },
+ }
++
++# Keep the multilingual greeting accurate only when V8 is enabled.
++if _v8_os.getenv("V8_ENABLED", "").lower() in ("true", "1", "yes"):
++    for _lang_text in TEXT.values():
++        if "welcome" in _lang_text:
++            _lang_text["welcome"] = _lang_text["welcome"].replace("V7.9", "V8.0 Pilot")
+ 
+ CATEGORY_TEXT = {
+     "en": {
+--- a/navigation.py
++++ b/navigation.py
+@@ -146,6 +146,15 @@
+     "🧠 Practice Saved Cards", "📊 Revision Progress", "⏰ Revision Reminders",
+ })
+ 
++# V8 feature selection must not be swallowed by older stateful handlers.
++import os as _v8_os
++if _v8_os.getenv("V8_ENABLED", "").lower() in ("true", "1", "yes"):
++    GLOBAL_BUTTONS.add("🚀 V8 Study Lab")
++    GLOBAL_BUTTONS.update(("📄 Document Chat", "📚 Past Paper Analyzer",
++        "🧠 Auto Flashcards & Quiz", "📅 Smart Exam Planner", "🎙 Lecture → Notes",
++        "📊 Advanced Progress", "📖 Citation Generator", "🏆 Group Quiz Battles",
++        "📱 Mini App", "☁️ Data Backup"))
++
+ GLOBAL_BUTTONS.add("📝 Text → PDF")
+ 
+ 

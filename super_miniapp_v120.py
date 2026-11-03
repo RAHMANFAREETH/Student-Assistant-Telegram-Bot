@@ -64,6 +64,8 @@ def register_super_miniapp(app):
     # >>> V12.0.2 optional temporary exports >>>
     from super_miniapp_v120_exports import register_v120_exports
     register_v120_exports(app)
+    from super_miniapp_v121 import register_v121_arcade
+    register_v121_arcade(app)
     # <<< V12.0.2 optional temporary exports <<<
 
     @app.after_request

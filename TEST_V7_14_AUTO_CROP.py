@@ -83,7 +83,9 @@ class AutoCropEngineTests(unittest.TestCase):
 
     def test_preview_fallback_keeps_whole_photo(self):
         im = Image.new("RGB", (350, 500), (248, 248, 246))
-        raw = BytesIO(); im.save(raw, "PNG"); im.close()
+        raw = BytesIO()
+        im.save(raw, "PNG")
+        im.close()
         out = filt.make_preview(raw.getvalue(), "original", auto_crop=True)
         with Image.open(out) as preview:
             self.assertEqual(preview.size, (350, 500))
@@ -103,7 +105,8 @@ class AutoCropEngineTests(unittest.TestCase):
             self.assertLess(float(crop_page.mediabox.width), float(orig_page.mediabox.width))
             self.assertLess(float(crop_page.mediabox.height), float(orig_page.mediabox.height))
         finally:
-            raw.close(); cropped.close()
+            raw.close()
+            cropped.close()
 
     def test_multiple_pages_and_filter_combination(self):
         try:
@@ -122,7 +125,8 @@ class AutoCropEngineTests(unittest.TestCase):
         no_crop = filt.images_to_pdf([data], "original")
         explicit_no_crop = filt.images_to_pdf([data], "original", auto_crop=False)
         self.assertEqual(no_crop.getvalue(), explicit_no_crop.getvalue())
-        no_crop.close();explicit_no_crop.close()
+        no_crop.close()
+        explicit_no_crop.close()
 
 
 # Reuse the V7.13 stubs and real handler registration; requires V7.13 tests.
@@ -137,8 +141,10 @@ if BaseFlow:
             self.open_mode()
             state = self.pdf_tools.pdf_state[100]
             self.assertIs(state["image_autocrop"], False)
-            rows = self.bot.sent[-1][2]["reply_markup"].rows
-            labels = [b.text for row in rows for b in row]
+            markup = self.bot.sent[-1][2]["reply_markup"]
+            rows = getattr(markup, "keyboard", getattr(markup, "rows", None))
+            self.assertIsNotNone(rows, "Unsupported Telegram keyboard representation")
+            labels = [b["text"] if isinstance(b, dict) else b.text for row in rows for b in row]
             self.assertIn(crop.CROP_MENU_BUTTON, labels)
 
         def test_user_selects_auto_crop_and_original_again(self):

@@ -1,0 +1,13 @@
+{
+  "modified": {
+    "pdf_tools.py": {
+      "before": "44110c06c24756dbe9a67a466bfa7e7f1f6fdb1de4ea06252a4381484b952f7d",
+      "after": "27cdb1682666d291f62bba4e4978a3d6960d59ab22ecbdd632a8f8ea5e7bc5e5"
+    },
+    "requirements.txt": {
+      "before": "3ccc59130f733dc58a29eec98d73f6a65f6da51cb9cd8602a51b4ea6aeee30d7",
+      "after": "62ff19e45e17fbfd9e15311a7f8520113d2b438b865d1ec45552e0571ab4872e"
+    }
+  },
+  "added": {}
+}

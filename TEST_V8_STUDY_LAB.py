@@ -129,7 +129,8 @@ class TelegramWorkflowTests(unittest.TestCase):
             sys.modules['navigation']=nav
         import v8_bot
         self.mod=v8_bot
-        self.old=(os.getenv('V8_ENABLED'),os.getenv('V8_ALLOWED_USER_IDS'))
+        self.old=(os.getenv('V8_ENABLED'),os.getenv('V8_ALLOWED_USER_IDS'),os.getenv('STUDY_ACCESS_MODE'))
+        os.environ['STUDY_ACCESS_MODE']='pilot'  # V11.8.4.1: isolate pilot fixture
         os.environ['V8_ENABLED']='true';os.environ['V8_ALLOWED_USER_IDS']='2468'
         class Bot:
             def __init__(self):self.handlers={};self.sent=[]
@@ -143,7 +144,7 @@ class TelegramWorkflowTests(unittest.TestCase):
         self.bot=Bot();self.mod.register_v8_handlers(self.bot,lambda *a:None)
     def tearDown(self):
         self.mod._clear(2468)
-        for key,val in zip(('V8_ENABLED','V8_ALLOWED_USER_IDS'),self.old):
+        for key,val in zip(('V8_ENABLED','V8_ALLOWED_USER_IDS','STUDY_ACCESS_MODE'),self.old):
             if val is None:os.environ.pop(key,None)
             else:os.environ[key]=val
     def msg(self,text=None,chat_id=2468,chat_type='private',document=None):
@@ -209,9 +210,10 @@ class GateTests(unittest.TestCase):
             sys.modules['telebot']=mod;sys.modules['telebot.handler_backends']=back
         import v8_bot
         self.v8=v8_bot
-        self.old=(os.getenv('V8_ENABLED'),os.getenv('V8_ALLOWED_USER_IDS'))
+        self.old=(os.getenv('V8_ENABLED'),os.getenv('V8_ALLOWED_USER_IDS'),os.getenv('STUDY_ACCESS_MODE'))
+        os.environ['STUDY_ACCESS_MODE']='pilot'  # V11.8.4.1: isolate pilot fixture
     def tearDown(self):
-        for name,val in zip(('V8_ENABLED','V8_ALLOWED_USER_IDS'),self.old):
+        for name,val in zip(('V8_ENABLED','V8_ALLOWED_USER_IDS','STUDY_ACCESS_MODE'),self.old):
             if val is None:os.environ.pop(name,None)
             else:os.environ[name]=val
     def test_closed_default(self):

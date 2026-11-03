@@ -1,0 +1,25 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {TOOLS,dateDifference,ageAt,addDays,dayOfYear,temperatureConvert,baseConvert,unitConvert,calculate,discount,bmi,securePassword,secureRandom,wordCount,textCase,compute} from './super_miniapp_v120_tools.mjs';
+test('tool ids unique, 68 working tool entries',()=>{assert.equal(TOOLS.length,68);assert.equal(new Set(TOOLS.map(x=>x.id)).size,TOOLS.length);});
+test('20 days between 3 Nov and 23 Nov 2026',()=>{const r=dateDifference('2026-11-03','2026-11-23');assert.equal(r.days,20);assert.equal(r.weeks,2);assert.equal(r.remaining,6);assert.equal(r.business,14);assert.equal(r.weekends,6);});
+test('inclusive date difference',()=>{assert.equal(dateDifference('2026-11-03','2026-11-23',true).days,21);});
+test('same date inclusive',()=>{assert.equal(dateDifference('2026-11-03','2026-11-03',true).days,1);});
+test('leap year ordinal',()=>{assert.deepEqual(dayOfYear('2024-12-31'),{number:366,length:366});});
+test('reject invalid calendar date',()=>{assert.throws(()=>dayOfYear('2026-02-30'));});
+test('add and subtract across month',()=>{assert.equal(addDays('2026-11-03',20),'2026-11-23');assert.equal(addDays('2026-11-03',-4),'2026-10-30');});
+test('age on birthday',()=>{assert.deepEqual(ageAt('2000-11-03','2026-11-03'),{years:26,months:0,days:0});});
+test('age handles month end',()=>{assert.deepEqual(ageAt('2026-01-31','2026-02-01'),{years:0,months:0,days:1});});
+test('age refuses future birth',()=>{assert.throws(()=>ageAt('2027-01-01','2026-11-03'));});
+test('temperature conversion',()=>{assert.ok(Math.abs(temperatureConvert(0,'Celsius','Fahrenheit')-32)<1e-8);assert.ok(Math.abs(temperatureConvert(273.15,'Kelvin','Celsius'))<1e-8);assert.throws(()=>temperatureConvert(-1,'Kelvin','Celsius'));});
+test('unit conversion',()=>{assert.equal(unitConvert('Length',1,'Kilometers','Meters'),1000);assert.ok(Math.abs(unitConvert('Mass',1,'Pounds','Kilograms')-.45359237)<1e-8);});
+test('binary and hex conversion',()=>{assert.equal(baseConvert('101011',2,16),'2B');assert.equal(baseConvert('FF',16,2),'11111111');assert.throws(()=>baseConvert('19',2,10));});
+test('arithmetic blocks divide zero',()=>{assert.equal(calculate(100,'×',2),200);assert.equal(calculate(3,'^',2),9);assert.throws(()=>calculate(1,'÷',0));});
+test('discount returns savings and total',()=>{assert.deepEqual(discount(2500,15),{saved:375,total:2125});assert.throws(()=>discount(20,101));});
+test('bmi is adult screening',()=>{const r=bmi(70,175);assert.ok(r.value>22&&r.value<23);});
+test('secure password uses random source',()=>{const fake={getRandomValues(a){a.fill(1);return a;}};const p=securePassword(16,{symbols:true},fake);assert.equal(p.length,16);assert.match(p,/^[a-zA-Z0-9!@#$%^&*_+=-]+$/);});
+test('random honors bounds',()=>{const fake={getRandomValues(a){a.fill(12345);return a;}};assert.equal(secureRandom(5,5,fake),5);assert.ok(secureRandom(-10,10,fake)>=-10);});
+test('word count and case',()=>{assert.deepEqual(wordCount('One  two\nThree'),{characters:14,words:3,lines:2});assert.equal(textCase('hello world','upper'),'HELLO WORLD');});
+test('calculator form output',()=>{assert.equal(compute('date-add',{date:'2026-11-03',offset:'20'}),'2026-11-23 (YYYY-MM-DD)');assert.match(compute('date-difference',{start:'2026-11-03',end:'2026-11-23',include:false}),/20 days/);});
+
+test('reverse dates preserve weekday totals',()=>{const r=dateDifference('2026-11-23','2026-11-03');assert.equal(r.days,-20);assert.equal(r.business,14);assert.equal(r.weekends,6);});
+test('reverse inclusive counts both endpoints',()=>{const r=dateDifference('2026-11-23','2026-11-03',true);assert.equal(r.days,-21);assert.equal(r.business,15);assert.equal(r.weekends,6);});

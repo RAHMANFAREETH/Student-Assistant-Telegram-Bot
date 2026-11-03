@@ -128,6 +128,10 @@ class BotTests(unittest.TestCase):
     def setUp(self):
         self.env=patch.dict(os.environ,{
             'BOOK_LIBRARY_ENABLED':'true','BOOK_LIBRARY_V112_ENABLED':'true',
+            'LIBRARY_MEDIA_V117_ENABLED':'false',
+            'BOOK_LIBRARY_PRIVATE_GROUP_RESULTS':'false',  # V11.8.6.2 legacy-only test environment
+
+            'BOOK_LIBRARY_V113_ENABLED':'false',  # V11.8.6.1 isolate V11.2 tests
             'BOOK_LIBRARY_REQUIRE_VERIFIED_ADULT':'false','BOOK_LIBRARY_ALLOW_ALL_GROUPS':'true',
             'BOOK_LIBRARY_ADMIN_IDS':'7','BOOK_LIBRARY_CHANNEL_ID':'-1003000',
             'BOOK_LIBRARY_BOT_USERNAME':'TestStudyBot','BOOK_LIBRARY_AUTO_GROUP_SEARCH':'true'})

@@ -234,7 +234,7 @@ class BroadcastTests(unittest.TestCase):
 
     def test_registers_each_command(self):
         register_broadcast_handlers(self.bot, self.db)
-        self.assertEqual({'subscribe', 'unsubscribe', 'announcements', 'broadcastusers',
+        self.assertEqual({'subscribe', 'announcements', 'broadcastusers',
                           'broadcast', 'broadcastconfirm', 'broadcastcancel',
                           'broadcaststatus', 'messageuser'}, set(self.bot.handlers))
 

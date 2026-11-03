@@ -1,0 +1,14 @@
+{
+  "before": {
+    "pdf_tools.py": "0a40c90bc1b6b1c39a79eb68efd5037438477ccb0cd1d67fff48d1b23fa18302",
+    "image_filters_v713.py": "25623780a3b417f712eb1136c07854ff13f2bd85e769d4353175d4a7125afa58"
+  },
+  "after": {
+    "pdf_tools.py": "7119c7ef66e7317e17c3ecf3a4972db78af6c0194d07ed3946028c527d6ead46",
+    "image_filters_v713.py": "5fb9f6ab933329c5013391bdaea4daef9220d1ea09303402ee7f2028a5f86142"
+  },
+  "added": {
+    "image_crop_v714.py": "bad548617ce9c230bfd7bf38fc1306699c4872e3eb7b87b102aaef75e6587a6c",
+    "TEST_V7_14_AUTO_CROP.py": "8059c7ce96b4637162995499142f17174135fb267d25fe5bb154bbea211b7dbc"
+  }
+}

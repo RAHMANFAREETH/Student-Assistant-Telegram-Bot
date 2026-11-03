@@ -1,0 +1,23 @@
+
+Flask>=3.0,<4
+pyTelegramBotAPI>=4.20,<5
+gunicorn>=22,<25
+
+# Existing Student Assistant Bot dependencies
+python-dotenv
+requests
+supabase
+PyPDF2[crypto]
+Pillow
+python-docx
+deep-translator
+gTTS
+tzdata
+
+# V7.11 Unicode Text to PDF
+fpdf2>=2.8.5,<3
+uharfbuzz>=0.40,<1
+
+# V7.16 offline scanner (OpenCV)
+opencv-python-headless>=4.10,<5
+python-pptx

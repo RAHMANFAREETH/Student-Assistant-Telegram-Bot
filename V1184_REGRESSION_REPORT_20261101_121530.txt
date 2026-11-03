@@ -1,0 +1,177 @@
+Modules: 10
+Passed modules: 10
+Failed/timeout modules: 0
+Tests run: 254
+Skipped: 0
+Nonpassing modules: (none)
+
+Student Assistant Bot test-only regression
+Python: 3.14.7 (tags/v3.14.7:823f032, Aug  5 2026, 10:51:32) [MSC v.1944 64 bit (AMD64)]
+Module isolation: each module uses a new Python process
+Application environment: feature flags isolated
+Redacted count of inherited app keys excluded: 41
+Modules: 10
+
+==========================================================================
+[01/10] PASS    TEST_BOOK_LIBRARY                               42 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 42 tests in 0.065s
+
+OK
+
+==========================================================================
+[02/10] PASS    TEST_BOOK_LIBRARY_PRIVACY_V114                  21 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 21 tests in 0.905s
+
+OK
+
+==========================================================================
+[03/10] PASS    TEST_BOOK_LIBRARY_V112                          49 tests
+Exit code: 0
+
+V11.2 delivery count unavailable
+----------------------------------------------------------------------
+Ran 49 tests in 0.060s
+
+OK
+
+==========================================================================
+[04/10] PASS    TEST_BOOK_PUBLIC_LATEST5                        14 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 14 tests in 0.075s
+
+OK
+
+==========================================================================
+[05/10] PASS    TEST_TRANSLATOR_DIRECT_API                       7 tests
+Exit code: 0
+Translator provider failure: MyMemory: RuntimeError
+Translator provider failure: Google: rate limited (HTTP 429)
+Translation history save failure: RuntimeError
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.001s
+
+OK
+
+==========================================================================
+[06/10] PASS    TEST_TRANSLATOR_FIX                              7 tests
+Exit code: 0
+Translator provider failure: MyMemory: RuntimeError
+Translator provider failure: Google: RuntimeError
+Translator provider failure: MyMemory Direct API: TimeoutError
+Translator provider failure: Google Public Endpoint: TimeoutError
+Translator provider failure: MyMemory: RuntimeError
+Translator provider failure: Google: RuntimeError
+Translator provider failure: MyMemory Direct API: ValueError
+Translator provider failure: MyMemory: RuntimeError
+Telegram inline keyboard error (retrying without it): ValueError('Mock Telegram keyboard rejection')
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.001s
+
+OK
+
+==========================================================================
+[07/10] PASS    TEST_TRANSLATOR_LOCALES                          5 tests
+Exit code: 0
+Translator provider failure: MyMemory: RuntimeError
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.001s
+
+OK
+
+==========================================================================
+[08/10] PASS    TEST_V8_STUDY_LAB                               45 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 45 tests in 0.656s
+
+OK
+
+==========================================================================
+[09/10] PASS    TEST_V91_MANUAL_ACCESS                          26 tests
+Exit code: 0
+--- main.py:current
++++ main.py:planned
+@@ -1,2 +1,6 @@
++# V9.1 administrator-reviewed age eligibility (before V9 and V8 handlers).
++from v91_access_bot import register_v91_access_handlers
++register_v91_access_handlers(bot)
++
+ from v9_bot import register_v9_handlers
+ register_v9_handlers(bot, show_main_menu)
+--- ui_v57.py:current
++++ ui_v57.py:planned
+@@ -1 +1,6 @@
++# V9.1: verification requests are available even before V8/V9 authorization.
++import os as _v91_os
++if _v91_os.getenv("V91_ACCESS_REQUESTS_ENABLED", "").lower() in ("true", "1", "yes"):
++    CATEGORY_FEATURES[CAT_MORE].insert(0, "🔐 Verify Adult Access")
++
+ ALL_UI_BUTTONS = (set(CATEGORY_FEATURES)
+--- navigation.py:current
++++ navigation.py:planned
+@@ -1 +1,6 @@
++# V9.1: preserve the request action while legacy workflows are active.
++import os as _v91_os
++if _v91_os.getenv("V91_ACCESS_REQUESTS_ENABLED", "").lower() in ("true", "1", "yes"):
++    GLOBAL_BUTTONS.add("🔐 Verify Adult Access")
++
+ GLOBAL_BUTTONS.add("📝 Text → PDF")
+CHECK OK. No files changed.
+--- main.py:current
++++ main.py:planned
+@@ -1,2 +1,6 @@
++# V9.1 administrator-reviewed age eligibility (before V9 and V8 handlers).
++from v91_access_bot import register_v91_access_handlers
++register_v91_access_handlers(bot)
++
+ from v9_bot import register_v9_handlers
+ register_v9_handlers(bot, show_main_menu)
+--- ui_v57.py:current
++++ ui_v57.py:planned
+@@ -1 +1,6 @@
++# V9.1: verification requests are available even before V8/V9 authorization.
++import os as _v91_os
++if _v91_os.getenv("V91_ACCESS_REQUESTS_ENABLED", "").lower() in ("true", "1", "yes"):
++    CATEGORY_FEATURES[CAT_MORE].insert(0, "🔐 Verify Adult Access")
++
+ ALL_UI_BUTTONS = (set(CATEGORY_FEATURES)
+--- navigation.py:current
++++ navigation.py:planned
+@@ -1 +1,6 @@
++# V9.1: preserve the request action while legacy workflows are active.
++import os as _v91_os
++if _v91_os.getenv("V91_ACCESS_REQUESTS_ENABLED", "").lower() in ("true", "1", "yes"):
++    GLOBAL_BUTTONS.add("🔐 Verify Adult Access")
++
+ GLOBAL_BUTTONS.add("📝 Text → PDF")
+Applied V9.1 request handler integration. Backup: C:\Users\Pros\AppData\Local\Temp\tmpmyx3gpu6\V91_ACCESS_BACKUP_20261101_121535_613320
+main.py: already installed
+ui_v57.py: already installed
+navigation.py: already installed
+Already installed. No files changed.
+
+----------------------------------------------------------------------
+Ran 26 tests in 0.035s
+
+OK
+
+==========================================================================
+[10/10] PASS    TEST_V9_ACADEMIC_TOOLKIT                        38 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 38 tests in 1.077s
+
+OK

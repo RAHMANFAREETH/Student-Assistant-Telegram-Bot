@@ -1,0 +1,183 @@
+[1mdiff --git a/translate.py b/translate.py[m
+[1mindex 08d8ece..103b31b 100644[m
+[1m--- a/translate.py[m
+[1m+++ b/translate.py[m
+[36m@@ -1,4 +1,5 @@[m
+ import time[m
+[32m+[m[32mimport os[m
+ from collections import OrderedDict[m
+ [m
+ from telebot import types[m
+[36m@@ -81,6 +82,68 @@[m [mMYMEMORY_LOCALES = {[m
+ }[m
+ [m
+ [m
+[32m+[m
+[32m+[m[32m# Azure Translator official API. No API key is included in project files.[m
+[32m+[m[32m# The Translator F0 plan offers 2M characters/month when available.[m
+[32m+[m[32m# Store AZURE_TRANSLATOR_KEY and AZURE_TRANSLATOR_REGION in Render environment.[m
+[32m+[m[32mAZURE_TRANSLATOR_KEY = os.getenv("AZURE_TRANSLATOR_KEY", "").strip()[m
+[32m+[m[32mAZURE_TRANSLATOR_REGION = os.getenv("AZURE_TRANSLATOR_REGION", "").strip()[m
+[32m+[m[32mAZURE_TRANSLATOR_URL = "https://api.cognitive.microsofttranslator.com/translate"[m
+[32m+[m
+[32m+[m[32m# Stop repeatedly hitting publicly rate-limited services during one Render process.[m
+[32m+[m[32mprovider_blocked_until = {}[m
+[32m+[m[32mPUBLIC_RATE_LIMIT_COOLDOWN = 1800  # 30 minutes, process-local[m
+[32m+[m
+[32m+[m
+[32m+[m[32mdef translate_azure(source, target, text):[m
+[32m+[m[32m    """Translate using Azure Translator's authenticated text REST API v3."""[m
+[32m+[m[32m    if not AZURE_TRANSLATOR_KEY:[m
+[32m+[m[32m        raise RuntimeError("AZURE_TRANSLATOR_KEY is missing")[m
+[32m+[m[32m    if target not in LANGUAGE_BY_CODE:[m
+[32m+[m[32m        raise ValueError("Unsupported target language")[m
+[32m+[m[32m    if source != "auto" and source not in LANGUAGE_BY_CODE:[m
+[32m+[m[32m        raise ValueError("Unsupported source language")[m
+[32m+[m
+[32m+[m[32m    params = {"api-version": "3.0", "to": target}[m
+[32m+[m[32m    if source != "auto":[m
+[32m+[m[32m        params["from"] = source[m
+[32m+[m[32m    headers = {[m
+[32m+[m[32m        "Ocp-Apim-Subscription-Key": AZURE_TRANSLATOR_KEY,[m
+[32m+[m[32m        "Content-Type": "application/json",[m
+[32m+[m[32m    }[m
+[32m+[m[32m    if AZURE_TRANSLATOR_REGION:[m
+[32m+[m[32m        headers["Ocp-Apim-Subscription-Region"] = AZURE_TRANSLATOR_REGION[m
+[32m+[m[32m    response = requests.post([m
+[32m+[m[32m        AZURE_TRANSLATOR_URL,[m
+[32m+[m[32m        params=params,[m
+[32m+[m[32m        headers=headers,[m
+[32m+[m[32m        json=[{"Text": text}],[m
+[32m+[m[32m        timeout=(5, 20),[m
+[32m+[m[32m    )[m
+[32m+[m[32m    if response.status_code != 200:[m
+[32m+[m[32m        # Don't log the full request (which may contain private text or keys).[m
+[32m+[m[32m        raise RuntimeError(f"Azure Translator HTTP {response.status_code}")[m
+[32m+[m[32m    data = response.json()[m
+[32m+[m[32m    try:[m
+[32m+[m[32m        value = data[0]["translations"][0]["text"][m
+[32m+[m[32m    except (IndexError, KeyError, TypeError) as exc:[m
+[32m+[m[32m        raise ValueError("Azure Translator returned an invalid response") from exc[m
+[32m+[m[32m    if not isinstance(value, str) or not value.strip():[m
+[32m+[m[32m        raise ValueError("Azure Translator returned empty text")[m
+[32m+[m[32m    return value.strip()[m
+[32m+[m
+[32m+[m
+[32m+[m[32mdef is_rate_limited(error):[m
+[32m+[m[32m    """Recognize public provider quota failures without echoing request URLs."""[m
+[32m+[m[32m    if isinstance(error, requests.exceptions.HTTPError):[m
+[32m+[m[32m        response = getattr(error, "response", None)[m
+[32m+[m[32m        if getattr(response, "status_code", None) == 429:[m
+[32m+[m[32m            return True[m
+[32m+[m[32m    name = type(error).__name__.lower()[m
+[32m+[m[32m    snippet = str(error).lower()[m
+[32m+[m[32m    return "toomanyrequests" in name or "429" in snippet or "too many requests" in snippet[m
+[32m+[m
+[32m+[m
+ def translate_mymemory(source, target, text):[m
+     """Use regional codes supported by this provider; Google still uses short codes."""[m
+     src = "auto" if source == "auto" else MYMEMORY_LOCALES.get(source)[m
+[36m@@ -280,62 +343,55 @@[m [mdef translate_chunk(source, target, text):[m
+     if cached:[m
+         return cached, "Cache"[m
+ [m
+[31m-    errors = [][m
+[31m-[m
+[31m-    def attempt(label, translate_fn):[m
+[32m+[m[32m    def attempt(label, fn, public=True):[m
+[32m+[m[32m        if public and time.monotonic() < provider_blocked_until.get(label, 0):[m
+[32m+[m[32m            return None[m
+         try:[m
+[31m-            value = translate_fn()[m
+[32m+[m[32m            value = fn()[m
+             if not isinstance(value, str) or not value.strip():[m
+[31m-                raise ValueError("Provider returned empty translation")[m
+[31m-            cache_save(cache_key, value.strip())[m
+[31m-            return value.strip(), label[m
+[32m+[m[32m                raise ValueError("Empty translation")[m
+[32m+[m[32m            value = value.strip()[m
+[32m+[m[32m            cache_save(cache_key, value)[m
+[32m+[m[32m            return value, label[m
+         except Exception as error:[m
+[31m-            # Keep detailed diagnostics in Render logs, not public Telegram chat.[m
+[31m-            errors.append(f"{label}: {type(error).__name__}: {str(error)[:250]}")[m
+[32m+[m[32m            if is_rate_limited(error):[m
+[32m+[m[32m                if public:[m
+[32m+[m[32m                    provider_blocked_until[label] = time.monotonic() + PUBLIC_RATE_LIMIT_COOLDOWN[m
+[32m+[m[32m                print(f"Translator provider failure: {label}: rate limited (HTTP 429)")[m
+[32m+[m[32m            else:[m
+[32m+[m[32m                # Avoid printing user text or an HTTPError's URL in server logs.[m
+[32m+[m[32m                print(f"Translator provider failure: {label}: {type(error).__name__}")[m
+             return None[m
+ [m
+[31m-    # Prefer MyMemory for short text: it avoids Google's shared-host 429 rate[m
+[31m-    # limits, but uses regional language identifiers instead of short codes.[m
+[31m-    result = attempt([m
+[31m-        "MyMemory", lambda: translate_mymemory(source, target, text)[m
+[31m-    )[m
+[31m-    if result:[m
+[31m-        return result[m
+[31m-[m
+[31m-    # Keep Google as a best-effort fallback using its own short language codes.[m
+[31m-    result = attempt([m
+[31m-        "Google", lambda: GoogleTranslator(source=source, target=target).translate(text)[m
+[31m-    )[m
+[31m-    if result:[m
+[31m-        return result[m
+[31m-[m
+[31m-    # When a self-hosted or managed LibreTranslate URL is available, prefer it.[m
+[32m+[m[32m    # If configured, use the official, authenticated service only. Otherwise[m
+[32m+[m[32m    # invalid credentials might be masked by unreliable anonymous endpoints.[m
+[32m+[m[32m    if AZURE_TRANSLATOR_KEY:[m
+[32m+[m[32m        result = attempt("Azure Translator", lambda: translate_azure(source, target, text), public=False)[m
+[32m+[m[32m        if result:[m
+[32m+[m[32m            return result[m
+[32m+[m[32m        raise RuntimeError("Azure Translator failed; check status and credentials in Render logs")[m
+[32m+[m
+[32m+[m[32m    # Legacy best-effort services when Azure has not yet been configured.[m
+[32m+[m[32m    # HTTP 429 puts each service on a 30-minute process-local cooldown.[m
+[32m+[m[32m    for label, fn in [[m
+[32m+[m[32m        ("MyMemory", lambda: translate_mymemory(source, target, text)),[m
+[32m+[m[32m        ("Google", lambda: GoogleTranslator(source=source, target=target).translate(text)),[m
+[32m+[m[32m    ]:[m
+[32m+[m[32m        result = attempt(label, fn)[m
+[32m+[m[32m        if result:[m
+[32m+[m[32m            return result[m
+     if LIBRETRANSLATE_URL:[m
+[31m-        result = attempt([m
+[31m-            "LibreTranslate", lambda: translate_libretranslate(source, target, text)[m
+[31m-        )[m
+[32m+[m[32m        result = attempt("LibreTranslate", lambda: translate_libretranslate(source, target, text))[m
+         if result:[m
+             return result[m
+[31m-[m
+[31m-    # Try the documented MyMemory REST API directly with short ISO codes.[m
+[31m-    # This can help when the deep-translator locale validation fails, but it[m
+[31m-    # still shares MyMemory's service-level quota and availability.[m
+[31m-    result = attempt([m
+[31m-        "MyMemory Direct API", lambda: translate_mymemory_api(source, target, text)[m
+[31m-    )[m
+[31m-    if result:[m
+[31m-        return result[m
+[31m-[m
+[31m-    # Free best-effort fallback, not an official Google API.[m
+[31m-    result = attempt([m
+[31m-        "Google Public Endpoint", lambda: translate_google_endpoint(source, target, text)[m
+[31m-    )[m
+[31m-    if result:[m
+[31m-        return result[m
+[31m-[m
+[31m-    for problem in errors:[m
+[31m-        print("Translator provider failure:", problem)[m
+[31m-    raise RuntimeError("All available translation services failed; check Render logs")[m
+[32m+[m[32m    for label, fn in [[m
+[32m+[m[32m        ("MyMemory Direct API", lambda: translate_mymemory_api(source, target, text)),[m
+[32m+[m[32m        ("Google Public Endpoint", lambda: translate_google_endpoint(source, target, text)),[m
+[32m+[m[32m    ]:[m
+[32m+[m[32m        result = attempt(label, fn)[m
+[32m+[m[32m        if result:[m
+[32m+[m[32m            return result[m
+[32m+[m[32m    raise RuntimeError("All available translation services failed (public providers rate-limited); configure Azure Translator")[m
+ [m
+ [m
+ def translate_complete_text([m

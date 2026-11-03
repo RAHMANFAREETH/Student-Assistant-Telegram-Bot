@@ -111,7 +111,8 @@ class BotTests(unittest.TestCase):
         import v9_bot
         cls.mod=v9_bot
     def setUp(self):
-        self.env=patch.dict(os.environ,{'V8_ENABLED':'true','V8_ALLOWED_USER_IDS':'123','V9_ENABLED':'true'})
+        self.env=patch.dict(os.environ,{'V8_ENABLED':'true','V8_ALLOWED_USER_IDS':'123','V9_ENABLED':'true',
+                                        'STUDY_ACCESS_MODE':'pilot'})  # V11.8.4.1 test-only
         self.env.start()
         class Bot:
             def __init__(self):self.handlers={};self.sent=[]

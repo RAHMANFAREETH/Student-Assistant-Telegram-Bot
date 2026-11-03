@@ -1,0 +1,5 @@
+/* V12.1 optional Arcade tile; intentionally scoped to the existing V12 home. */
+#v121-arcade-link.v121-entry{display:grid;gap:4px;padding:18px;margin:0 0 16px;border-radius:16px;color:#fff!important;background:linear-gradient(110deg,#16435b,#206a69);text-decoration:none!important;box-shadow:0 4px 18px #16435b22}
+#v121-arcade-link.v121-entry strong{font-size:1rem;line-height:1.45}
+#v121-arcade-link.v121-entry span{opacity:.9;font-size:.84rem}
+#v121-arcade-link.v121-entry:focus-visible{outline:3px solid #f7bc4f;outline-offset:2px}

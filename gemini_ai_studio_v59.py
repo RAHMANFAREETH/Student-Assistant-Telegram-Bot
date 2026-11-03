@@ -60,7 +60,7 @@ def build_payload(question: str, task: str = "ask", language: str = "english") -
     return {
         "systemInstruction": {"parts": [{"text": system_text}]},
         "contents": [{"role": "user", "parts": [{"text": question}]}],
-        "generationConfig": {"maxOutputTokens": 1500, "temperature": 0.4},
+        "generationConfig": {"maxOutputTokens": 2400, "temperature": 0.4},
     }
 
 
@@ -76,7 +76,7 @@ def extract_text(payload: Any) -> str:
     parts = content.get("parts", []) if isinstance(content, dict) else []
     if not isinstance(parts, list):
         parts = []
-    chunks = [p.get("text", "") for p in parts if isinstance(p, dict) and isinstance(p.get("text"), str)]
+    chunks = [p.get("text", "") for p in parts if isinstance(p, dict) and not p.get("thought") and isinstance(p.get("text"), str)]
     answer = "\n".join(s.strip() for s in chunks if s.strip()).strip()
     if not answer:
         raise GeminiClientError("Gemini returned no text. Try another sample prompt.")

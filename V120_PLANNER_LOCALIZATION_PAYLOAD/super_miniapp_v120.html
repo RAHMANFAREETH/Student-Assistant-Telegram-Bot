@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark"><meta name="robots" content="noindex,nofollow">
+<title>Student Assistant — Super Mini App</title>
+<link rel="stylesheet" href="/app/assets/style.css">
+<script defer src="https://telegram.org/js/telegram-web-app.js"></script>
+<script type="module" src="/app/assets/app.js"></script>
+</head>
+<body>
+<div class="app-shell" id="app-shell">
+  <header class="app-header">
+    <div class="brand"><div class="brand-mark" aria-hidden="true">🎓</div><div><span class="eyebrow">STUDENT ASSISTANT</span><h1>Super Mini App</h1></div></div>
+    <div class="header-actions"><label for="language-select" class="sr-only">Language</label><select id="language-select" class="language-picker" aria-label="App language"><option value="en">English</option><option value="ta">தமிழ்</option><option value="si">සිංහල</option></select><button id="theme-toggle" type="button" class="small-icon" aria-label="Toggle theme">☼</button><span class="version">V12 Preview</span></div>
+  </header>
+  <div id="auth-wall" class="auth-wall" role="status" aria-live="polite"><div class="loading-icon">🔐</div><h2>Checking Telegram access…</h2><p>Open this Mini App from your Student Assistant bot.</p></div>
+  <div id="workspace" hidden>
+    <div class="welcome"><div><p class="eyebrow" data-i18n="tagline">EVERYTHING IN ONE PLACE</p><h2 data-i18n="welcome">Study smarter, every day.</h2><p data-i18n="subtitle">Books, calculators and useful everyday tools.</p></div><span aria-hidden="true">✨</span></div>
+    <section class="search-region" aria-label="Search tools"><label for="tool-search" class="sr-only">Search tools</label><span aria-hidden="true">⌕</span><input type="search" id="tool-search" autocomplete="off" placeholder="Search tools…" data-i18n-placeholder="search" maxlength="80"><button id="clear-search" type="button" aria-label="Clear search" hidden>×</button></section>
+    <div id="status" class="status" role="status" aria-live="polite"></div>
+    <div id="tool-view" hidden>
+      <button id="back-tools" class="back" type="button" data-i18n="back">← All tools</button>
+      <div class="tool-heading"><span id="tool-emoji" aria-hidden="true"></span><div><h2 id="tool-heading"></h2><p id="tool-summary"></p></div><button id="favorite-toggle" type="button" aria-label="Add to favorites" title="Toggle favorite">☆</button></div>
+      <section id="tool-body" class="tool-panel"></section>
+    </div>
+    <div id="dashboard">
+      <div class="category-pills" id="category-pills" aria-label="Filter categories"></div>
+      <div id="home-content"><div class="section-title"><h2 id="category-heading">Explore tools</h2><span id="tool-count"></span></div><div class="tool-grid" id="tool-grid"></div></div>
+      <section id="planner-panel" hidden>
+        <div class="section-title"><h2 data-i18n="plannerHead">🗓️ My study plan</h2><button id="planner-refresh" class="secondary" type="button" data-i18n="plannerRefresh">Refresh</button></div>
+        <p class="muted" data-i18n="taskLocalOnly">Quick tasks stay on this device. Assignments and exams below come from your existing bot.</p>
+        <h3 data-i18n="quickTasks">Quick tasks on this device</h3>
+        <form id="task-form" class="inline-form"><label for="task-input" class="sr-only">New task</label><input id="task-input" maxlength="160" data-i18n-placeholder="taskPlaceholder" placeholder="Add an assignment or goal…" required><button type="submit" class="primary" data-i18n="add">Add</button></form>
+        <ul id="task-list" class="task-list"></ul>
+        <div class="planner-remote"><h3 data-i18n="plannerAssignments">Upcoming assignments</h3><ul id="planner-assignments" class="plan-records"></ul>
+        <h3 data-i18n="plannerExams">Upcoming exams</h3><ul id="planner-exams" class="plan-records"></ul>
+        <p id="planner-remote-status" class="muted" role="status" aria-live="polite"></p>
+        <p class="muted" data-i18n="plannerReadOnly">Assignments and exams are read-only here. Edit them using the existing Telegram bot.</p>
+        <button type="button" id="planner-open-bot" class="secondary" data-i18n="openBot">Open Student Assistant Bot</button>
+        </div>
+      </section>
+      <section id="profile-panel" hidden><div class="section-title"><h2 data-i18n="profile">👤 My profile</h2></div><div class="profile-box"><p data-i18n="privacyLine">Your user data is visible only to your signed Telegram session.</p><p id="account-hint">Your private user data is not displayed publicly.</p><p data-i18n="deviceOnly">Favorites and quick tasks are saved only in this browser. They are not synced to Supabase.</p><button id="open-bot" type="button" class="primary" data-i18n="openBot">Open Student Assistant Bot</button></div></section>
+      <section id="library-panel" hidden><div class="library-hero"><span aria-hidden="true">📚</span><h2 data-i18n="libraryHeading">Your Book Library</h2><p data-i18n="libraryInfo">Continue using your existing live Library, with searches, favorites and reading progress.</p><button id="open-library" class="primary" type="button" data-i18n="openLibrary">Open Book Library ↗</button><p class="muted" data-i18n="libraryKeep">The existing /library page and API remain unchanged.</p></div></section>
+    </div>
+  </div>
+  <nav class="bottom-nav" aria-label="Main navigation" id="bottom-nav" hidden>
+    <button type="button" data-tab="home" class="active"><span>⌂</span><span data-i18n="navHome">Home</span></button>
+    <button type="button" data-tab="library"><span>📚</span><span data-i18n="navLibrary">Library</span></button>
+    <button type="button" data-tab="tools"><span>▦</span><span data-i18n="navTools">Tools</span></button>
+    <button type="button" data-tab="planner"><span>☑</span><span data-i18n="navPlanner">Planner</span></button>
+    <button type="button" data-tab="profile"><span>☻</span><span data-i18n="navProfile">Profile</span></button>
+  </nav>
+</div>
+</body></html>

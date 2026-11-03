@@ -78,6 +78,8 @@ class PrivacyTests(unittest.TestCase):
           'BOOK_LIBRARY_PRIVATE_GROUP_RESULTS':'true','BOOK_LIBRARY_DELETE_GROUP_COMMANDS':'true',
           'BOOK_LIBRARY_AUTODELETE_MENU':'true','BOOK_LIBRARY_V112_ENABLED':'false',
           'BOOK_LIBRARY_V113_ENABLED':'false', 'BOOK_LIBRARY_AUTO_GROUP_SEARCH':'true',
+          'LIBRARY_MEDIA_V117_ENABLED':'false',  # V11.8.6.2 legacy-only test environment
+
         })
         self.settings.start()
         self.t=types.ModuleType('telebot')

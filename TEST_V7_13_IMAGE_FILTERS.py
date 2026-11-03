@@ -291,8 +291,10 @@ class TelegramFlowTests(unittest.TestCase):
     def test_menu_offers_filters_and_preview(self):
         self.open_mode()
         self.assertEqual(self.pdf_tools.pdf_state[100]["image_filter"], "original")
-        rows = self.bot.sent[-1][2]["reply_markup"].rows
-        labels = [b.text for row in rows for b in row]
+        markup = self.bot.sent[-1][2]["reply_markup"]
+        rows = getattr(markup, "keyboard", getattr(markup, "rows", None))
+        self.assertIsNotNone(rows, "Unsupported Telegram keyboard representation")
+        labels = [b["text"] if isinstance(b, dict) else b.text for row in rows for b in row]
         self.assertIn(filters.FILTER_BUTTON, labels)
         self.assertIn(filters.PREVIEW_BUTTON, labels)
 

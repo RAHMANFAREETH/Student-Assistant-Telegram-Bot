@@ -8,8 +8,6 @@ from io import BytesIO
 
 from PIL import Image, ImageEnhance, ImageOps, ImageFilter, ImageChops, UnidentifiedImageError
 
-from image_crop_v714 import auto_crop_image
-
 FILTER_BUTTON = "🎨 Choose Filter"
 PREVIEW_BUTTON = "👁 Preview Last"
 REMOVE_BUTTON = "🗑 Remove Last"
@@ -154,14 +152,28 @@ def filter_image(image: Image.Image, filter_code: str) -> Image.Image:
     raise ImageFilterError("❌ Unknown filter.")
 
 
-def make_preview(data: bytes, filter_code: str, auto_crop: bool = False) -> BytesIO:
+def _apply_filter_with_optional_crop(image: Image.Image, filter_code: str, *, auto_crop: bool) -> Image.Image:
+    """Apply opt-in page crop before filtering without changing original images.
+
+    Keep the V7.13 no-crop path intact for existing callers. A conservative
+    crop copies the source and retains the full frame if no page is detected.
+    """
+    if not auto_crop:
+        return filter_image(image, filter_code)
+
+    from image_crop_v714 import auto_crop_image
+
+    cropped = auto_crop_image(image)
+    try:
+        return filter_image(cropped, filter_code)
+    finally:
+        cropped.close()
+
+
+def make_preview(data: bytes, filter_code: str, *, auto_crop: bool = False) -> BytesIO:
     image = _read_image(data, max_dimension=900)
     try:
-        crop_source = auto_crop_image(image) if auto_crop else image.copy()
-        try:
-            filtered = filter_image(crop_source, filter_code)
-        finally:
-            crop_source.close()
+        filtered = _apply_filter_with_optional_crop(image, filter_code, auto_crop=auto_crop)
         try:
             result = BytesIO()
             result.name = "image_filter_preview.jpg"
@@ -174,8 +186,7 @@ def make_preview(data: bytes, filter_code: str, auto_crop: bool = False) -> Byte
         image.close()
 
 
-def images_to_pdf(image_items: list[bytes], filter_code: str = "original",
-                  auto_crop: bool = False) -> BytesIO:
+def images_to_pdf(image_items: list[bytes], filter_code: str = "original", *, auto_crop: bool = False) -> BytesIO:
     if not image_items:
         raise ImageFilterError("❌ Send at least one image first.")
     if len(image_items) > MAX_IMAGES:
@@ -187,11 +198,7 @@ def images_to_pdf(image_items: list[bytes], filter_code: str = "original",
         for data in image_items:
             original = _read_image(data)
             try:
-                crop_source = auto_crop_image(original) if auto_crop else original.copy()
-                try:
-                    converted.append(filter_image(crop_source, filter_code))
-                finally:
-                    crop_source.close()
+                converted.append(_apply_filter_with_optional_crop(original, filter_code, auto_crop=auto_crop))
             finally:
                 original.close()
         output = BytesIO()

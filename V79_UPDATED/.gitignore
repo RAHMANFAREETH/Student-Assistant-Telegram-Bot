@@ -1,0 +1,28 @@
+# Secrets and local credentials
+.env
+.env.*
+!.env.example
+!.env.azure.example
+*.key
+*.pem
+
+# Data, backups, local caches, downloaded archives
+*.db
+*.sqlite3
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+*.bak
+*.bak_*
+*.before_v*.bak
+*.zip
+UploadFix/
+V622_Extracted/
+
+# Local/editor files
+.vscode/
+.idea/
+.DS_Store
+v79_backups/

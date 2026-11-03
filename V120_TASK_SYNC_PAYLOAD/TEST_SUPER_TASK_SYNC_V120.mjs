@@ -1,0 +1,16 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {translateResult,translateError} from './super_miniapp_v120_results.mjs';
+import {localUI} from './super_miniapp_v120_tools.mjs';
+const js=fs.readFileSync(new URL('./super_miniapp_v120.js',import.meta.url),'utf8');
+const html=fs.readFileSync(new URL('./super_miniapp_v120.html',import.meta.url),'utf8');
+test('Tamil results translate calculated labels',()=>assert.match(translateResult('discount','Final price: 100\nYou save: 20','ta'),/இறுதி விலை: 100/));
+test('Sinhala results translate calculated labels',()=>assert.match(translateResult('discount','Final price: 100\nYou save: 20','si'),/අවසාන මිල: 100/));
+test('user-written text is never altered',()=>assert.equal(translateResult('text-case','Final price: student','ta'),'Final price: student'));
+test('English error preserved for debugging',()=>assert.equal(translateError('Invalid date','en'),'Invalid date'));
+test('Tamil and Sinhala errors are localized',()=>{assert.match(translateError('Invalid date','ta'),/உள்ளீடு/);assert.match(translateError('Invalid date','si'),/වලංගු/);});
+test('sync labels provided for all supported languages',()=>{for(const lang of ['en','ta','si'])for(const k of ['tasksSynced','tasksDeviceFallback','taskImportLocal','tasksPartialImport','tasksOffline'])assert.ok(localUI(k,lang));});
+test('task API sends signed initData and never client user id',()=>{assert.match(js,/X-Telegram-Init-Data/);assert.match(js,/\/app\/api\/tasks/);assert.doesNotMatch(js,/user_id\s*:/);});
+test('task import is user-triggered and preserves backup',()=>{assert.match(js,/\$\('task-import-local'\)\.onclick=importDeviceTasks/);assert.match(js,/tasks_backup_before_import/);assert.match(html,/id="task-import-local"/);});
+test('library launch remains available',()=>assert.match(js,/window\.location\.assign\('\/library'\)/));

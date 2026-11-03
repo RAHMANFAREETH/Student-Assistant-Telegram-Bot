@@ -1,0 +1,252 @@
+Modules: 10
+Passed modules: 8
+Failed/timeout modules: 2
+Tests run: 254
+Skipped: 0
+Nonpassing modules: TEST_V8_STUDY_LAB, TEST_V9_ACADEMIC_TOOLKIT
+
+Student Assistant Bot test-only regression
+Python: 3.14.7 (tags/v3.14.7:823f032, Aug  5 2026, 10:51:32) [MSC v.1944 64 bit (AMD64)]
+Module isolation: each module uses a new Python process
+Application environment: feature flags isolated
+Redacted count of inherited app keys excluded: 40
+Modules: 10
+
+==========================================================================
+[01/10] PASS    TEST_BOOK_LIBRARY                               42 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 42 tests in 0.071s
+
+OK
+
+==========================================================================
+[02/10] PASS    TEST_BOOK_LIBRARY_PRIVACY_V114                  21 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 21 tests in 0.812s
+
+OK
+
+==========================================================================
+[03/10] PASS    TEST_BOOK_LIBRARY_V112                          49 tests
+Exit code: 0
+
+V11.2 delivery count unavailable
+----------------------------------------------------------------------
+Ran 49 tests in 0.086s
+
+OK
+
+==========================================================================
+[04/10] PASS    TEST_BOOK_PUBLIC_LATEST5                        14 tests
+Exit code: 0
+
+----------------------------------------------------------------------
+Ran 14 tests in 0.048s
+
+OK
+
+==========================================================================
+[05/10] PASS    TEST_TRANSLATOR_DIRECT_API                       7 tests
+Exit code: 0
+Translator provider failure: MyMemory: RuntimeError
+Translator provider failure: Google: rate limited (HTTP 429)
+Translation history save failure: RuntimeError
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.001s
+
+OK
+
+==========================================================================
+[06/10] PASS    TEST_TRANSLATOR_FIX                              7 tests
+Exit code: 0
+Translator provider failure: MyMemory: RuntimeError
+Translator provider failure: Google: RuntimeError
+Translator provider failure: MyMemory Direct API: TimeoutError
+Translator provider failure: Google Public Endpoint: TimeoutError
+Translator provider failure: MyMemory: RuntimeError
+Translator provider failure: Google: RuntimeError
+Translator provider failure: MyMemory Direct API: ValueError
+Translator provider failure: MyMemory: RuntimeError
+Telegram inline keyboard error (retrying without it): ValueError('Mock Telegram keyboard rejection')
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.001s
+
+OK
+
+==========================================================================
+[07/10] PASS    TEST_TRANSLATOR_LOCALES                          5 tests
+Exit code: 0
+Translator provider failure: MyMemory: RuntimeError
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.001s
+
+OK
+
+==========================================================================
+[08/10] FAIL    TEST_V8_STUDY_LAB                               45 tests
+Exit code: 1
+
+C:\Users\Pros\AppData\Roaming\Python\Python314\site-packages\supabase\_sync\client.py:309: DeprecationWarning: The 'timeout' parameter is deprecated. Please configure it in the http client instead.
+  return SyncPostgrestClient(
+C:\Users\Pros\AppData\Roaming\Python\Python314\site-packages\supabase\_sync\client.py:309: DeprecationWarning: The 'verify' parameter is deprecated. Please configure it in the http client instead.
+  return SyncPostgrestClient(
+======================================================================
+FAIL: test_allowlist (TEST_V8_STUDY_LAB.GateTests.test_allowlist)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\Pros\Desktop\StudentAssistantBot\TEST_V8_STUDY_LAB.py", line 222, in test_allowlist
+    self.assertTrue(self.v8.allowed(2468));self.assertFalse(self.v8.allowed(2))
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true
+
+======================================================================
+FAIL: test_flashcards_preview (TEST_V8_STUDY_LAB.TelegramWorkflowTests.test_flashcards_preview)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\Pros\Desktop\StudentAssistantBot\TEST_V8_STUDY_LAB.py", line 159, in test_flashcards_preview
+    self.assertTrue(any('Draft cards' in text for _,text in self.bot.sent))
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true
+
+======================================================================
+FAIL: test_private_document_search (TEST_V8_STUDY_LAB.TelegramWorkflowTests.test_private_document_search)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\Pros\Desktop\StudentAssistantBot\TEST_V8_STUDY_LAB.py", line 155, in test_private_document_search
+    self.assertTrue(any('Matching passages' in text for _,text in self.bot.sent))
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true
+
+----------------------------------------------------------------------
+Ran 45 tests in 2.489s
+
+FAILED (failures=3)
+<sys>:0: ResourceWarning: unclosed <ssl.SSLSocket fd=696, family=2, type=1, proto=0, laddr=('10.62.192.76', 53595), raddr=('104.18.38.10', 443)>
+
+==========================================================================
+[09/10] PASS    TEST_V91_MANUAL_ACCESS                          26 tests
+Exit code: 0
+--- main.py:current
++++ main.py:planned
+@@ -1,2 +1,6 @@
++# V9.1 administrator-reviewed age eligibility (before V9 and V8 handlers).
++from v91_access_bot import register_v91_access_handlers
++register_v91_access_handlers(bot)
++
+ from v9_bot import register_v9_handlers
+ register_v9_handlers(bot, show_main_menu)
+--- ui_v57.py:current
++++ ui_v57.py:planned
+@@ -1 +1,6 @@
++# V9.1: verification requests are available even before V8/V9 authorization.
++import os as _v91_os
++if _v91_os.getenv("V91_ACCESS_REQUESTS_ENABLED", "").lower() in ("true", "1", "yes"):
++    CATEGORY_FEATURES[CAT_MORE].insert(0, "🔐 Verify Adult Access")
++
+ ALL_UI_BUTTONS = (set(CATEGORY_FEATURES)
+--- navigation.py:current
++++ navigation.py:planned
+@@ -1 +1,6 @@
++# V9.1: preserve the request action while legacy workflows are active.
++import os as _v91_os
++if _v91_os.getenv("V91_ACCESS_REQUESTS_ENABLED", "").lower() in ("true", "1", "yes"):
++    GLOBAL_BUTTONS.add("🔐 Verify Adult Access")
++
+ GLOBAL_BUTTONS.add("📝 Text → PDF")
+CHECK OK. No files changed.
+--- main.py:current
++++ main.py:planned
+@@ -1,2 +1,6 @@
++# V9.1 administrator-reviewed age eligibility (before V9 and V8 handlers).
++from v91_access_bot import register_v91_access_handlers
++register_v91_access_handlers(bot)
++
+ from v9_bot import register_v9_handlers
+ register_v9_handlers(bot, show_main_menu)
+--- ui_v57.py:current
++++ ui_v57.py:planned
+@@ -1 +1,6 @@
++# V9.1: verification requests are available even before V8/V9 authorization.
++import os as _v91_os
++if _v91_os.getenv("V91_ACCESS_REQUESTS_ENABLED", "").lower() in ("true", "1", "yes"):
++    CATEGORY_FEATURES[CAT_MORE].insert(0, "🔐 Verify Adult Access")
++
+ ALL_UI_BUTTONS = (set(CATEGORY_FEATURES)
+--- navigation.py:current
++++ navigation.py:planned
+@@ -1 +1,6 @@
++# V9.1: preserve the request action while legacy workflows are active.
++import os as _v91_os
++if _v91_os.getenv("V91_ACCESS_REQUESTS_ENABLED", "").lower() in ("true", "1", "yes"):
++    GLOBAL_BUTTONS.add("🔐 Verify Adult Access")
++
+ GLOBAL_BUTTONS.add("📝 Text → PDF")
+Applied V9.1 request handler integration. Backup: C:\Users\Pros\AppData\Local\Temp\tmpryt_o_9p\V91_ACCESS_BACKUP_20261101_121142_662202
+main.py: already installed
+ui_v57.py: already installed
+navigation.py: already installed
+Already installed. No files changed.
+
+----------------------------------------------------------------------
+Ran 26 tests in 0.037s
+
+OK
+
+==========================================================================
+[10/10] FAIL    TEST_V9_ACADEMIC_TOOLKIT                        38 tests
+Exit code: 1
+
+C:\Users\Pros\AppData\Roaming\Python\Python314\site-packages\supabase\_sync\client.py:309: DeprecationWarning: The 'timeout' parameter is deprecated. Please configure it in the http client instead.
+  return SyncPostgrestClient(
+C:\Users\Pros\AppData\Roaming\Python\Python314\site-packages\supabase\_sync\client.py:309: DeprecationWarning: The 'verify' parameter is deprecated. Please configure it in the http client instead.
+  return SyncPostgrestClient(
+======================================================================
+FAIL: test_hub_shows_14_tools (TEST_V9_ACADEMIC_TOOLKIT.BotTests.test_hub_shows_14_tools)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\Pros\Desktop\StudentAssistantBot\TEST_V9_ACADEMIC_TOOLKIT.py", line 133, in test_hub_shows_14_tools
+    self.assertIn('14 student tools',self.bot.sent[-1][1])
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: '14 student tools' not found in '🔒 V9 access requires approved pilot access or verified adult eligibility.'
+
+======================================================================
+FAIL: test_math_workflow (TEST_V9_ACADEMIC_TOOLKIT.BotTests.test_math_workflow)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\Pros\Desktop\StudentAssistantBot\TEST_V9_ACADEMIC_TOOLKIT.py", line 143, in test_math_workflow
+    self.assertIn('x = 4',self.bot.sent[-1][1])
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'x = 4' not found in '🔒 V9 access requires approved pilot access or verified adult eligibility.'
+
+======================================================================
+FAIL: test_ocr_consented (TEST_V9_ACADEMIC_TOOLKIT.BotTests.test_ocr_consented)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\Pros\Desktop\StudentAssistantBot\TEST_V9_ACADEMIC_TOOLKIT.py", line 154, in test_ocr_consented
+    ocr.assert_called_once()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python314\Lib\unittest\mock.py", line 965, in assert_called_once
+    raise AssertionError(msg)
+AssertionError: Expected '_read_ocr' to have been called once. Called 0 times.
+
+======================================================================
+FAIL: test_requires_ocr_consent (TEST_V9_ACADEMIC_TOOLKIT.BotTests.test_requires_ocr_consent)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\Pros\Desktop\StudentAssistantBot\TEST_V9_ACADEMIC_TOOLKIT.py", line 149, in test_requires_ocr_consent
+    self.assertIn('cancelled',self.bot.sent[-1][1])
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'cancelled' not found in '🔒 V9 access requires approved pilot access or verified adult eligibility.'
+
+----------------------------------------------------------------------
+Ran 38 tests in 3.012s
+
+FAILED (failures=4)
+<sys>:0: ResourceWarning: unclosed <ssl.SSLSocket fd=928, family=2, type=1, proto=0, laddr=('10.62.192.76', 53597), raddr=('104.18.38.10', 443)>

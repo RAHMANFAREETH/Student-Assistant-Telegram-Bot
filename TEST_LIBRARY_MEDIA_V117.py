@@ -217,7 +217,7 @@ class QueryTests(unittest.TestCase):
     def test_no_media_upload_without_private(self):
         self.assertFalse(api.private(message(kind='supergroup',cid=-1002)))
     def test_contributor_uses_review_channel(self):
-        with patch.dict(os.environ,{'BOOK_LIBRARY_CHANNEL_ID':'-10011','BOOK_LIBRARY_REVIEW_CHANNEL_ID':'-10012'}):
+        with patch.dict(os.environ,{'BOOK_LIBRARY_CHANNEL_ID':'-10011','BOOK_LIBRARY_REVIEW_CHANNEL_ID':'-10012','LIBRARY_MEDIA_OCR_ENABLED':'false'}):
             m=message(caption='Tamil Charts | Tutor | Tamil | Education | Author granted permission | Class study',
                       document=document('charts.pdf'))
             row={'id':UID,'title':'Tamil Charts'}

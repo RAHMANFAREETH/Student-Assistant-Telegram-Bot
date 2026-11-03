@@ -1,0 +1,14 @@
+# Render > Environment (NOT a Python file)
+CLOUDFLARE_ACCOUNT_ID=YOUR_32_CHARACTER_ACCOUNT_ID
+CLOUDFLARE_API_TOKEN=YOUR_PRIVATE_WORKERS_AI_TOKEN
+AI_ENABLED=true
+AI_ALLOW_PUBLIC=false
+AI_ALLOWED_USER_IDS=YOUR_ADULT_TESTER_TELEGRAM_ID
+AI_DAILY_LIMIT=8
+
+# When ready for public access, after the required provider/child-safety review:
+# AI_ALLOW_PUBLIC=true
+# AI_ALLOWED_USER_IDS=  (blank)
+
+# These settings belong in Render Environment, not public GitHub files.
+# Gemini API keys are not used by this Cloudflare module.

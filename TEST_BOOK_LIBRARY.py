@@ -125,6 +125,11 @@ class BotTests(unittest.TestCase):
     def setUp(self):
         self.env=patch.dict(os.environ,{
             'BOOK_LIBRARY_ENABLED':'true','BOOK_LIBRARY_ADMIN_IDS':'7',
+            'LIBRARY_MEDIA_V117_ENABLED':'false', 'BOOK_LIBRARY_V112_ENABLED':'false',
+            'BOOK_LIBRARY_ALLOW_ALL_GROUPS':'false',
+            'BOOK_LIBRARY_PRIVATE_GROUP_RESULTS':'false',  # V11.8.6.2 legacy-only test environment
+
+            'BOOK_LIBRARY_V113_ENABLED':'false',  # V11.8.6.1 isolate V11.2 tests
             'BOOK_LIBRARY_GROUP_IDS':'-1002020','BOOK_LIBRARY_CHANNEL_ID':'-1003000',
             'BOOK_LIBRARY_BOT_USERNAME':'TestStudyBot',
             'BOOK_LIBRARY_REQUIRE_VERIFIED_ADULT':'false',
@@ -193,7 +198,9 @@ class BotTests(unittest.TestCase):
         self.handlers['admin_book_upload'](fake_message(caption='Ihya | Ghazali | Arabic',file_name='book.exe'))
         self.assertIn('Supported book files',self.bot.sent[-1][1])
     def test_admin_oversize(self):
-        self.handlers['admin_book_upload'](fake_message(caption='Ihya | Ghazali | Arabic',file_size=90*1024*1024))
+        # Legacy rejection scenario: administrators can explicitly enable a 50 MB cap.
+        with patch.dict(os.environ,{'BOOK_LIBRARY_MAX_BYTES':'52428800'}):
+            self.handlers['admin_book_upload'](fake_message(caption='Ihya | Ghazali | Arabic',file_size=90*1024*1024))
         self.assertIn('exceeds library upload limit',self.bot.sent[-1][1])
     def test_deeplink_delivery(self):
         bookid=__import__('uuid').uuid4()
