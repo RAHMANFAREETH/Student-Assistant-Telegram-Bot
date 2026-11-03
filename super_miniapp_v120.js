@@ -59,6 +59,23 @@ const specs = {
  'word-count':[['text','Text','textarea','']],
  'text-case':[['text','Text','textarea',''],['mode','Change to','select','upper',['upper','lower','title']]],
 };
+
+// Additional self-contained tool forms; same audited submit and live-refresh flow.
+Object.assign(specs,{
+ 'percentage-change':[['before','Original value','number',100],['after','New value','number',120]],
+ 'sales-tax':[['price','Price before tax','number',100],['rate','Tax percentage','number',15]],
+ 'profit-margin':[['cost','Cost price','number',80],['price','Selling price','number',100]],
+ 'speed-calc':[['distance','Distance (km)','number',20],['minutes','Travel time (minutes)','number',30]],
+ 'grade-percent':[['scored','Marks obtained','number',75],['total','Maximum marks','number',100]],
+ 'stddev':[['values','Values (commas or lines)','textarea','1,2,3,4,5']],
+ 'quadratic':[['a','Coefficient a','number',1],['b','Coefficient b','number',-3],['c','Coefficient c','number',2]],
+ 'factorial':[['n','Integer n (0–200)','number',10]],
+ 'combinations':[['n','Population n (0–200)','number',10],['k','Choose k','number',3]],
+ 'text-replace':[['text','Text','textarea','Hello world. Hello again.'],['find','Find','text','Hello'],['replace','Replace with','text','Hi'],['ignoreCase','Ignore capitalization','checkbox',false]],
+ 'word-frequency':[['text','Text','textarea','Apple apple banana. Banana apple!']],
+ 'study-sessions':[['blocks','Study sessions','number',4],['focus','Focus minutes each','number',25],['rest','Break minutes','number',5]]
+});
+
 function makeField([id,label,type,defaultValue,options]){
  const wrap=el('div',{class:'field'+(type==='textarea'?' full':'')});const lbl=el('label',{for:'v120-'+id,'data-v120-label':label},localField(label,state.lang));
  let input;
@@ -72,32 +89,35 @@ function messagePanel(panel,t){panel.append(el('p',{class:'muted'},t));}
 function outputBox(panel){const out=el('div',{class:'result',role:'status','aria-live':'polite'});panel.append(out);return out;}
 function actionButton(text,callback,cls='primary'){const b=el('button',{type:'button',class:cls},text);b.onclick=callback;return b;}
 function genericForm(panel,id){let cfg=specs[id];if(id==='unit'){cfg=[['category','Category','select','Length',Object.keys(UNITS)],['value','Value','number',1],['from','From','select','Meters',Object.keys(UNITS.Length)],['to','To','select','Feet',Object.keys(UNITS.Length)]];}
- const form=el('form',{class:'form-grid'});for(const entry of cfg)form.append(makeField(entry));panel.append(form);
+ const form=el('form',{class:'form-grid',id:'v120-active-tool-form'});for(const entry of cfg)form.append(makeField(entry));panel.append(form);
  if(id==='unit'){
   const update=()=>{const c=form.elements.category.value;for(const key of ['from','to']){const sel=form.elements[key],old=sel.value;sel.replaceChildren(...Object.keys(UNITS[c]).map(u=>el('option',{value:u},u)));if(Object.hasOwn(UNITS[c],old))sel.value=old;}if(form.elements.from.value===form.elements.to.value)form.elements.to.selectedIndex=Math.min(1,form.elements.to.length-1);};
   form.elements.category.addEventListener('change',update);
  }
- const out=outputBox(panel),buttons=el('div',{class:'toolbar'}),go=el('button',{type:'submit',class:'primary','data-v120-ui':'calculate'},i18n('calculate'));buttons.append(go);
+ const out=outputBox(panel),buttons=el('div',{class:'toolbar'}),go=el('button',{type:'submit',class:'primary','data-v120-ui':'calculate',form:'v120-active-tool-form'},i18n('calculate'));buttons.append(go);
  const copy=actionButton(i18n('copyResult'),()=>navigator.clipboard?.writeText(out.textContent||'').then(()=>status(i18n('resultCopied'))).catch(()=>status(i18n('copyUnavailable'))),'secondary');copy.dataset.v120Ui='copyResult';buttons.append(copy);panel.insertBefore(buttons,out);
  const run=()=>{try{out.classList.remove('error');out.textContent=translateResult(id,compute(id,formValues(form)),state.lang);}catch(e){out.classList.add('error');out.textContent=translateError(e,state.lang);}};
- form.addEventListener('submit',e=>{e.preventDefault();run();});run();
+ form.addEventListener('submit',e=>{e.preventDefault();run();});
+ // Refresh calculated output when inputs change; the last result must never
+ // be presented as if it belongs to newly entered values.
+ form.addEventListener('input',run);form.addEventListener('change',run);run();
 }
 function localDateTime(zone){return new Intl.DateTimeFormat('en-GB',{timeZone:zone,weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).format(new Date());}
 function worldClock(panel){const zones={'Sri Lanka':'Asia/Colombo','New York':'America/New_York','London':'Europe/London','Dubai':'Asia/Dubai','Tokyo':'Asia/Tokyo','Paris':'Europe/Paris','Sydney':'Australia/Sydney','Mumbai':'Asia/Kolkata'};
  const out=el('div');panel.append(out);let timer=null;const render=()=>{out.replaceChildren(...Object.entries(zones).map(([name,z])=>el('div',{class:'result'},`${name} · ${localDateTime(z)}`)));};render();timer=setInterval(render,1000);state.cleanup=()=>clearInterval(timer);}
 function timeText(ms){const sec=Math.max(0,Math.floor(ms/1000));return `${String(Math.floor(sec/3600)).padStart(2,'0')}:${String(Math.floor(sec%3600/60)).padStart(2,'0')}:${String(sec%60).padStart(2,'0')}`;}
-function runningClock(panel,mode){const form=el('div',{class:'form-grid'});let duration=mode==='pomodoro'?25:5;if(mode!=='stopwatch'){form.append(makeField(['minutes','Minutes','number',duration]));panel.append(form);}const digits=el('div',{class:'live-digits'},mode==='stopwatch'?'00:00:00':timeText(duration*60000));panel.append(digits);const tb=el('div',{class:'toolbar'});panel.append(tb);
- let target=0,elapsed=0,started=0,interval=null,remaining=duration*60000;
+function runningClock(panel,mode){const form=el('form',{class:'form-grid'});let duration=mode==='pomodoro'?25:5;if(mode!=='stopwatch'){form.append(makeField(['minutes','Minutes','number',duration]));panel.append(form);}const digits=el('div',{class:'live-digits'},mode==='stopwatch'?'00:00:00':timeText(duration*60000));panel.append(digits);const tb=el('div',{class:'toolbar'});panel.append(tb);
+ let target=0,elapsed=0,started=0,interval=null,remaining=duration*60000,hasStarted=false;
  function update(){const now=Date.now();if(mode==='stopwatch')digits.textContent=timeText(elapsed+(started?now-started:0));else{const left=started?Math.max(0,target-now):remaining;digits.textContent=timeText(left);if(started&&left<=0){stop();remaining=0;digits.textContent='00:00:00';status('Timer completed while the app was open.');}}}
  function stop(){if(started){if(mode==='stopwatch')elapsed+=Date.now()-started;else remaining=Math.max(0,target-Date.now());started=0;}if(interval){clearInterval(interval);interval=null;}update();}
- tb.append(actionButton('Start',()=>{if(started)return;if(mode!=='stopwatch'&&remaining<=0){const n=Number(form.elements.minutes.value);if(!Number.isFinite(n)||n<=0||n>1440){status('Enter 1–1440 minutes.');return;}remaining=n*60000;}started=Date.now();target=started+remaining;interval=setInterval(update,200);update();}));
+ tb.append(actionButton('Start',()=>{if(started)return;if(mode!=='stopwatch' && !started && !hasStarted){const n=Number(form.elements.namedItem('minutes').value);if(!Number.isFinite(n)||n<=0||n>1440){status('Enter 1–1440 minutes.');return;}remaining=n*60000;}if(mode!=='stopwatch'&&remaining<=0){const n=Number(form.elements.namedItem('minutes').value);if(!Number.isFinite(n)||n<=0||n>1440){status('Enter 1–1440 minutes.');return;}remaining=n*60000;}hasStarted=true;started=Date.now();target=started+remaining;interval=setInterval(update,200);update();}));
  tb.append(actionButton('Pause',stop,'secondary'));
- tb.append(actionButton('Reset',()=>{stop();elapsed=0;remaining=mode==='stopwatch'?0:(Number(form.elements.minutes.value)||duration)*60000;update();},'secondary'));
+ tb.append(actionButton('Reset',()=>{stop();hasStarted=false;elapsed=0;remaining=mode==='stopwatch'?0:(Number(form.elements.namedItem('minutes').value)||duration)*60000;update();},'secondary'));
  if(mode!=='stopwatch'){messagePanel(panel,'Timer alerts only work while this Mini App remains open. Use your bot reminders for later notifications.');}
  state.cleanup=()=>{if(interval)clearInterval(interval);};}
-function cryptoTool(panel,mode){const form=el('form',{class:'form-grid'});if(mode==='password'){form.append(makeField(['length','Length (8–128)','number',20]));form.append(makeField(['symbols','Include symbols','checkbox',true]));}if(mode==='uuid')form.append(makeField(['count','Number (1–20)','number',5]));panel.append(form);const out=outputBox(panel),bar=el('div',{class:'toolbar'});const go=()=>{try{if(!crypto?.getRandomValues)throw Error('Secure random generator unavailable.');if(mode==='password')out.textContent=securePassword(Number(form.elements.length.value),{symbols:form.elements.symbols.checked});else{const n=Number(form.elements.count.value);if(!Number.isInteger(n)||n<1||n>20)throw Error('Count must be 1–20.');out.textContent=Array.from({length:n},()=>crypto.randomUUID()).join('\n');}}catch(e){out.textContent=e.message;}};
- bar.append(actionButton('Generate',go));bar.append(actionButton('Copy',()=>navigator.clipboard?.writeText(out.textContent||'').then(()=>status('Copied.')).catch(()=>status('Copy not supported.')),'secondary'));panel.insertBefore(bar,out);messagePanel(panel,'Generated entirely in this browser; nothing is sent to your server.');go();}
-function funRoll(panel,mode){const out=outputBox(panel);const go=()=>{if(mode==='coin')out.textContent=secureRandom(0,1)?'Heads 🪙':'Tails 🪙';else out.textContent=Array.from({length:2},()=>String(secureRandom(1,6))).join(' + ');};panel.insertBefore(actionButton(mode==='coin'?'Flip coin':'Roll two dice',go),out);go();}
+function cryptoTool(panel,mode){const form=el('form',{class:'form-grid'});if(mode==='password'){form.append(makeField(['length','Length (8–128)','number',20]));form.append(makeField(['symbols','Include symbols','checkbox',true]));}if(mode==='uuid')form.append(makeField(['count','Number (1–20)','number',5]));panel.append(form);const out=outputBox(panel),bar=el('div',{class:'toolbar'});const go=()=>{try{if(!crypto?.getRandomValues)throw Error('Secure random generator unavailable.');if(mode==='password')out.textContent=securePassword(Number(form.elements.namedItem('length').value),{symbols:form.elements.namedItem('symbols').checked});else{const n=Number(form.elements.count.value);if(!Number.isInteger(n)||n<1||n>20)throw Error('Count must be 1–20.');out.textContent=Array.from({length:n},()=>taskId()).join('\n');}}catch(e){out.textContent=e.message;}};
+ bar.append(actionButton('Generate',go));bar.append(actionButton('Copy',()=>navigator.clipboard?.writeText(out.textContent||'').then(()=>status('Copied.')).catch(()=>status('Copy not supported.')),'secondary'));panel.insertBefore(bar,out);messagePanel(panel,'Generated entirely in this browser; nothing is sent to your server.');form.addEventListener('input',()=>{out.textContent='';});form.addEventListener('change',()=>{out.textContent='';});go();}
+function funRoll(panel,mode){let form=null;if(mode==='dice'){form=el('form',{class:'form-grid'});form.append(makeField(['diceCount','Number of dice (1–5)','number',2]));panel.append(form);}const out=outputBox(panel);const go=()=>{try{if(mode==='coin')out.textContent=secureRandom(0,1)?'Heads 🪙':'Tails 🪙';else{const raw=Number(form.elements.namedItem('diceCount').value);if(!Number.isInteger(raw)||raw<1||raw>5)throw Error('Choose 1–5 dice.');out.textContent=Array.from({length:raw},()=>String(secureRandom(1,6))).join(' + ');}}catch(e){out.textContent=e.message;}};panel.insertBefore(actionButton(mode==='coin'?'Flip coin':'Roll dice',go),out);if(form)form.addEventListener('change',()=>{out.textContent='';});go();}
 function reaction(panel){messagePanel(panel,'Tap Start. When the panel turns green, tap it as quickly as you can.');const pad=el('button',{type:'button',class:'reaction-pad'},'Tap Start');panel.append(pad);const out=outputBox(panel);let stage=0,timeout=null,start=0;pad.onclick=()=>{if(stage===0){stage=1;pad.className='reaction-pad wait';pad.textContent='Wait for green…';timeout=setTimeout(()=>{stage=2;start=performance.now();pad.className='reaction-pad ready';pad.textContent='TAP NOW!';},800+secureRandom(0,2200));}else if(stage===1){clearTimeout(timeout);stage=0;pad.className='reaction-pad';pad.textContent='Too early! Tap to retry';out.textContent='False start';}else{out.textContent=`${Math.round(performance.now()-start)} ms`;stage=0;pad.className='reaction-pad';pad.textContent='Try again';}};state.cleanup=()=>{if(timeout)clearTimeout(timeout);};}
 function planTime(value){if(typeof value!=='string'||!value)return '';const d=new Date(value);if(!Number.isFinite(d.getTime()))return '';try{return new Intl.DateTimeFormat(state.lang==='ta'?'ta-IN':state.lang==='si'?'si-LK':'en-GB',{dateStyle:'medium',timeStyle:'short'}).format(d);}catch{return d.toISOString().slice(0,16);}}
 function renderPlannerOverview(){const assignments=$('planner-assignments'),exams=$('planner-exams');if(!assignments||!exams)return;

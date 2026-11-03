@@ -78,12 +78,17 @@ class TestSuperMiniApp(unittest.TestCase):
         fake_v8.validate_init_data=lambda raw,token: 44 if raw=='valid' and token=='secret' else (_ for _ in ()).throw(AuthError('invalid'))
         fake_age=types.ModuleType('study_access_v9'); fake_age.is_verified_adult=lambda uid:uid==44
         with patch.dict(sys.modules, {'v8_miniapp':fake_v8,'study_access_v9':fake_age}):
-            with patch.dict(os.environ, {'BOT_TOKEN':'secret'}):
+            with patch.dict(os.environ, {'BOT_TOKEN':'secret', 'SUPER_MINIAPP_V120_REQUIRE_ADULT':'true', 'SUPER_MINIAPP_V120_LAUNCH_PUBLIC':'true', 'SUPER_MINIAPP_V120_PILOT_IDS':''}):  # V120 TEST MODE COMPAT
                 self.assertEqual(module.verify_super_session('valid'),44)
                 with self.assertRaises(AuthError):module.verify_super_session('invalid')
                 with self.assertRaises(AuthError):module.verify_super_session('')
                 fake_age.is_verified_adult=lambda uid:False
                 with self.assertRaises(PermissionError):module.verify_super_session('valid')
+                # Public utility mode deliberately removes *manual* adult verification,
+                # but always requires valid Telegram HMAC for private user data.
+                with patch.dict(os.environ, {'SUPER_MINIAPP_V120_REQUIRE_ADULT':'false'}):
+                    self.assertEqual(module.verify_super_session('valid'), 44)
+                    with self.assertRaises(AuthError):module.verify_super_session('invalid')
     def test_safe_security_headers(self):
         response=types.SimpleNamespace(headers={})
         # Patch module.request, not flask.request (Flask's LocalProxy requires

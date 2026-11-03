@@ -51,6 +51,23 @@ export const TOOLS = [
  ['url-encode','URL Encode / Decode','🔗','Text & Study','Encode or decode URL components safely'],
  ['color-contrast','Color Contrast','🎨','Generators','Check WCAG contrast between two hex colors'],
 ].map(([id,name,icon,category,summary])=>({id,name,icon,category,summary}));
+
+// V12 functional QA expansion: no external API, no remote storage.
+TOOLS.push(
+ {id:'percentage-change',name:'Percentage Change',icon:'📉',category:'Calculators',summary:'Increase or decrease from an original value'},
+ {id:'sales-tax',name:'Sales Tax / VAT',icon:'🧾',category:'Calculators',summary:'Tax amount and total price'},
+ {id:'profit-margin',name:'Profit & Margin',icon:'💹',category:'Calculators',summary:'Profit, gross margin, and markup'},
+ {id:'speed-calc',name:'Average Speed',icon:'🚴',category:'Calculators',summary:'Calculate distance per hour'},
+ {id:'grade-percent',name:'Grade Percentage',icon:'📚',category:'Text & Study',summary:'Convert scored marks to a percentage'},
+ {id:'stddev',name:'Standard Deviation',icon:'📊',category:'Calculators',summary:'Population and sample standard deviation'},
+ {id:'quadratic',name:'Quadratic Equation',icon:'📐',category:'Calculators',summary:'Solve ax² + bx + c = 0, including complex roots'},
+ {id:'factorial',name:'Factorial',icon:'🔢',category:'Calculators',summary:'Exact factorial of integers up to 200'},
+ {id:'combinations',name:'Combinations (nCr)',icon:'🧩',category:'Calculators',summary:'Exact number of ways to choose k from n'},
+ {id:'text-replace',name:'Find & Replace',icon:'🔎',category:'Text & Study',summary:'Replace literal text without regular expressions'},
+ {id:'word-frequency',name:'Word Frequency',icon:'🔤',category:'Text & Study',summary:'Most frequent words across languages'},
+ {id:'study-sessions',name:'Study Session Planner',icon:'🍅',category:'Productivity',summary:'Estimate total focus and break time'}
+);
+
 export const CATEGORIES = ['All','Date & Time','Converters','Calculators','Generators','Text & Study','Productivity','Image Tools','Fun & Learning','Favorites'];
 
 
@@ -136,7 +153,7 @@ export function discount(price,percentage){const p=num(price,'price'),r=num(perc
 export function secureInt(maxExclusive, cryptoImpl=globalThis.crypto){if(!Number.isSafeInteger(maxExclusive)||maxExclusive<1||maxExclusive>0xffffffff)throw Error('Invalid random range.');if(!cryptoImpl?.getRandomValues)throw Error('Secure randomness not available in this browser.');const max=0x100000000,limit=Math.floor(max/maxExclusive)*maxExclusive,arr=new Uint32Array(1);let n;do{cryptoImpl.getRandomValues(arr);n=arr[0];}while(n>=limit);return n%maxExclusive;}
 export function securePassword(length=16,options={},cryptoImpl=globalThis.crypto){const n=natural(length,'length',8,128);const pool=(options.upper===false?'':'ABCDEFGHIJKLMNOPQRSTUVWXYZ')+(options.lower===false?'':'abcdefghijklmnopqrstuvwxyz')+(options.digits===false?'':'0123456789')+(options.symbols===true?'!@#$%^&*_-+=':'');if(!pool)throw Error('Choose at least one character type.');let result='';for(let i=0;i<n;i++)result+=pool[secureInt(pool.length,cryptoImpl)];return result;}
 export function secureRandom(min,max,cryptoImpl=globalThis.crypto){const a=natural(min,'minimum',-1000000000,1000000000),b=natural(max,'maximum',-1000000000,1000000000);if(a>b)throw Error('Minimum must not exceed maximum.');return a+secureInt(b-a+1,cryptoImpl);}
-export function wordCount(s){const t=String(s||'').trim();return {characters:String(s||'').length,words:t?(t.match(/\S+/gu)||[]).length:0,lines:t?t.split(/\r?\n/).length:0};}
+export function wordCount(s){const original=String(s||'');const t=original.trim();const characters=typeof Intl.Segmenter==='function'?[...new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(original)].length:Array.from(original).length;return {characters,words:t?(t.match(/\S+/gu)||[]).length:0,lines:t?t.split(/\r?\n/).length:0};}
 export function textCase(s,mode){const t=String(s||'');if(mode==='upper')return t.toLocaleUpperCase();if(mode==='lower')return t.toLocaleLowerCase();if(mode==='title')return t.toLocaleLowerCase().replace(/\b\S/gu,x=>x.toLocaleUpperCase());throw Error('Choose a text case.');}
 
 // Additional self-contained study utilities. No network requests and no dynamic code execution.
@@ -180,7 +197,7 @@ export function squareRoot(value){const x=num(value,'number');if(x<0)throw Error
 export function sortLines(text){const lines=String(text||'').split(/\r?\n/).filter(x=>x.trim());if(lines.length>500)throw Error('Maximum 500 lines.');return lines.sort((a,b)=>a.localeCompare(b,undefined,{sensitivity:'base',numeric:true})).join('\n');}
 export function uniqueLines(text,ignoreCase=false){const seen=new Set(),out=[];for(const line of String(text||'').split(/\r?\n/)){if(!line.trim())continue;const key=ignoreCase?line.trim().toLocaleLowerCase():line.trim();if(!seen.has(key)){if(out.length>=500)throw Error('Maximum 500 unique lines.');seen.add(key);out.push(line);}}return out.join('\n');}
 export function readingTime(text,wordsPerMinute=200){const pace=natural(wordsPerMinute,'reading speed',80,500),count=wordCount(text).words;return {words:count,minutes:count/pace,seconds:Math.ceil(count/pace*60)};}
-export function reverseText(text){return Array.from(String(text||'')).reverse().join('');}
+export function reverseText(text){const src=String(text||'');const segments=typeof Intl.Segmenter==='function'?[...new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(src)].map(x=>x.segment):Array.from(src);return segments.reverse().join('');}
 export function urlComponent(text,operation='encode'){if(operation==='encode')return encodeURIComponent(String(text||''));if(operation==='decode')return decodeURIComponent(String(text||''));throw Error('Choose encode or decode.');}
 export function colorContrast(foreground,background){const parse=(value)=>{const t=String(value||'').trim();if(!/^#[0-9a-f]{6}$/i.test(t))throw Error('Use a 6-digit hex color like #FFFFFF.');const rgb=[1,3,5].map(i=>parseInt(t.slice(i,i+2),16)/255).map(v=>v<=0.04045?v/12.92:((v+0.055)/1.055)**2.4);return 0.2126*rgb[0]+0.7152*rgb[1]+0.0722*rgb[2];};const a=parse(foreground),b=parse(background),ratio=(Math.max(a,b)+0.05)/(Math.min(a,b)+0.05);return {ratio,normal:ratio>=4.5,large:ratio>=3};}
 
@@ -220,8 +237,36 @@ export function compute(id,f){switch(id){
  case 'text-reverse':return reverseText(f.text);
  case 'url-encode':return urlComponent(f.text,f.mode);
  case 'color-contrast':{const r=colorContrast(f.foreground,f.background);return `WCAG contrast: ${nice(r.ratio,2)}:1\nNormal-size AA text: ${r.normal?'Pass':'Fail'}\nLarge-size AA text: ${r.large?'Pass':'Fail'}\nApplies to solid colors without alpha.`;}
+
+ case 'percentage-change':return `${nice(percentChange(f.before,f.after),2)}% change`;
+ case 'sales-tax':{const r=salesTax(f.price,f.rate);return `Tax: ${nice(r.tax,2)}\nTotal: ${nice(r.total,2)}`;}
+ case 'profit-margin':{const r=profitMargin(f.cost,f.price);return `Profit: ${nice(r.profit,2)}\nGross margin: ${nice(r.margin,2)}%\nMarkup: ${r.markup===null?'N/A':nice(r.markup,2)+'%'}`;}
+ case 'speed-calc':return `${nice(averageSpeed(f.distance,f.minutes),3)} km/h`;
+ case 'grade-percent':return `${nice(gradePercentage(f.scored,f.total),2)}%`;
+ case 'stddev':{const r=deviation(f.values);return `Count: ${r.count}\nMean: ${nice(r.mean,4)}\nPopulation σ: ${nice(r.population,4)}\nSample s: ${r.sample===null?'N/A':nice(r.sample,4)}`;}
+ case 'quadratic':{const r=quadratic(f.a,f.b,f.c);return r.real?`Roots: ${nice(r.root1,6)}, ${nice(r.root2,6)}\nDiscriminant: ${nice(r.discriminant,6)}`:`Complex roots: ${nice(r.realPart,6)} ± ${nice(r.imaginary,6)}i\nDiscriminant: ${nice(r.discriminant,6)}`;}
+ case 'factorial':return factorial(f.n);
+ case 'combinations':return combinations(f.n,f.k);
+ case 'text-replace':return findReplace(f.text,f.find,f.replace,f.ignoreCase);
+ case 'word-frequency':return wordFrequency(f.text).map(([word,n])=>`${word}: ${n}`).join('\n') || 'No words found.';
+ case 'study-sessions':{const r=studySessions(f.blocks,f.focus,f.rest);return `Focus: ${r.focus} minutes\nBreaks: ${r.breaks} minutes\nTotal: ${Math.floor(r.total/60)}h ${r.total%60}m`;} 
  case 'random':return String(secureRandom(f.min,f.max));
  default:throw Error('This tool needs its interactive panel.');}}
+
+// Additional tested pure calculations. Inputs never leave the device.
+export function percentChange(before,after){const a=num(before,'original value'),b=num(after,'new value');if(a===0)throw Error('Original value must be nonzero.');return (b-a)/Math.abs(a)*100;}
+export function salesTax(price,rate){const p=num(price,'price'),r=num(rate,'tax rate');if(p<0||r<0||r>100)throw Error('Price must be nonnegative and tax rate 0–100%.');const tax=p*r/100;return {tax,total:p+tax};}
+export function profitMargin(cost,price){const c=num(cost,'cost'),p=num(price,'sale price');if(c<0||p<=0)throw Error('Cost must be nonnegative and sale price positive.');const profit=p-c;return {profit,margin:profit/p*100,markup:c===0?null:profit/c*100};}
+export function averageSpeed(distance,minutes){const d=num(distance,'distance'),m=num(minutes,'minutes');if(d<0||m<=0)throw Error('Distance cannot be negative and minutes must be positive.');return d*60/m;}
+export function gradePercentage(scored,possible){const s=num(scored,'scored marks'),p=num(possible,'total marks');if(s<0||p<=0||s>p)throw Error('Marks must be between zero and the positive total.');return s/p*100;}
+export function deviation(value){const text=String(value??'').trim();if(!text)throw Error('Enter numeric values.');const parts=text.split(/[\s,;]+/).filter(Boolean);if(parts.length>500)throw Error('Maximum 500 values.');const vals=parts.map((x,i)=>num(x,`value ${i+1}`));let mean=0,m2=0;for(let i=0;i<vals.length;i++){const delta=vals[i]-mean;mean+=delta/(i+1);m2+=delta*(vals[i]-mean);}return {count:vals.length,mean,population:Math.sqrt(m2/vals.length),sample:vals.length>1?Math.sqrt(m2/(vals.length-1)):null};}
+export function quadratic(a,b,c){const x=num(a,'a'),y=num(b,'b'),z=num(c,'c');if(x===0)throw Error('Coefficient a must not be zero.');const d=y*y-4*x*z;if(!Number.isFinite(d))throw Error('Coefficients out of range.');if(d>=0){const r=Math.sqrt(d);return {discriminant:d,real:true,root1:(-y+r)/(2*x),root2:(-y-r)/(2*x)};}return {discriminant:d,real:false,realPart:-y/(2*x),imaginary:Math.sqrt(-d)/(2*Math.abs(x))};}
+export function factorial(n){const k=natural(n,'n',0,200);let out=1n;for(let i=2;i<=k;i++)out*=BigInt(i);return out.toString();}
+export function combinations(n,k){const a=natural(n,'n',0,200),b=natural(k,'k',0,200);if(b>a)throw Error('k must not exceed n.');const count=Math.min(b,a-b);let answer=1n;for(let i=1;i<=count;i++)answer=answer*BigInt(a-count+i)/BigInt(i);return answer.toString();}
+export function findReplace(text,needle,replacement,ignoreCase=false){const src=String(text??'');const term=String(needle??'');if(!term)throw Error('Enter text to find.');if(term.length>1000)throw Error('Search term too long.');const rep=String(replacement??'');if(!ignoreCase)return src.split(term).join(rep);const escaped=term.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');return src.replace(new RegExp(escaped,'giu'),()=>rep);}
+export function wordFrequency(value){const words=(String(value??'').toLocaleLowerCase().match(/[\p{L}\p{M}\p{N}]+/gu)||[]);const counts=new Map();for(const w of words)counts.set(w,(counts.get(w)||0)+1);return [...counts.entries()].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0])).slice(0,20);}
+export function studySessions(blocks,focus,rest){const n=natural(blocks,'sessions',1,100),f=natural(focus,'focus minutes',1,240),b=natural(rest,'break minutes',0,60);return {focus:n*f,breaks:(n-1)*b,total:n*f+(n-1)*b};}
+
 export const FORMAT = nice;
 
 // V12 development: reviewed interface labels. Calculation results remain English in this stage.
@@ -535,3 +580,11 @@ export const TASK_SYNC_TRANSLATIONS = {
 
 export function localUI(key,lang="en"){return TASK_SYNC_TRANSLATIONS[lang]?.[key] || EXTRA_UI_TRANSLATIONS[lang]?.[key] || translateUI(key,lang);}
 export function localField(label,lang="en"){return FIELD_LABEL_TRANSLATIONS[lang]?.[label] || label;}
+
+// New tools have translated names; unusual numerical output labels remain English.
+Object.assign(TOOL_NAME_TRANSLATIONS.ta,{
+ 'percentage-change':'சதவீத மாற்றம்','sales-tax':'வரி / VAT','profit-margin':'லாபம் & விகிதம்','speed-calc':'சராசரி வேகம்','grade-percent':'மதிப்பெண் சதவீதம்','stddev':'நியம விலகல்','quadratic':'இருபடி சமன்பாடு','factorial':'தொடர்பெருக்கம்','combinations':'சேர்க்கைகள் (nCr)','text-replace':'தேடி மாற்று','word-frequency':'சொல் நிகழ்வெண்','study-sessions':'படிப்பு நேரத் திட்டம்'
+});
+Object.assign(TOOL_NAME_TRANSLATIONS.si,{
+ 'percentage-change':'ප්‍රතිශත වෙනස','sales-tax':'විකුණුම් බදු / VAT','profit-margin':'ලාභය සහ ආන්තිකය','speed-calc':'සාමාන්‍ය වේගය','grade-percent':'ලකුණු ප්‍රතිශතය','stddev':'සම්මත අපගමනය','quadratic':'වර්ගජ සමීකරණය','factorial':'ක්‍රමාරෝපිතය','combinations':'සංයෝජන (nCr)','text-replace':'සොයන්න සහ ප්‍රතිස්ථාපනය','word-frequency':'වචන සංඛ්‍යාතය','study-sessions':'අධ්‍යයන කාල සැලැස්ම'
+});

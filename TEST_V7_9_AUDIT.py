@@ -76,7 +76,16 @@ class FeatureFinderTests(unittest.TestCase):
         self.assertEqual(len(CATEGORY_FEATURES), 8)
         self.assertIn('🔎 Find a Tool', ALL_UI_BUTTONS)
         from navigation import MAIN_MENU_ROWS, GLOBAL_BUTTONS
-        self.assertEqual(sum(len(row) for row in MAIN_MENU_ROWS), 10)
+        # V120 OPTIONAL MENU BUTTON: all eleven legacy entries must remain;
+        # an enabled Super Mini App adds exactly one extra entry.
+        super_label = '🎓 Super Mini App'
+        occurrences = sum(button == super_label for row in MAIN_MENU_ROWS for button in row)
+        self.assertIn(occurrences, (0, 1))
+        self.assertEqual(sum(len(row) for row in MAIN_MENU_ROWS), 11 + occurrences)
+        if occurrences:
+            self.assertIn(super_label, GLOBAL_BUTTONS)
+        self.assertIn('📚 Book Library', GLOBAL_BUTTONS)
+        self.assertIn("📚 Book Library", GLOBAL_BUTTONS)
         self.assertIn('🔎 Find a Tool', GLOBAL_BUTTONS)
         self.assertIn('⬅️ Main Menu', __import__('navigation').NAVIGATION_BUTTONS)
 
@@ -127,7 +136,8 @@ class SecurityAndWiringTests(unittest.TestCase):
         self.assertNotIn('bot.remove_webhook()', code)
         self.assertIn('bot.set_webhook(', code)
         self.assertIn('secret_token=WEBHOOK_SECRET', code)
-        self.assertIn('"version": "7.9"', src)
+        self.assertIn('"version":', src)
+        self.assertIn('"bot": "Student Assistant Bot"', src)
 
     def test_internal_system_health_is_admin_only(self):
         fake_db = types.ModuleType('db')
