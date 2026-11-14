@@ -41,6 +41,7 @@ from text_pdf_v711 import (
 )
 from office_to_pdf_v713 import register_office_to_pdf_handlers
 from advanced_pdf_v717 import ADVANCED_BUTTONS, register_advanced_pdf_handlers
+from pdf_fontstudio_v130 import register_pdf_fontstudio_handlers
 
 
 # Per-chat PDF tool state.
@@ -100,6 +101,7 @@ def _pdf_tools_menu(bot, chat_id):
         types.KeyboardButton("📄 DOCX → PDF"),
         types.KeyboardButton("📊 PPTX → PDF"),
     )
+    markup.row(types.KeyboardButton("🌍 Font & Writing Studio"))
     # V7.17: keep all Advanced PDF Tools above Main Menu.
     for i in range(0, len(ADVANCED_BUTTONS), 2):
         markup.row(*[types.KeyboardButton(label) for label in ADVANCED_BUTTONS[i:i + 2]])
@@ -322,6 +324,9 @@ def _images_to_pdf(image_items):
 
 
 def register_pdf_handlers(bot, show_main_menu):
+    # >>> V13 FOUR-LANGUAGE PDF TOOLS STUDIO >>>
+    register_pdf_fontstudio_handlers(bot)
+    # <<< V13 FOUR-LANGUAGE PDF TOOLS STUDIO <<<
     # V7.17: register before Office and legacy PDF document handlers.
     register_advanced_pdf_handlers(
         bot, lambda chat_id: _pdf_tools_menu(bot, chat_id),

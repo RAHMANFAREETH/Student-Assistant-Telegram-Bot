@@ -6,9 +6,12 @@
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script type="module" src="/app/assets/fontstudio.js"></script>
 </head><body><div class="shell">
-<header class="top"><a class="back" href="/app" aria-label="Back to Mini App">← Mini App</a><span>STUDENT ASSISTANT · V12.2</span></header>
+<header class="top"><a class="back" href="/app" aria-label="Back to Mini App">← Mini App</a><span>STUDENT ASSISTANT · V12.2</span><label for="v13-studio-language">Language</label>
+<select id="v13-studio-language" aria-label="Studio interface language">
+<option value="en">English</option><option value="ta">தமிழ்</option>
+<option value="si">සිංහල</option><option value="ar">العربية</option></select></header>
 <main>
-<section class="hero"><div class="mini">✍️ தமிழ் எழுத்துரு மாற்றி</div><h1>Font &amp; Writing Studio</h1><p>Unicode ↔ Bamini ↔ SunTommy, plus private writing utilities.</p><span class="private">🔒 Processes text on your device · no text upload</span></section>
+<section class="hero"><div class="mini">✍️ தமிழ் எழுத்துரு மாற்றி</div><h1>Font &amp; Writing Studio</h1><p>Tamil, English, Arabic & Sinhala Unicode fonts, plus Tamil legacy converters.</p><span class="private">🔒 Processes text on your device · no text upload</span></section>
 <div id="auth-state" class="state" role="status" aria-live="polite">Checking Mini App access…</div>
 <div id="studio" hidden>
 <div id="studio-feedback" class="note" role="status" aria-live="polite" hidden></div>
@@ -17,6 +20,8 @@
 <button data-panel="cleanup">🧹 Text cleaner</button>
 <button data-panel="inspect">🔎 Unicode inspector</button>
 <button data-panel="digits">🔢 Tamil digits</button>
+<button id="compat-tab" data-panel="compat">🅰️ Font guide</button>
+<button id="multiscript-tab" data-panel="multiscript">🌍 Four languages</button>
 </nav>
 <section id="convert" class="pane" aria-label="Convert Tamil legacy fonts">
  <h2>Unicode / Bamini / SunTommy</h2><p class="hint">This is a character-encoding converter, not merely a font-family switch.</p>
@@ -51,6 +56,87 @@
  <label for="digits-input">Text with numbers</label><textarea id="digits-input" rows="5" maxlength="120000">2026 நவம்பர் 04</textarea>
  <label for="digits-output">Converted text</label><textarea id="digits-output" rows="5" readonly></textarea>
  <div class="toolbar"><button data-copy="digits-output">Copy result</button><button data-download="digits-output">Download .txt</button></div>
+</section>
+<section id="compat" class="pane" aria-label="Tamil font compatibility guide" hidden>
+ <h2 id="compat-title">Tamil font compatibility</h2>
+ <p id="compat-intro" class="hint">Unicode fonts change appearance. Legacy fonts have separate character encodings; conversion needs a verified mapping.</p>
+ <label id="compat-select-label" for="compat-font">Choose a font</label>
+ <select id="compat-font">
+  <optgroup label="Unicode Tamil (font selection; no encoding conversion)">
+   <option value="Noto Sans Tamil">Noto Sans Tamil</option>
+   <option value="Noto Serif Tamil">Noto Serif Tamil</option>
+   <option value="Latha">Latha</option>
+   <option value="Nirmala UI">Nirmala UI</option>
+   <option value="Vijaya">Vijaya</option>
+  </optgroup>
+  <optgroup label="Legacy (matching font required for PDFs)">
+   <option value="Bamini">Bamini</option>
+   <option value="Baamini">Baamini</option>
+   <option value="SunTommy">SunTommy</option>
+   <option value="Kalaham">Kalaham</option>
+   <option value="Tharmini">Tharmini</option>
+   <option value="Vanavil">Vanavil</option>
+   <option value="Senthamil">Senthamil</option>
+   <option value="TSCII">TSCII</option>
+   <option value="TAB">TAB</option>
+   <option value="TAM">TAM</option>
+   <option value="Anjal">Anjal</option>
+   <option value="Amudham">Amudham</option>
+   <option value="Shree Lipi">Shree Lipi</option>
+  </optgroup>
+ </select>
+ <div id="compat-detail" class="note" aria-live="polite"></div>
+ <label id="compat-preview-label" for="compat-preview">Unicode font preview</label>
+ <textarea id="compat-preview" rows="3" maxlength="1000">தமிழ் வணக்கம் · Student Assistant</textarea>
+ <p id="compat-hint" class="hint">Preview only works with Unicode fonts present on this device. A browser may substitute a different font; selecting a legacy name does not convert its encoding.</p>
+ <details><summary id="compat-office-summary">DOCX / PPTX → PDF requirements</summary>
+ <p id="compat-office-message">For legacy documents, the matching licensed font must be installed on the Render server, not merely in Windows. The bot will reject conversion if the required legacy family is unavailable. For Unicode documents, use Noto Sans Tamil or another installed Unicode font. The source file remains unchanged.</p></details>
+</section>
+<section id="multiscript" class="pane" aria-label="Four-language writing and font preview" hidden>
+ <h2 id="ms-title">Four-language Writing Studio</h2>
+ <p id="ms-intro" class="hint">Preview Unicode fonts for Tamil, English, Arabic and Sinhala. Text stays on this device. This does not convert legacy encodings.</p>
+ <div class="two-cols">
+  <label for="ms-language" id="ms-language-label">Writing language</label>
+  <select id="ms-language"><option value="ta">தமிழ் · Tamil</option><option value="en">English</option><option value="ar">العربية · Arabic</option><option value="si">සිංහල · Sinhala</option></select>
+  <label for="ms-font" id="ms-font-label">Unicode font</label>
+  <select id="ms-font"></select>
+<!-- V13 FONT LIBRARY 80: names only; exact font files are never delivered. -->
+<div class="v130-font-controls" id="v130-font-library" role="group" aria-label="Additional Unicode font selections">
+ <div class="v130-font-controls-row">
+  <label for="v130-font-filter" id="v130-font-filter-label">Style
+   <select id="v130-font-filter">
+    <option value="all">All styles</option>
+    <option value="academic">Academic / classic</option>
+    <option value="modern">Modern</option>
+    <option value="display">Decorative</option>
+   </select>
+  </label>
+  <label for="v130-font-search" id="v130-font-search-label">Find font
+   <input id="v130-font-search" type="search" maxlength="70" autocomplete="off" placeholder="Search font names">
+  </label>
+ </div>
+ <p class="hint" id="v130-font-count" role="status" aria-live="polite"></p>
+ <p class="hint" id="v130-font-info">Font name is a preference, not proof of installation. PDF output uses server fonts.</p>
+ <details class="v130-legacy-guide">
+  <summary id="v130-legacy-heading">Legacy-font guide (not Unicode preview)</summary>
+  <p class="hint" id="v130-legacy-info">Legacy font encodings require matching fonts. Encoding conversion is available only for Bamini and SunTommy, using the existing converter.</p>
+  <div class="v130-legacy-tags" id="v130-legacy-tags" aria-label="Legacy font families"></div>
+ </details>
+</div>
+
+ </div>
+ <label id="ms-input-label" for="ms-input">Your text</label>
+ <textarea id="ms-input" rows="5" maxlength="120000" lang="ta" dir="auto" spellcheck="true">வணக்கம்! Student Assistant</textarea>
+ <div class="label-row"><label id="ms-preview-label" for="ms-preview">Live preview</label><span id="ms-count" aria-live="polite"></span></div>
+ <div id="ms-preview" class="multiscript-preview" lang="ta" dir="auto" role="region" aria-label="Text preview"></div>
+ <p id="ms-status" class="hint" role="status" aria-live="polite">Fonts shown are examples; the device may use a substitute when the font is unavailable.</p>
+ <div class="toolbar">
+   <button id="ms-copy" type="button">Copy text</button>
+   <button id="ms-download" type="button" class="secondary">Download UTF-8 .txt</button>
+   <button id="ms-normalize" type="button" class="secondary">Normalize Unicode (NFC)</button>
+   <button id="ms-reset" type="button" class="ghost">Sample</button>
+ </div>
+ <details><summary id="ms-important">Important: Office PDF font compatibility</summary><p id="ms-office-info">For PDF conversion, Unicode font support depends on the fonts installed on Render. Legacy Tamil or Sinhala font encodings require exact licensed fonts and separate verified mapping when converting text. Arabic needs proper RTL and shaping. A browser preview does not prove PDF appearance.</p></details>
 </section>
 </div>
 </main><footer>Existing Book Library and Arcade are unchanged · Conversion is on-device</footer>
