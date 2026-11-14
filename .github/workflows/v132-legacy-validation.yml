@@ -1,0 +1,39 @@
+﻿name: V13.2 Legacy Converter Validation
+
+on:
+  push:
+    branches:
+      - v13-fonts-validation
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  legacy-converter:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Complete JavaScript regression
+        shell: bash
+        run: |
+          files=(TEST_*.mjs)
+          node --test "${files[@]}"
+
+      - name: Verify real FM Abhaya mapping
+        shell: bash
+        run: |
+          curl --fail --silent --show-error --location --retry 3 \
+            "https://raw.githubusercontent.com/akuruAI/pandukabhaya/main/pandukabhaya/mappings/fm_abhaya.json" \
+            --output /tmp/fm_abhaya.json
+
+          node VERIFY_V132_FM_SOURCE.mjs /tmp/fm_abhaya.json
