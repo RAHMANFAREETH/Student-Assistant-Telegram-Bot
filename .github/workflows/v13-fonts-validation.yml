@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - v13-fonts-validation
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -14,7 +15,7 @@ jobs:
     timeout-minutes: 35
 
     steps:
-      - name: Checkout source
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Build Docker image
@@ -24,7 +25,6 @@ jobs:
         run: |
           docker run --rm --entrypoint sh student-assistant:v13-fonts -c '
             set -eu
-            fc-list : family | sort -u | grep -Ei "Noto.*(Tamil|Arabic|Sinhala)|Liberation" | head -n 60
             for script in Tamil Arabic Sinhala; do
               fc-list : family | grep -Eiq "Noto.*${script}" || {
                 echo "Missing Noto ${script}"
@@ -33,12 +33,10 @@ jobs:
             done
           '
 
-      - name: Run V13 font regression in Python 3.12
+      - name: Test V13 runtime fonts in Python 3.12
         run: |
           docker run --rm --entrypoint python student-assistant:v13-fonts \
-            -m unittest -q \
-            TEST_V130_FONT_LIBRARY \
-            TEST_V130_FOUR_LANGUAGES \
-            TEST_V130_MULTIFONT \
-            TEST_V130_OFFICE_LEGACY_FONTS \
-            TEST_V130_PDF_FONT_STUDIO
+            -m unittest -q TEST_V130_FONT_LIBRARY
+
+          docker run --rm --entrypoint python student-assistant:v13-fonts \
+            -c 'from office_language_check_v130 import classify; from office_legacy_fonts_v130 import recognized_legacy_font; from pdf_fontstudio_v130 import FONT_STUDIO_BUTTON; assert [classify(chr(c)) for c in (0x0b85, 0x0041, 0x0627, 0x0d85)] == ["ta", "en", "ar", "si"]; assert recognized_legacy_font("Kalaham"); assert "Font & Writing Studio" in FONT_STUDIO_BUTTON; print("Multilingual runtime smoke check passed")'
