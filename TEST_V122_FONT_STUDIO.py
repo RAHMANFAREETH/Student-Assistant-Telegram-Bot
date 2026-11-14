@@ -31,7 +31,8 @@ class TestFontStudio(unittest.TestCase):
   with patch.dict('os.environ',{'SUPER_FONT_STUDIO_V122_ENABLED':'true'}):
    self.module.register_v122_fontstudio(app);n=len(app.routes)
    self.module.register_v122_fontstudio(app)
-  self.assertEqual(n,7)
+  self.assertEqual(n,2+len(self.module.STATIC))
+  for asset in self.module.STATIC:self.assertIn(asset,app.routes)
   self.assertEqual(len(app.routes),n)
   self.assertIn('/app/fonts',app.routes)
   self.assertNotIn('/library',app.routes)

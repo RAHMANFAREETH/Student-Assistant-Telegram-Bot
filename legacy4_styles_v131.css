@@ -1,0 +1,7 @@
+/* V13.1 4-language legacy converter: namespaced to avoid existing UI changes. */
+#legacy4 textarea,#legacy4 select,#legacy4 input[type=file]{width:100%;max-width:100%;box-sizing:border-box}
+#legacy4 .two-cols{margin-top:.65rem}
+#legacy4 #legacy4-status{white-space:pre-line}
+#legacy4 select{min-height:2.5rem}
+#legacy4 .toolbar{display:flex;flex-wrap:wrap;gap:.5rem;margin:.7rem 0}
+#legacy4 label[hidden]{display:none}

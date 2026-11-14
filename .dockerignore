@@ -34,3 +34,11 @@ V130_*_PAYLOAD/
 INSTALL_V130_*.py
 DIAG_V78_SHUTDOWN.py
 *.old
+# V13.1 local-only installation artifacts
+V131_*_BACKUP_*/
+V131_*_PAYLOAD/
+INSTALL_V131_*.py
+TEST_INSTALL_V131_*.py
+V13_Four_Languages.*
+V13_QA_RESULT.txt
+*.backup
