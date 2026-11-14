@@ -1,0 +1,44 @@
+﻿name: V13 Font Docker Validation
+
+on:
+  push:
+    branches:
+      - v13-fonts-validation
+
+permissions:
+  contents: read
+
+jobs:
+  docker-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build --pull -t student-assistant:v13-fonts .
+
+      - name: Verify multilingual fonts
+        run: |
+          docker run --rm --entrypoint sh student-assistant:v13-fonts -c '
+            set -eu
+            fc-list : family | sort -u | grep -Ei "Noto.*(Tamil|Arabic|Sinhala)|Liberation" | head -n 60
+            for script in Tamil Arabic Sinhala; do
+              fc-list : family | grep -Eiq "Noto.*${script}" || {
+                echo "Missing Noto ${script}"
+                exit 1
+              }
+            done
+          '
+
+      - name: Run V13 font regression in Python 3.12
+        run: |
+          docker run --rm --entrypoint python student-assistant:v13-fonts \
+            -m unittest -q \
+            TEST_V130_FONT_LIBRARY \
+            TEST_V130_FOUR_LANGUAGES \
+            TEST_V130_MULTIFONT \
+            TEST_V130_OFFICE_LEGACY_FONTS \
+            TEST_V130_PDF_FONT_STUDIO
