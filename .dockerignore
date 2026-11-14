@@ -24,3 +24,27 @@ V711_FILES
 V712_FILES
 V7121_FILES
 V713_FILES
+
+# V13 generated installation artifacts
+V1184_REGRESSION_REPORT_*.txt
+V122_FONT_STUDIO_BACKUP_*/
+V130_*_BACKUP_*/
+V122_FONT_STUDIO_PAYLOAD/
+V130_*_PAYLOAD/
+INSTALL_V130_*.py
+DIAG_V78_SHUTDOWN.py
+*.old
+# V13.1 local-only installation artifacts
+V131_*_BACKUP_*/
+V131_*_PAYLOAD/
+INSTALL_V131_*.py
+TEST_INSTALL_V131_*.py
+V13_Four_Languages.*
+V13_QA_RESULT.txt
+*.backup
+
+# V13.3 local installer and QA artifacts
+V133_BACKUP_*/
+V133_PAYLOAD/
+INSTALL_V133_ONESHOT.py
+TEST_INSTALL_V133_ONESHOT.py

@@ -6,7 +6,7 @@ import unittest
 from unittest.mock import patch
 from uuid import uuid4
 
-from TEST_SUPER_MINIAPP_V120 import FakeApp, module
+from TEST_SUPER_MINIAPP_V120 import FakeApp, module, register_v120_baseline
 import super_miniapp_v120_tasks as tasks
 
 ID1='e58d6d63-78a9-49a9-b7e7-9f7c36dd976e'
@@ -87,7 +87,8 @@ class TestTaskStore(unittest.TestCase):
 class TestTaskRoutes(unittest.TestCase):
  def setUp(self):
   self.app=FakeApp()
-  module.register_super_miniapp(self.app)
+  # V13 test-only optional-feature registration isolation
+  register_v120_baseline(self.app)
   self.app.logger=SimpleNamespace(warning=lambda *args:None)
  def call(self,method='GET',path='collection',uid=44,body=None,flag='true'):
   fake_request=SimpleNamespace(headers={'X-Telegram-Init-Data':'signed'},method=method,content_length=100,get_json=lambda silent=True:body)

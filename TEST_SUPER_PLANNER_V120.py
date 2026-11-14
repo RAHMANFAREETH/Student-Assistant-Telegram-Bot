@@ -5,12 +5,13 @@ import sys
 import types
 import unittest
 from unittest.mock import patch
-from TEST_SUPER_MINIAPP_V120 import module, FakeApp
+from TEST_SUPER_MINIAPP_V120 import module, FakeApp, register_v120_baseline
 
 class TestPlannerV120(unittest.TestCase):
     def setUp(self):
         self.app=FakeApp()
-        module.register_super_miniapp(self.app)
+        # V13 test-only optional-feature registration isolation
+        register_v120_baseline(self.app)
         self.view=self.app.view_functions['v120_super_planner']
 
     def test_read_only_queries_use_signed_account_not_request_id(self):

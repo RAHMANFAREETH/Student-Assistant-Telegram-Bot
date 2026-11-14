@@ -1,0 +1,62 @@
+name: V13 Font Docker Validation
+
+on:
+  push:
+    branches:
+      - v13-fonts-validation
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  docker-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build --pull -t student-assistant:v13-fonts .
+
+      - name: Verify multilingual fonts
+        run: |
+          docker run --rm --entrypoint sh student-assistant:v13-fonts -c '
+            set -eu
+            for script in Tamil Arabic Sinhala; do
+              fc-list : family | grep -Eiq "Noto.*${script}" || {
+                echo "Missing Noto ${script}"
+                exit 1
+              }
+            done
+          '
+
+      - name: Test V13 runtime fonts in Python 3.12
+        run: |
+          docker run --rm --entrypoint python student-assistant:v13-fonts \
+            -m unittest -q TEST_V130_FONT_LIBRARY
+
+          docker run --rm --entrypoint python student-assistant:v13-fonts \
+            -c 'from office_language_check_v130 import classify; from office_legacy_fonts_v130 import recognized_legacy_font; from pdf_fontstudio_v130 import FONT_STUDIO_BUTTON; assert [classify(chr(c)) for c in (0x0b85, 0x0041, 0x0627, 0x0d85)] == ["ta", "en", "ar", "si"]; assert recognized_legacy_font("Kalaham"); assert "Font & Writing Studio" in FONT_STUDIO_BUTTON; print("Multilingual runtime smoke check passed")'
+
+      - name: Convert real four-language DOCX to PDF and render previews
+        run: |
+          mkdir -p qa-artifacts
+          chmod 777 qa-artifacts
+          docker run --rm \
+            -v "$PWD/qa-artifacts:/qa-artifacts" \
+            --entrypoint python student-assistant:v13-fonts \
+            /app/QA_V130_MULTISCRIPT_PDF.py /qa-artifacts
+          test -s qa-artifacts/V13_Four_Languages.pdf
+          test -s qa-artifacts/V13_Four_Languages_page_1.png
+
+      - name: Upload four-language DOCX, PDF and previews
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v13-four-language-pdf-qa
+          path: qa-artifacts/
+          if-no-files-found: warn
+          retention-days: 7

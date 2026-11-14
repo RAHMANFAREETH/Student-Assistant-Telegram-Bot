@@ -1,0 +1,609 @@
+{
+  "schema": 1,
+  "disclaimer": "Font names are selections only; exact display and PDF rendering require the font installed on the correct device/server. No font binaries are bundled.",
+  "fonts": [
+    {
+      "language": "ta",
+      "name": "Latha",
+      "category": "academic",
+      "source": "system",
+      "kind": "unicode"
+    },
+    {
+      "language": "ta",
+      "name": "Vijaya",
+      "category": "academic",
+      "source": "system",
+      "kind": "unicode"
+    },
+    {
+      "language": "ta",
+      "name": "Nirmala UI",
+      "category": "academic",
+      "source": "system",
+      "kind": "unicode"
+    },
+    {
+      "language": "ta",
+      "name": "Noto Serif Tamil",
+      "category": "academic",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "ta",
+      "name": "Tiro Tamil",
+      "category": "academic",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "ta",
+      "name": "Noto Sans Tamil",
+      "category": "modern",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "ta",
+      "name": "Noto Sans Tamil UI",
+      "category": "modern",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "ta",
+      "name": "Catamaran",
+      "category": "modern",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "ta",
+      "name": "Hind Madurai",
+      "category": "modern",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "ta",
+      "name": "Mukta Malar",
+      "category": "modern",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "ta",
+      "name": "Anek Tamil",
+      "category": "modern",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "ta",
+      "name": "Arima",
+      "category": "modern",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "ta",
+      "name": "Pavanam",
+      "category": "modern",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "ta",
+      "name": "Meera Inimai",
+      "category": "modern",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "ta",
+      "name": "Baloo Thambi 2",
+      "category": "display",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "ta",
+      "name": "Kavivanar",
+      "category": "display",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "ta",
+      "name": "Coiny",
+      "category": "display",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "ta",
+      "name": "Oi",
+      "category": "display",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "en",
+      "name": "Times New Roman",
+      "category": "academic",
+      "source": "system",
+      "kind": "unicode"
+    },
+    {
+      "language": "en",
+      "name": "Cambria",
+      "category": "academic",
+      "source": "system",
+      "kind": "unicode"
+    },
+    {
+      "language": "en",
+      "name": "Georgia",
+      "category": "academic",
+      "source": "system",
+      "kind": "unicode"
+    },
+    {
+      "language": "en",
+      "name": "Garamond",
+      "category": "academic",
+      "source": "system",
+      "kind": "unicode"
+    },
+    {
+      "language": "en",
+      "name": "Book Antiqua",
+      "category": "academic",
+      "source": "system",
+      "kind": "unicode"
+    },
+    {
+      "language": "en",
+      "name": "Noto Serif",
+      "category": "academic",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "en",
+      "name": "EB Garamond",
+      "category": "academic",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "en",
+      "name": "Merriweather",
+      "category": "academic",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "en",
+      "name": "Source Serif 4",
+      "category": "academic",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "en",
+      "name": "Liberation Serif",
+      "category": "academic",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "en",
+      "name": "Caladea",
+      "category": "academic",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "en",
+      "name": "Arial",
+      "category": "modern",
+      "source": "system",
+      "kind": "unicode"
+    },
+    {
+      "language": "en",
+      "name": "Calibri",
+      "category": "modern",
+      "source": "system",
+      "kind": "unicode"
+    },
+    {
+      "language": "en",
+      "name": "Aptos",
+      "category": "modern",
+      "source": "system",
+      "kind": "unicode"
+    },
+    {
+      "language": "en",
+      "name": "Segoe UI",
+      "category": "modern",
+      "source": "system",
+      "kind": "unicode"
+    },
+    {
+      "language": "en",
+      "name": "Verdana",
+      "category": "modern",
+      "source": "system",
+      "kind": "unicode"
+    },
+    {
+      "language": "en",
+      "name": "Tahoma",
+      "category": "modern",
+      "source": "system",
+      "kind": "unicode"
+    },
+    {
+      "language": "en",
+      "name": "Noto Sans",
+      "category": "modern",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "en",
+      "name": "Liberation Sans",
+      "category": "modern",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "en",
+      "name": "Carlito",
+      "category": "modern",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "en",
+      "name": "Lato",
+      "category": "modern",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "en",
+      "name": "Inter",
+      "category": "modern",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "en",
+      "name": "Roboto",
+      "category": "modern",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "en",
+      "name": "Open Sans",
+      "category": "modern",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "en",
+      "name": "Montserrat",
+      "category": "modern",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "en",
+      "name": "Source Sans 3",
+      "category": "modern",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "ar",
+      "name": "Sakkal Majalla",
+      "category": "academic",
+      "source": "system",
+      "kind": "unicode"
+    },
+    {
+      "language": "ar",
+      "name": "Traditional Arabic",
+      "category": "academic",
+      "source": "system",
+      "kind": "unicode"
+    },
+    {
+      "language": "ar",
+      "name": "Arabic Typesetting",
+      "category": "academic",
+      "source": "system",
+      "kind": "unicode"
+    },
+    {
+      "language": "ar",
+      "name": "Simplified Arabic",
+      "category": "academic",
+      "source": "system",
+      "kind": "unicode"
+    },
+    {
+      "language": "ar",
+      "name": "Noto Naskh Arabic",
+      "category": "academic",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "ar",
+      "name": "Amiri",
+      "category": "academic",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "ar",
+      "name": "Scheherazade New",
+      "category": "academic",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "ar",
+      "name": "Lateef",
+      "category": "academic",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "ar",
+      "name": "Noto Naskh Arabic UI",
+      "category": "academic",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "ar",
+      "name": "Andalus",
+      "category": "academic",
+      "source": "system",
+      "kind": "unicode"
+    },
+    {
+      "language": "ar",
+      "name": "Aldhabi",
+      "category": "academic",
+      "source": "system",
+      "kind": "unicode"
+    },
+    {
+      "language": "ar",
+      "name": "Noto Sans Arabic",
+      "category": "modern",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "ar",
+      "name": "Noto Kufi Arabic",
+      "category": "modern",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "ar",
+      "name": "Cairo",
+      "category": "modern",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "ar",
+      "name": "Tajawal",
+      "category": "modern",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "ar",
+      "name": "Almarai",
+      "category": "modern",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "ar",
+      "name": "Changa",
+      "category": "modern",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "ar",
+      "name": "El Messiri",
+      "category": "modern",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "ar",
+      "name": "Markazi Text",
+      "category": "modern",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "ar",
+      "name": "Reem Kufi",
+      "category": "modern",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "ar",
+      "name": "IBM Plex Sans Arabic",
+      "category": "modern",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "ar",
+      "name": "Readex Pro",
+      "category": "modern",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "ar",
+      "name": "Mada",
+      "category": "modern",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "ar",
+      "name": "Harmattan",
+      "category": "modern",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "ar",
+      "name": "Aref Ruqaa",
+      "category": "modern",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "ar",
+      "name": "Mirza",
+      "category": "modern",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "si",
+      "name": "Iskoola Pota",
+      "category": "academic",
+      "source": "system",
+      "kind": "unicode"
+    },
+    {
+      "language": "si",
+      "name": "Noto Serif Sinhala",
+      "category": "academic",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "si",
+      "name": "Abhaya Libre",
+      "category": "academic",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "si",
+      "name": "Malithi Web",
+      "category": "academic",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "si",
+      "name": "Bhashita",
+      "category": "academic",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "si",
+      "name": "Noto Sans Sinhala",
+      "category": "modern",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "si",
+      "name": "Noto Sans Sinhala UI",
+      "category": "modern",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "si",
+      "name": "Yaldevi",
+      "category": "modern",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "si",
+      "name": "Gemunu Libre",
+      "category": "modern",
+      "source": "external",
+      "kind": "unicode"
+    },
+    {
+      "language": "si",
+      "name": "Maname",
+      "category": "modern",
+      "source": "external",
+      "kind": "unicode"
+    }
+  ],
+  "legacy": {
+    "ta": [
+      "Bamini",
+      "Baamini",
+      "SunTommy",
+      "Kalaham",
+      "Tharmini",
+      "Vanavil",
+      "Senthamil",
+      "TSCII",
+      "TAB",
+      "TAM",
+      "Anjal",
+      "Amudham",
+      "Shree Lipi",
+      "Suratha",
+      "Elango"
+    ],
+    "si": [
+      "FM Abhaya",
+      "FM Malithi",
+      "FM Bindumathi",
+      "FM Derana",
+      "DL Manel",
+      "DL Araliya",
+      "DL Champika",
+      "DL Divani",
+      "Kaputa",
+      "Thibus29STru"
+    ]
+  },
+  "priority_exact_pdf": [
+    "Sakkal Majalla",
+    "Arabic Typesetting",
+    "Traditional Arabic",
+    "Iskoola Pota"
+  ],
+  "samples": {
+    "ta": "தமிழ் மொழி · கல்வி நம் எதிர்காலம்",
+    "en": "Education opens doors. 2026",
+    "ar": "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ · العِلْمُ نُورٌ",
+    "si": "සිංහල භාෂාව · අධ්‍යාපනය අපේ අනාගතයයි"
+  }
+}

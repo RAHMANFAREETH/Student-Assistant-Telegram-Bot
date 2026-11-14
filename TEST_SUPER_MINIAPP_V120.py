@@ -46,9 +46,16 @@ class FakeApp:
         return self.get(path, endpoint=endpoint)
     def after_request(self, fn): self.after.append(fn); return fn
 
+# V13 test-only optional-feature registration isolation
+def register_v120_baseline(app):
+    # The V12 tests exercise the V12 endpoints, not optional V12.1/2 assets.
+    with patch.dict(os.environ, {'SUPER_ARCADE_V121_ENABLED': 'false', 'SUPER_FONT_STUDIO_V122_ENABLED': 'false'}):
+        module.register_super_miniapp(app)
+
+
 class TestSuperMiniApp(unittest.TestCase):
     def setUp(self):
-        self.app=FakeApp(); module.register_super_miniapp(self.app)
+        self.app=FakeApp(); register_v120_baseline(self.app)
     def test_routes_registered(self):
         names=('v120_super_home','v120_super_css','v120_super_js','v120_super_tools','v120_super_session','v120_super_planner','v120_super_tasks','v120_super_task_item','v120_super_results')
         for n in names: self.assertIn(n,self.app.view_functions)

@@ -1,0 +1,34 @@
+name: V13.3 Verified Legacy Profiles Validation
+on:
+  push:
+    branches: [v13-fonts-validation]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  converter-and-docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Full JavaScript regression
+        shell: bash
+        run: |
+          files=(TEST_*.mjs)
+          node --test "${files[@]}"
+      - name: Build production-style Docker image
+        run: docker build --pull -t student-assistant:v133 .
+      - name: Offline DOCX audit and conversion safety checks
+        run: |
+          docker run --rm --entrypoint python student-assistant:v133 -m unittest -q TEST_V133_DOCX_AUDIT
+      - name: Check Unicode fallback font families
+        run: |
+          docker run --rm --entrypoint sh student-assistant:v133 -c '
+            set -eu
+            for script in Tamil Arabic Sinhala; do
+              fc-list : family | grep -Eiq "Noto.*${script}" || exit 1
+            done
+          '

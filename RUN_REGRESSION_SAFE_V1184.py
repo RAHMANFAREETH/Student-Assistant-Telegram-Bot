@@ -20,6 +20,8 @@ APP_PREFIXES = (
     'BOOK_LIBRARY_', 'LIBRARY_MEDIA_', 'LIBRARY_MANAGE_',
     'LIBRARY_SEARCH_', 'V8_', 'V9_', 'V91_', 'V92_', 'V93_',
     'V10_', 'V101_', 'V11_',
+    # V13 test-only optional-feature registration isolation
+    'SUPER_ARCADE_', 'SUPER_FONT_STUDIO_',
 )
 APP_KEYS = ('AZURE_TRANSLATOR_KEY', 'AZURE_TRANSLATOR_REGION',
             'STUDY_ACCESS_MODE')  # V11.8.4.1: isolate study access mode in tests

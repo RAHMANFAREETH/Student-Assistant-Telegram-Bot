@@ -119,6 +119,8 @@ def convert_office_to_pdf(blob: bytes, filename: str, kind: str, *, binary: str 
     if Path((filename or "").replace("\\", "/")).suffix.lower() != "." + kind:
         raise OfficePdfError(f"Please upload a .{kind.upper()} file for this tool.")
     _validate_document(blob, kind)
+    _require_supported_legacy_fonts(blob,kind)
+    _require_exact_multilingual_fonts(blob, kind)
     lo_binary = binary or locate_libreoffice()
     if not lo_binary:
         raise OfficePdfError("Office conversion is not installed on this server. Ask the admin to enable LibreOffice.")
@@ -153,6 +155,39 @@ def convert_office_to_pdf(blob: bytes, filename: str, kind: str, *, binary: str 
     out.name = _safe_filename(filename, ".pdf")
     return out
 
+
+
+def _require_supported_legacy_fonts(blob: bytes, kind: str) -> None:
+    # Do not falsely claim success when a required legacy font is missing.
+    from office_legacy_fonts_v130 import missing_legacy_fonts
+    missing=missing_legacy_fonts(blob,kind)
+    if missing:
+        display=', '.join(missing[:4])
+        raise OfficePdfError(
+            f"This document needs the legacy font(s): {display}. "
+            "They are not installed (or could not be verified) on this server. "
+            "The administrator must install the licensed matching font, "
+            "or you can export the PDF directly from Word. "
+            "Unicode Tamil fonts cannot replace this legacy encoding."
+        )
+
+# >>> V13 EXACT MULTILINGUAL OFFICE FONT CHECK >>>
+def _require_exact_multilingual_fonts(blob: bytes, kind: str) -> None:
+    from office_font_catalog_v130 import missing_exact_fonts
+    try:
+        missing = missing_exact_fonts(blob, kind)
+    except ValueError:
+        raise OfficePdfError('Could not examine important Office font declarations safely.') from None
+    if missing:
+        raise OfficePdfError(
+            'The document requests font(s) not installed or not verified on this server: '
+            + ', '.join(missing[:5]) + '. '
+            'To preserve the original formatting, install the matching legally licensed fonts '
+            'on the conversion server or export directly using Word. '
+            'A Unicode fallback can change the layout. '
+            'The administrator can configure OFFICE_EXACT_FONT_POLICY if needed.'
+        )
+# <<< V13 EXACT MULTILINGUAL OFFICE FONT CHECK <<<
 
 # Prevent concurrent conversion from exhausting a small Render instance.
 _conversion_slot = threading.BoundedSemaphore(1)

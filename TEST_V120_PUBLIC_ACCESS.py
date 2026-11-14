@@ -39,25 +39,31 @@ class FakeApp:
         def deco(fn):self.view_functions[endpoint or fn.__name__]=fn;return fn
         return deco
 
+# V13 test-only optional-feature registration isolation
+def register_v120_public_baseline(app):
+    with patch.dict(os.environ, {'SUPER_ARCADE_V121_ENABLED': 'false', 'SUPER_FONT_STUDIO_V122_ENABLED': 'false'}):
+        backend.register_super_miniapp(app)
+
+
 class Tests(unittest.TestCase):
     def test_public_unconfigured_fails_closed(self):
         with patch.dict(os.environ,{'SUPER_MINIAPP_V120_PUBLIC_TOOLS':'false','SUPER_MINIAPP_V120_REQUIRE_ADULT':'true'}):
             self.assertFalse(backend.public_tools_enabled())
             self.assertTrue(backend.adult_verification_required())
     def test_no_login_public_tools_guest(self):
-        app=FakeApp();backend.register_super_miniapp(app)
+        app=FakeApp();register_v120_public_baseline(app)
         with patch.dict(os.environ,{'SUPER_MINIAPP_V120_ENABLED':'true','SUPER_MINIAPP_V120_PUBLIC_TOOLS':'true'}),patch.object(backend,'request',types.SimpleNamespace(headers={})),patch.object(backend,'jsonify',side_effect=lambda obj:obj):
             result=app.view_functions['v120_super_session']()
         self.assertTrue(result['guest']);self.assertIsNone(result['user_id']);self.assertFalse(result['private_features'])
     def test_unsigned_private_tasks_rejected_even_with_public_tools(self):
-        app=FakeApp();backend.register_super_miniapp(app)
+        app=FakeApp();register_v120_public_baseline(app)
         v8=types.ModuleType('v8_miniapp');v8.MiniAppAuthError=ValueError
         v8.validate_init_data=lambda raw,token: (_ for _ in ()).throw(ValueError('Invalid signature'))
         with patch.dict(sys.modules,{'v8_miniapp':v8}),patch.dict(os.environ,{'SUPER_MINIAPP_V120_ENABLED':'true','SUPER_MINIAPP_V120_PUBLIC_TOOLS':'true'}),patch.object(backend,'request',types.SimpleNamespace(headers={},method='GET')),patch.object(backend,'jsonify',side_effect=lambda obj:obj):
             response=app.view_functions['v120_super_tasks']()
         self.assertEqual(response[1],401)
     def test_bad_signature_only_guest_in_public_session(self):
-        app=FakeApp();backend.register_super_miniapp(app)
+        app=FakeApp();register_v120_public_baseline(app)
         v8=types.ModuleType('v8_miniapp');v8.MiniAppAuthError=ValueError
         v8.validate_init_data=lambda raw,token: (_ for _ in ()).throw(ValueError('Invalid signature'))
         with patch.dict(sys.modules,{'v8_miniapp':v8}),patch.dict(os.environ,{'SUPER_MINIAPP_V120_ENABLED':'true','SUPER_MINIAPP_V120_PUBLIC_TOOLS':'true','BOT_TOKEN':'abc'}),patch.object(backend,'request',types.SimpleNamespace(headers={'X-Telegram-Init-Data':'bad'})),patch.object(backend,'jsonify',side_effect=lambda obj:obj):
