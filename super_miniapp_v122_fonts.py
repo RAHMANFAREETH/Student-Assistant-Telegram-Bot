@@ -19,6 +19,7 @@ STATIC = {
  '/app/assets/legacy4-core.mjs': ('legacy4_core_v131.mjs','application/javascript; charset=utf-8'),
  '/app/assets/legacy4-ui.mjs': ('legacy4_ui_v131.mjs','application/javascript; charset=utf-8'),
  '/app/assets/legacy4.css': ('legacy4_styles_v131.css','text/css; charset=utf-8'),
+ '/app/assets/fm-abhaya-v132.mjs': ('fm_abhaya_import_v132.mjs','application/javascript; charset=utf-8'),
 
 }
 
