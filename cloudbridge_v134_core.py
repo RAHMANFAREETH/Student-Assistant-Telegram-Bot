@@ -188,7 +188,7 @@ def decrypt_token(value):
 
 def list_jobs(uid, client=None):
     db = client if client is not None else database()
-    rows = (db.table("cloudbridge_jobs_v134").select("id,filename,source_kind,source_provider,destination_kind,destination_provider,status,error_code,bytes_done,created_at,updated_at")
+    rows = (db.table("cloudbridge_jobs_v134").select("id,filename,source_kind,source_provider,destination_kind,destination_provider,status,error_code,bytes_done,total_bytes,result_file_id,created_at,updated_at")
             .eq("user_id", account_id(uid)).order("created_at", desc=True).limit(MAX_JOBS).execute()).data or []
     return rows
 
@@ -226,7 +226,7 @@ def update_job(uid, jid, action, client=None):
     db = client if client is not None else database()
     jid = job_id(jid)
     account_id(uid)
-    rows = (db.table("cloudbridge_jobs_v134").select("id,status")
+    rows = (db.table("cloudbridge_jobs_v134").select("id,status,attempts,upload_state_ciphertext,source_kind,source_provider,destination_provider")
             .eq("user_id", uid).eq("id", jid).limit(1).execute()).data or []
     if not rows:
         return None
@@ -235,16 +235,42 @@ def update_job(uid, jid, action, client=None):
         deleted = (db.table("cloudbridge_jobs_v134").delete().eq("user_id", uid)
                    .eq("id", jid).eq("status", current).execute()).data or []
         return {"id": jid, "status": "deleted"} if deleted else None
-    if action == "cancel" and current in ("queued", "running"):
-        change = {"cancel_requested": True}
+    if action == "cancel" and current in ("queued", "running", "paused"):
+        change = {"cancel_requested": True, "pause_requested": False}
         if current == "queued":
             change["status"] = "cancelled"
+        elif current == "paused":
+            # Remote Google upload may exist; do not claim it is cancelled.
+            change["status"] = "needs_review" if rows[0].get("upload_state_ciphertext") else "cancelled"
+    elif action == "pause" and current in ("queued", "running"):
+        # Legacy transports stage files on disk and cannot be restarted safely
+        # from the last byte. Google's server-side copy is also atomic.
+        if not (rows[0].get("source_kind") == "url"
+                and rows[0].get("destination_provider") == "google"
+                and os.getenv("CLOUDBRIDGE_V136_ENABLED", "false").lower() in {"true", "yes", "1", "on"}):
+            raise BridgeError("Pause is available for resumable HTTPS-to-Google-Drive uploads only.")
+        change = {"pause_requested": True}
+        if current == "queued":
+            change["status"] = "paused"
+    elif action == "resume" and current == "paused":
+        if int(rows[0].get("attempts") or 0) >= 3:
+            raise BridgeError("Maximum worker attempts reached. Check the destination.")
+        change = {"status": "queued", "pause_requested": False,
+                  "cancel_requested": False, "error_code": None}
     elif action == "retry" and current in ("failed", "needs_review"):
-        # Never automatically retry an uncertain provider upload: it could
-        # already have created a duplicate at the destination.
-        if current == "needs_review":
+        if int(rows[0].get("attempts") or 0) >= 3:
+            raise BridgeError("Maximum worker attempts reached. Check destination and start a new job.")
+        # A Google resumable session can be queried before writing again,
+        # unlike the earlier uncertain provider uploads.
+        resumable = (rows[0].get("upload_state_ciphertext")
+                     and rows[0].get("destination_provider") == "google"
+                     and os.getenv("CLOUDBRIDGE_V136_ENABLED", "false").lower() in {"true", "yes", "1", "on"})
+        if current == "needs_review" and not resumable:
             raise BridgeError("Check the destination and create a new job if necessary.")
-        change = {"status": "queued", "cancel_requested": False, "error_code": None, "bytes_done": 0}
+        change = {"status": "queued", "cancel_requested": False,
+                  "pause_requested": False, "error_code": None}
+        if not resumable:
+            change["bytes_done"] = 0
     else:
         raise BridgeError("Action unavailable for this job state.")
     changed = (db.table("cloudbridge_jobs_v134").update(change)
