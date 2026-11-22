@@ -25,9 +25,13 @@ class Cancelled(Exception):
 
 
 def max_bytes():
-    # Render ephemeral disk / Telegram API have finite practical limits.
-    value = int(os.getenv("CLOUDBRIDGE_MAX_MB", "100"))
-    return max(1, min(value, 1024)) * 1024 * 1024
+    # V13.6 Google Drive streaming supports up to 4096 MiB; legacy transfers
+    # still use temporary disk and keep their original <=1024 MiB safety cap.
+    try:
+        value = int(os.getenv("CLOUDBRIDGE_MAX_MB", "100"))
+    except ValueError:
+        value = 100
+    return max(1, min(value, 4096)) * 1024 * 1024
 
 
 def _cancel_check(row, db):
@@ -77,6 +81,13 @@ def _download_telegram(file_id, handle, limit, bot, cancel):
 
 def execute_job(row, bot, db=None):
     db = db or database()
+    from cloudbridge_v136_large import enabled as large_enabled, transfer as large_transfer
+    if (large_enabled() and row.get("destination_kind") == "provider"
+            and row.get("destination_provider") == "google"
+            and (row.get("source_kind") == "url" or
+                 (row.get("source_kind") == "provider" and row.get("source_provider") == "google"))):
+        large_transfer(row, bot, db, maximum=max_bytes())
+        return
     stage = "download"
     try:
         uid = int(row["user_id"])
@@ -84,15 +95,22 @@ def execute_job(row, bot, db=None):
             raise BridgeError("Invalid account.")
         cancel = lambda: _cancel_check(row, db)
         cancel()
+        # Old transport needs disk; never let the V13.6 4-GiB setting make
+        # legacy Telegram/other-provider staging allocate a 4-GiB file.
+        legacy_limit = min(max_bytes(), 1024 * 1024 * 1024)
+        if row.get("destination_kind") == "telegram":
+            # Reject large Telegram deliveries during download, rather than
+            # filling temporary storage and rejecting only at upload.
+            legacy_limit = min(legacy_limit, 49 * 1024 * 1024)
         with tempfile.TemporaryFile() as handle:
             kind = row["source_kind"]
             if kind == "telegram":
-                length = _download_telegram(row["source_ref"], handle, max_bytes(), bot, cancel)
+                length = _download_telegram(row["source_ref"], handle, legacy_limit, bot, cancel)
             elif kind == "provider":
                 length = download_provider(uid, row["source_provider"], row["source_ref"],
-                                           handle, max_bytes(), db, cancel)
+                                           handle, legacy_limit, db, cancel)
             elif kind == "url":
-                length = download_https(row["source_ref"], handle, max_bytes(), cancel)
+                length = download_https(row["source_ref"], handle, legacy_limit, cancel)
             else:
                 raise BridgeError("Unsupported source.")
             if length <= 0:

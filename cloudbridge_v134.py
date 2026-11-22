@@ -98,7 +98,12 @@ def register_cloudbridge(app, bot):
     @app.get("/cloud/api/session", endpoint="cloudbridge_v134_session")
     def session():
         gated()
-        return jsonify({"ok": True, "user_id": auth(), "version": "13.4",
+        from cloudbridge_v136_large import enabled as large_enabled
+        from cloudbridge_v134_worker import max_bytes
+        return jsonify({"ok": True, "user_id": auth(), "version": "13.6",
+                        "max_mb": max_bytes() // (1024 * 1024) if large_enabled() else
+                                  min(1024, max_bytes() // (1024 * 1024)),
+                        "large_drive_enabled": large_enabled(),
                         "providers": ["google", "onedrive", "dropbox"]})
 
     @app.route("/cloud/api/jobs", methods=["GET", "POST"], endpoint="cloudbridge_v134_jobs")
@@ -121,7 +126,7 @@ def register_cloudbridge(app, bot):
     def job_action(jid, action):
         gated()
         uid = auth()
-        if action not in {"cancel", "retry", "delete"}:
+        if action not in {"pause", "resume", "cancel", "retry", "delete"}:
             abort(404)
         try:
             body = json_body()
@@ -271,6 +276,60 @@ def register_cloudbridge(app, bot):
             bot.send_message(uid, message_text or "No CloudBridge transfers yet.")
         except Exception:
             bot.send_message(uid, "CloudBridge status is temporarily unavailable.")
+
+    @bot.message_handler(commands=["cloudcopy"])
+    def cloud_copy(message):
+        """Reply /cloudcopy [@channel] in private chat; server-side copy.
+
+        Telegram copyMessage does not download or reupload the media. It can
+        reuse existing Telegram-hosted media, subject to Telegram restrictions.
+        Cross-chat targets require both the user and bot to be admins; never
+        permit a user to copy private material to arbitrary direct messages.
+        """
+        chat = getattr(message, "chat", None)
+        uid = getattr(getattr(message, "from_user", None), "id", None)
+        if not enabled() or getattr(chat, "type", None) != "private":
+            return
+        if type(uid) is not int or uid != getattr(chat, "id", None):
+            return
+        original = getattr(message, "reply_to_message", None)
+        media = (getattr(original, "document", None) or getattr(original, "video", None)
+                 or getattr(original, "audio", None) or getattr(original, "photo", None)
+                 or getattr(original, "animation", None))
+        source_id = getattr(original, "message_id", None)
+        parts = (message.text or "").strip().split()
+        if (not isinstance(source_id, int) or source_id <= 0 or media is None
+                or len(parts) not in (1, 2) or parts[0] != "/cloudcopy"):
+            bot.send_message(uid, "Reply to a Telegram file with /cloudcopy (private chat) or /cloudcopy @yourchannel (admin-only).")
+            return
+        try:
+            destination = uid
+            if len(parts) == 2:
+                import re
+                raw = parts[1]
+                if not re.fullmatch(r"@[A-Za-z0-9_]{5,32}|-100[0-9]{5,16}", raw):
+                    raise BridgeError("Use an @channel username or a -100... chat ID.")
+                destination = raw if raw.startswith("@") else int(raw)
+                info = bot.get_chat(destination)
+                if getattr(info, "type", None) not in {"channel", "supergroup"}:
+                    raise BridgeError("Copy destination must be a channel or supergroup.")
+                member = bot.get_chat_member(destination, uid)
+                if getattr(member, "status", None) not in {"administrator", "creator"}:
+                    raise BridgeError("You must be an admin of the destination chat.")
+                bot_member = bot.get_chat_member(destination, bot.get_me().id)
+                if getattr(bot_member, "status", None) not in {"administrator", "creator"}:
+                    raise BridgeError("Add this bot as an admin of that chat first.")
+                if (getattr(info, "type", None) == "channel"
+                        and getattr(bot_member, "status", None) != "creator"
+                        and getattr(bot_member, "can_post_messages", False) is not True):
+                    raise BridgeError("Grant the bot permission to post in this channel.")
+            bot.copy_message(chat_id=destination, from_chat_id=uid, message_id=source_id)
+            if destination != uid:
+                bot.send_message(uid, "✅ Telegram file copied to your managed chat.")
+        except BridgeError as exc:
+            bot.send_message(uid, str(exc))
+        except Exception:
+            bot.send_message(uid, "Telegram could not copy this file. Check the destination's permissions and Telegram restrictions.")
 
     from cloudbridge_v134_worker import start_worker
     start_worker(bot)
