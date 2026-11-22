@@ -186,7 +186,7 @@ def welcome_text(name='Friend'):
             '🎓 Student tools are available to learners of all ages.')
 
 
-def home(bot,cid,name='Friend',*,send_welcome=True):
+def home(bot,cid,name='Friend',*,send_welcome=True,private_chat=False):
     if send_welcome:
         _msg(bot,cid,welcome_text(name))
     labels=HOME_LABELS.get(_lang(cid),HOME_LABELS['en'])
@@ -210,6 +210,22 @@ def home(bot,cid,name='Friend',*,send_welcome=True):
         # Preserve the older Friendly Home if V12 is missing/unavailable.
         pass
     # <<< V12.0 SUPER MINI APP FRIENDLY BUTTON <<<
+    # V13.5: additive CloudBridge launcher. The existing /cloud command and
+    # signed Telegram initData authentication remain the authority for access.
+    # Only present a Web App button in a verified private-chat context.
+    if private_chat:
+        try:
+            from cloudbridge_v134_core import enabled as cloud_enabled
+            from cloudbridge_v134 import public_url
+            cloud_base = public_url() if cloud_enabled() else None
+            if cloud_base:
+                from telebot import types
+                kb.row(types.InlineKeyboardButton(
+                    "☁️ CloudBridge · Google Drive",
+                    web_app=types.WebAppInfo(url=cloud_base + "/cloud")))
+        except Exception:
+            # Never break /start or remove existing buttons if unavailable.
+            LOG.debug('Optional CloudBridge home button unavailable',exc_info=True)
     return _msg(bot,cid,'🏠 Student Assistant — Friendly Home Menu',reply_markup=kb)
 
 
@@ -548,7 +564,7 @@ def handle_start(bot,m):
             else:_ensure_user(uid)
         _event(uid,'start')
     except Exception:LOG.warning('Referral recording unavailable',exc_info=True)
-    home(bot,m.chat.id,getattr(m.from_user,'first_name','Friend'))
+    home(bot,m.chat.id,getattr(m.from_user,'first_name','Friend'),private_chat=True)
     return True
 
 
@@ -660,7 +676,7 @@ def _perform(bot,m,cmd,args):
         forget(uid);return _msg(bot,cid,'✅ V11.9 personal records deleted. Original records managed by older bot features remain.')
     if cmd in ('friendlanguage','v119language'):return language(bot,cid,uid)
     if not _adult(uid):return _msg(bot,cid,'🔒 Please complete the existing adult-access verification before using library features.')
-    if cmd in ('home','friendly'):return home(bot,cid,getattr(m.from_user,'first_name','Friend'))
+    if cmd in ('home','friendly'):return home(bot,cid,getattr(m.from_user,'first_name','Friend'),private_chat=True)
     if cmd=='botinfo':return _msg(bot,cid,'🤖 Student Assistant Bot\nVersion: V13.4 Student Experience\nBot: https://t.me/'+BOT+'\n📚 /book · 📄 PDF · 🌍 Translation · ☁️ CloudBridge\n🎓 Available to students of all ages. Provider-specific AI restrictions still apply.')
     if cmd=='mystats':return stats(bot,cid,uid)
     if cmd in ('commands','friendhelp'):return command_guide(bot,cid)
@@ -730,7 +746,7 @@ def _callback(bot,c):
     if not _adult(uid):_msg(bot,cid,'🔒 Adult verification required.');return True
     parts=data.split(':')
     action=parts[1] if len(parts)>1 else ''
-    if action=='home':home(bot,cid,getattr(c.from_user,'first_name','Friend'),send_welcome=False)
+    if action=='home':home(bot,cid,getattr(c.from_user,'first_name','Friend'),send_welcome=False,private_chat=True)
     elif action=='find':_msg(bot,cid,'🔎 Search by title or author:\n/smartbook Sahih al Bukhari\n/book Quran')
     elif action=='mybooks':favorites(bot,cid,uid)
     elif action=='recent':recents(bot,cid,uid)
@@ -745,7 +761,7 @@ def _callback(bot,c):
     elif action=='language':language(bot,cid,uid)
     elif action=='lang' and len(parts)==3:
         saved=set_language(uid,parts[2]);_msg(bot,cid,'✅ Language saved.' if saved else '⚠️ Language changed for this session, database storage needs checking.')
-        home(bot,cid,getattr(c.from_user,'first_name','Friend'),send_welcome=False)
+        home(bot,cid,getattr(c.from_user,'first_name','Friend'),send_welcome=False,private_chat=True)
     elif action=='tools':_msg(bot,cid,'🤖 AI: use the existing AI & Questions menu.\n📄 PDF Tools: select PDF Tools in your main menu.\n🔎 Tool Finder: /findtool library\n🚀 /home to return.')
     elif action=='myinfo':profile(bot,type('M',(),{'chat':m.chat,'from_user':c.from_user})())
     elif action=='commands':command_guide(bot,cid)
