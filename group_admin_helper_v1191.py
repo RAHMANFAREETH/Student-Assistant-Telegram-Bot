@@ -219,7 +219,7 @@ def _command(bot,m):
         if not _group(m) or not _group_allowed(m.chat.id):return ContinueHandling()
         return _reply(bot,m,'👋 أَلسَّلَامُ عَلَيْكُمْ وَرَحْمَةُ اللَّهِ وَبَرَكَاتُهُ\n📚 Book Library Help\n'
               'Search: /book Quran\nLatest: /booklatest\nOpen any result privately to get the file.\n'
-              '🤖 https://t.me/Student_Sl_Assistant_bot\n🔞 18+ eligibility applies.')
+              '🤖 https://t.me/Student_Sl_Assistant_bot\n🎓 Study tools for learners of all ages.')
     if command=='reportproblem':
         if not _is_private(m):return ContinueHandling()
         if not _adult(_uid(m)):return _reply(bot,m,'🔒 Adult eligibility verification required.')

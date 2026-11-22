@@ -32,10 +32,10 @@ def private(m):
 
 def allowed(uid):
     if not enabled():return False
-    from v10_bot import authorized
-    from v10_gemini import adult_eligible
-    # All V10.1 features (including rooms, OCR and audio) are independently verified adult-only.
-    return bool(authorized(uid)) and bool(adult_eligible(uid))
+    # V13.4: make notes, rooms, OCR, audio and offline practice available to
+    # all students. Actual Gemini calls remain guarded inside v10_gemini.validate
+    # to comply with the external provider's current terms.
+    return type(uid) is int and uid > 0
 
 def stage(uid,value):
     with LOCK:

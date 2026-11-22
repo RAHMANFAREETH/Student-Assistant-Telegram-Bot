@@ -180,8 +180,7 @@ if _v9_os.getenv("V9_ENABLED", "").lower() in ("true", "1", "yes"):
 
 # V9.1: preserve the request action while legacy workflows are active.
 import os as _v91_os
-if _v91_os.getenv("V91_ACCESS_REQUESTS_ENABLED", "").lower() in ("true", "1", "yes"):
-    GLOBAL_BUTTONS.add("🔐 Verify Adult Access")
+# V13.4: legacy age-verification button intentionally removed from navigation.
 
 # V10.0 optional Learning Lab button should pass through legacy states.
 import os as _v10_nav_os

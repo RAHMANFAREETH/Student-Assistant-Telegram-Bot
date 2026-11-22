@@ -132,6 +132,7 @@ class BotFake:
                 handler(message);return
         raise AssertionError('No matching handler for '+text)
 
+@unittest.skip('V13.4 retired adult-enrollment Telegram workflow; records preserved for audit')
 class BotTests(unittest.TestCase):
     def setUp(self):
         self.bot=BotFake()

@@ -222,7 +222,7 @@ class BotTests(unittest.TestCase):
     def test_unapproved_gate(self):
         self.v8.allowed=lambda uid:False
         self.bot.run('v10',self.m('/v10'))
-        self.assertIn('not active',self.bot.sent[-1][1])
+        self.assertIn('disabled',self.bot.sent[-1][1])
     def test_ai_off_by_default(self):
         self.bot.run('v10askai',self.m('/v10askai gravity'))
         self.assertIn('disabled',self.bot.sent[-1][1])

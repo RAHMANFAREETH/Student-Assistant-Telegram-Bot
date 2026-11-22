@@ -161,9 +161,9 @@ class TelegramWorkflowTests(unittest.TestCase):
     def test_group_creation_not_public(self):
         self.bot.handlers['battle_new'](self.msg('/v8battle_new -100123456789 | Question? | A | B | C | D | A',chat_id=-100123456789,chat_type='supergroup'))
         self.assertIn('privately',self.bot.sent[-1][1])
-    def test_unlisted_user_no_access(self):
+    def test_unlisted_user_has_all_ages_access(self):
         self.bot.handlers['feature_command'](types.SimpleNamespace(text='/v8doc',chat=types.SimpleNamespace(id=7,type='private'),from_user=types.SimpleNamespace(id=7)))
-        self.assertIn('not enabled',self.bot.sent[-1][1])
+        self.assertIn('Send a PDF',self.bot.sent[-1][1])
     def test_cancel_clears_state(self):
         self.bot.handlers['feature_command'](self.msg('/v8doc'))
         self.bot.handlers['cancel'](self.msg('/v8cancel'))
@@ -219,9 +219,9 @@ class GateTests(unittest.TestCase):
     def test_closed_default(self):
         os.environ.pop('V8_ENABLED',None);os.environ['V8_ALLOWED_USER_IDS']='2468'
         self.assertFalse(self.v8.allowed(2468))
-    def test_allowlist(self):
+    def test_all_ages_access_when_enabled(self):
         os.environ['V8_ENABLED']='true';os.environ['V8_ALLOWED_USER_IDS']='1234, 2468'
-        self.assertTrue(self.v8.allowed(2468));self.assertFalse(self.v8.allowed(2))
+        self.assertTrue(self.v8.allowed(2468));self.assertTrue(self.v8.allowed(2))
     def test_expired_state(self):
         self.v8._put(99999,{'kind':'doc'});self.v8.STATES[99999]['last']-=1000
         self.assertIsNone(self.v8._get(99999))

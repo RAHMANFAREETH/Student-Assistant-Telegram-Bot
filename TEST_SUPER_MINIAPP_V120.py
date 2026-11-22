@@ -83,7 +83,7 @@ class TestSuperMiniApp(unittest.TestCase):
                 page=self.app.view_functions['v120_super_home']()
         self.assertIn(b'Super Mini App', page[0])
         self.assertIn(b'/app/assets/app.js', page[0])
-    def test_requires_signed_login_and_adult(self):
+    def test_requires_signed_login_but_not_adult(self):
         fake_v8=types.ModuleType('v8_miniapp')
         class AuthError(ValueError): pass
         fake_v8.MiniAppAuthError=AuthError
@@ -95,9 +95,8 @@ class TestSuperMiniApp(unittest.TestCase):
                 with self.assertRaises(AuthError):module.verify_super_session('invalid')
                 with self.assertRaises(AuthError):module.verify_super_session('')
                 fake_age.is_verified_adult=lambda uid:False
-                with self.assertRaises(PermissionError):module.verify_super_session('valid')
-                # Public utility mode deliberately removes *manual* adult verification,
-                # but always requires valid Telegram HMAC for private user data.
+                self.assertEqual(module.verify_super_session('valid'),44)
+                # V13.4: age verification is retired, Telegram signature remains.
                 with patch.dict(os.environ, {'SUPER_MINIAPP_V120_REQUIRE_ADULT':'false'}):
                     self.assertEqual(module.verify_super_session('valid'), 44)
                     with self.assertRaises(AuthError):module.verify_super_session('invalid')

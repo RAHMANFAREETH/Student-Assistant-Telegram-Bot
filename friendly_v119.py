@@ -183,7 +183,7 @@ def welcome_text(name='Friend'):
             f'👤 {name}\n'
             '📚 Books · 🤖 AI Study · 📄 PDF Tools · 🌍 Translation\n'
             'Choose a button below, or type /commands.\n'
-            '🔞 Available to eligible users aged 18+.')
+            '🎓 Student tools are available to learners of all ages.')
 
 
 def home(bot,cid,name='Friend',*,send_welcome=True):
@@ -661,7 +661,7 @@ def _perform(bot,m,cmd,args):
     if cmd in ('friendlanguage','v119language'):return language(bot,cid,uid)
     if not _adult(uid):return _msg(bot,cid,'🔒 Please complete the existing adult-access verification before using library features.')
     if cmd in ('home','friendly'):return home(bot,cid,getattr(m.from_user,'first_name','Friend'))
-    if cmd=='botinfo':return _msg(bot,cid,'🤖 Student Assistant Bot\nVersion: V11.9 Friendly Experience (feature enabled)\nBot: https://t.me/'+BOT+'\n📚 /book · 🤖 AI · 📄 PDF · 🌍 Translation\n🔞 18+ eligibility applies.')
+    if cmd=='botinfo':return _msg(bot,cid,'🤖 Student Assistant Bot\nVersion: V13.4 Student Experience\nBot: https://t.me/'+BOT+'\n📚 /book · 📄 PDF · 🌍 Translation · ☁️ CloudBridge\n🎓 Available to students of all ages. Provider-specific AI restrictions still apply.')
     if cmd=='mystats':return stats(bot,cid,uid)
     if cmd in ('commands','friendhelp'):return command_guide(bot,cid)
     if cmd=='smartbook':_event(uid,'search');return search_books(bot,cid,args)
@@ -694,7 +694,7 @@ def _perform(bot,m,cmd,args):
         link=referral_link(uid)
         profile=_get_user(uid)
         count=_db().table(USERS).select('user_id',count='exact').eq('referrer_id',uid).limit(1).execute()
-        return _msg(bot,cid,f'🤝 Invite your friends (18+)\n{link}\nInvited users who started: {getattr(count,"count",0) or 0}\nNo forced invitations or leaderboard.')
+        return _msg(bot,cid,f'🤝 Invite your classmates and friends\n{link}\nInvited users who started: {getattr(count,"count",0) or 0}\nNo forced invitations or leaderboard.')
     if cmd=='newarrivals':
         if args.lower() not in ('on','off'):
             p=_get_user(uid) or {}

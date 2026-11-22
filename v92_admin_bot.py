@@ -76,6 +76,9 @@ def _buttons(uid, rows):
 
 
 def register_v92_admin_handlers(bot):
+    # V13.4: legacy adult-review commands are retired, not repurposed.
+    # The old database records remain intact for operator audit.
+    return
     """Call once immediately after registering V9.1 handlers, before V8/V9."""
 
     def private(m):

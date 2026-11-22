@@ -132,9 +132,9 @@ class BotTests(unittest.TestCase):
     def test_hub_shows_14_tools(self):
         self.bot.handlers['command_hub'](self.msg('/v9'))
         self.assertIn('14 student tools',self.bot.sent[-1][1])
-    def test_unauthorized(self):
+    def test_all_ages_student_access(self):
         self.bot.handlers['command_hub'](self.msg('/v9',456))
-        self.assertIn('approved',self.bot.sent[-1][1])
+        self.assertIn('14 student tools',self.bot.sent[-1][1])
     def test_group_rejected(self):
         self.bot.handlers['command_hub'](self.msg('/v9',chat_type='group'))
         self.assertIn('private',self.bot.sent[-1][1])

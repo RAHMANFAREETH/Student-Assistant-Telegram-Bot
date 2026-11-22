@@ -98,7 +98,7 @@ PAGES = {
         '/v101check CLAIM — offline lexical source-overlap screening\n'
         '/v101confirm — review and consent to the pending Gemini request\n'
         '/v101forget — delete saved V10.1 tutor turns\n\n'
-        'AI requests require verified-adult access and a daily quota. '
+        'AI requests may be restricted by external provider terms and daily quotas. '
         'AI can be inaccurate; review document citations.'
     ),
     'practice': (
@@ -122,22 +122,20 @@ PAGES = {
         'Use each tool’s own menu for its complete instructions.'
     ),
     'access': (
-        '🔐 Adult-access help\n\n'
-        '/access_status — see current verification and expiry\n'
-        '/verify_adult — request administrator review\n'
-        '/access_help — access rules and help\n\n'
-        'Only independently verified adults can access restricted study features. '
-        'A self-declaration or Telegram account alone is not proof of age.'
+        '🔐 Student access help\n\n'
+        'Study, Library and Mini App utilities are available to students of all ages.\n'
+        'Telegram login and private account ownership are still required.\n'
+        'External AI providers may have separate usage restrictions.'
     ),
     'errors': (
         '🛠 Troubleshooting\n\n'
         '• Menu missing: check the relevant V8/V9/V10/V101 feature switch.\n'
-        '• Access denied: try /access_status; verified-adult record may be missing or expired.\n'
+        '• Access denied: check the feature switch and open the Mini App from Telegram.\n'
         '• Upload cannot be saved: check supported format, page/text limits and /v10save.\n'
         '• Gemini unavailable: confirm the feature switch, consent, provider quota and Render logs.\n'
         '• Pending upload or AI request stuck: try /studycancel, then restart.\n'
         '• Never paste API keys or service-role tokens into Telegram messages.\n\n'
-        'V11 does not bypass any provider quota or verified-adult restriction.'
+        'V11 does not bypass provider quotas, AI terms or admin permissions.'
     ),
 }
 
@@ -145,13 +143,12 @@ HOME_TEXT = (
     '🚀 Study Center — V11.0\n'
     'Fast navigation for existing Student Assistant tools.\n\n'
     'Choose a topic below or use /studyhelp. '
-    'Menus do not contact Gemini or Supabase; restricted tools still require adult verification.\n'
+    'Menus do not contact Gemini or Supabase; provider rules still apply.\n'
     'To cancel pending V10/V10.1 actions: /studycancel.'
 )
 
 
 def status_text(uid, verifier=None):
-    mode = os.getenv('STUDY_ACCESS_MODE', 'pilot').strip().lower()
     rows = [
         '📊 Study feature status',
         'V8: ' + _bool('V8_ENABLED'),
@@ -160,20 +157,9 @@ def status_text(uid, verifier=None):
         'V10 Gemini: ' + _bool('V10_GEMINI_ENABLED'),
         'V10.1: ' + _bool('V101_ENABLED'),
         'V11: ' + _bool('V11_ENABLED'),
-        'Adult access mode: ' + ('verified_adults' if mode == 'verified_adults' else 'not verified_adults'),
+        'Student access: all ages (V13.4)',
     ]
-    if mode != 'verified_adults':
-        rows.append('Verified-adult gate is not the active study access mode.')
-    else:
-        try:
-            if verifier is None:
-                from study_access_v9 import is_verified_adult
-                verifier = is_verified_adult
-            rows.append('Your adult verification: ' + ('active' if verifier(uid) else 'not confirmed'))
-        except Exception:
-            LOG.warning('V11 could not read verification status', exc_info=True)
-            rows.append('Your adult verification: temporarily unavailable')
-    rows.append('For expiry and requests, use /access_status. ON means configured, not provider-tested.')
+    rows.append('ON means configured, not provider-tested; Gemini usage rules remain separate.')
     return '\n'.join(rows)
 
 
@@ -185,7 +171,7 @@ def diagnostic_text():
         'Python: ' + '.'.join(map(str, sys.version_info[:3])),
         'V11: ' + _bool('V11_ENABLED'),
         'V10 Gemini: ' + _bool('V10_GEMINI_ENABLED'),
-        'Adult access mode: ' + ('verified_adults' if os.getenv('STUDY_ACCESS_MODE', '').lower() == 'verified_adults' else 'other'),
+        'Student access: all ages (V13.4)',
     ]
     for name in names:
         rows.append(f'{name}: ' + ('present' if importlib.util.find_spec(name) else 'missing'))
@@ -206,7 +192,7 @@ def _keyboard(uid, chat_id, items):
 HOME_BUTTONS = (
     ('📚 Documents', 'docs'), ('🤖 Gemini tutor', 'ai'),
     ('📝 Practice', 'practice'), ('🧰 All tools', 'more'),
-    ('🔐 Adult access', 'access'), ('📊 My status', 'status'),
+    ('🔐 Student access', 'access'), ('📊 My status', 'status'),
     ('🛠 Troubleshooting', 'errors'), ('❎ Cancel pending', 'cancel'),
 )
 

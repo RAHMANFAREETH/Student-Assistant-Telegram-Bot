@@ -52,17 +52,8 @@ def pilot_user_ids() -> set[int]:
 
 
 def pilot_access_allowed(uid: int) -> bool:
-    """Server-side API pilot limit, when PILOT_IDS is configured.
-
-    If unset, retain existing verified-adult-only API behavior and tests.
-    This is NOT a substitute for Telegram HMAC or adult verification.
-    """
-    if type(uid) is not int or uid <= 0:
-        return False
-    if _on('SUPER_MINIAPP_V120_LAUNCH_PUBLIC'):
-        return True
-    raw = os.getenv('SUPER_MINIAPP_V120_PILOT_IDS', '').strip()
-    return not raw or uid in pilot_user_ids()
+    """V13.4 public API: signed Telegram identity replaces legacy pilot gate."""
+    return type(uid) is int and uid > 0
 
 
 def can_launch(uid: int) -> bool:
@@ -71,21 +62,7 @@ def can_launch(uid: int) -> bool:
         return False
     if type(uid) is not int or uid <= 0:
         return False
-    if not (_on('SUPER_MINIAPP_V120_LAUNCH_PUBLIC') or uid in pilot_user_ids()):
-        return False
-    # >>> V12 PUBLIC LAUNCH MODE >>>
-    # Public V12 launcher permits calculators for all users. Other bot/AI gates
-    # are untouched. Private V12 endpoints independently validate Telegram HMAC.
-    if _on('SUPER_MINIAPP_V120_PUBLIC_TOOLS'):
-        return True
-    if os.getenv('SUPER_MINIAPP_V120_REQUIRE_ADULT', 'true').strip().lower() in ('false', '0', 'no', 'off'):
-        return True
-    # <<< V12 PUBLIC LAUNCH MODE <<<
-    try:
-        from study_access_v9 import is_verified_adult
-        return is_verified_adult(uid) is True
-    except Exception:
-        return False
+    return True
 
 
 def register_super_app_launcher(bot):

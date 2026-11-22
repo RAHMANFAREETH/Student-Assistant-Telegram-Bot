@@ -79,6 +79,8 @@ def summary(db=None):
 
 
 def register_v93_reliability_handlers(bot):
+    # V13.4: adult eligibility workflows are retired for general study tools.
+    return
     """Register after V9.2 and before the older V8/V9 stateful handlers."""
     from adult_requests_v91 import is_admin
 

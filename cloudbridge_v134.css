@@ -1,0 +1,23 @@
+:root{font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#e9edfc;background:#0c1530;color-scheme:dark}
+*{box-sizing:border-box}body{margin:0}.shell{max-width:900px;margin:auto;padding:16px 16px 95px}
+header,.section-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+header{padding:10px 0 18px}h1{font-size:1.55rem;margin:0;letter-spacing:-.03em}h1 small{font-size:.65rem;color:#a9bcf6}
+h2{font-size:1.14rem;margin:0 0 10px}.eyebrow{font-size:.7rem;color:#a6b6ec;letter-spacing:.16em;font-weight:700}
+.card{background:#18264a;border:1px solid #31416f;border-radius:18px;padding:18px;margin:12px 0;box-shadow:0 8px 32px #080e2740}
+.card h2{margin-top:0}.hint{font-size:.86rem;color:#afc0e5;line-height:1.55}.foot{text-align:center;margin:18px 0}
+.status{min-height:25px;color:#98eacc;margin-bottom:8px;font-size:.91rem}.status.error{color:#ffb5b7}
+button,select,input{font:inherit;min-height:44px;border-radius:11px;border:1px solid #55678b}
+select,input{width:100%;background:#0f1b37;color:#f5f8ff;padding:10px 12px;outline-offset:2px}
+header select{width:auto;max-width:120px}.cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+label{display:block;font-size:.83rem;font-weight:650;color:#ced8f6;margin:11px 0}label span{display:block;margin-bottom:6px}
+button{cursor:pointer;padding:9px 13px;font-weight:700;color:#f7f9ff;background:#2b3f71}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #9cbcff;outline-offset:2px}
+button:disabled{opacity:.52;cursor:not-allowed}.primary{width:100%;background:#4164de;border-color:#6b8bfa;margin-top:10px}
+.muted-button{min-height:36px;font-size:.85rem}.account-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.account{background:#101d3b;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+.account strong{font-size:.91rem}.account .connected{color:#86e2b3;font-size:.78rem}.account button{width:100%;font-size:.83rem}
+.jobs{list-style:none;padding:0;margin:0}.jobs li{border-top:1px solid #354669;padding:12px 0;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.job-name{font-weight:650;overflow-wrap:anywhere}.job-status{display:block;font-size:.78rem;color:#acc6ea;margin-top:4px}
+.job-action{font-size:.81rem;min-width:74px}.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+@media(max-width:580px){.shell{padding:12px 11px 80px}.account-grid{grid-template-columns:1fr}.account{flex-direction:row;align-items:center;flex-wrap:wrap}.account button{width:auto;margin-left:auto}.cols{grid-template-columns:1fr;gap:0}.card{padding:14px}.jobs li{align-items:flex-start}}
+@media(prefers-reduced-motion:no-preference){button{transition:filter .18s}button:hover:not(:disabled){filter:brightness(1.16)}}

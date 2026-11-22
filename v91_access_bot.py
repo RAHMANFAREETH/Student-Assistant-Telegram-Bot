@@ -19,6 +19,19 @@ def enabled():
 def register_v91_access_handlers(bot):
     """Register before legacy V8/V9 stateful handlers."""
 
+    # V13.4: all-ages student utilities no longer require adult enrollment.
+    # Preserve historical verification records for audit; do not collect new
+    # requests or use age review as an access condition.
+    @bot.message_handler(commands=['verify_adult', 'access_status'])
+    def legacy_age_status(m):
+        if getattr(getattr(m, 'chat', None), 'type', None) != 'private':
+            return
+        bot.send_message(m.chat.id,
+                         '🎓 Age verification is no longer required for Student Assistant learning tools. '
+                         'External AI provider terms may still limit particular AI features.')
+
+    return
+
     def send(chat_id, text):
         bot.send_message(chat_id, text)
 

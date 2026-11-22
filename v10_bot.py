@@ -76,7 +76,7 @@ def register_v10_handlers(bot):
         if not _private(m):
             send(m.chat.id,'🔒 V10 personal study tools are available only in a private chat.');return False
         if not authorized(m.from_user.id):
-            send(m.chat.id,'🔒 V10 is disabled or your adult study access is not active. Check /access_status.');return False
+            send(m.chat.id,'🔒 V10 Learning Lab is currently disabled.');return False
         return True
 
     def error(m,exc):

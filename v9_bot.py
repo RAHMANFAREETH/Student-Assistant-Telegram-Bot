@@ -236,7 +236,7 @@ def register_v9_handlers(bot, show_main_menu):
     def send(m,s):_safe_send(bot,m.chat.id,s)
     def require(m):
         if not _private(m):send(m,'🔒 V9 personal tools work only in private chat.');return False
-        if not allowed(m.from_user.id):send(m,'🔒 V9 access requires approved pilot access or verified adult eligibility.');return False
+        if not allowed(m.from_user.id):send(m,'🔒 V9 is currently disabled. Contact the bot operator.');return False
         return True
     def hub(m):
         if not require(m):return
