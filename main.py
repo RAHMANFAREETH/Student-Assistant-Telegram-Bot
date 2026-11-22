@@ -205,13 +205,14 @@ if os.getenv('BOOK_LIBRARY_V113_ENABLED', 'false').lower() in ('true','1','yes')
 # MAIN MENU
 # ==================================================
 
-def show_main_menu(chat_id, first_name="Friend"):
+def show_main_menu(chat_id, first_name="Friend", *, private_chat=False):
     """V5.7 compact menu; existing modules still receive original button text."""
     # V11.9 greeting and new inline home; retain original reply keyboard.
     from friendly_v119 import enabled as friendly_v119_enabled, home as v119_home, welcome_text as v119_welcome
     if friendly_v119_enabled():
         bot.send_message(chat_id, v119_welcome(first_name), reply_markup=build_main_menu_markup())
-        v119_home(bot, chat_id, first_name, send_welcome=False)
+        v119_home(bot, chat_id, first_name, send_welcome=False,
+                  private_chat=private_chat)
         return
     bot.send_message(
         chat_id,
@@ -250,6 +251,8 @@ def start(message):
     show_main_menu(
         message.chat.id,
         first_name,
+        private_chat=(getattr(message.chat, "type", None) == "private"
+                      and message.chat.id == message.from_user.id),
     )
 
 
