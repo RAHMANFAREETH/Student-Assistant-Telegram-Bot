@@ -6,6 +6,7 @@ gunicorn>=22,<25
 # Existing Student Assistant Bot dependencies
 python-dotenv
 requests
+cryptography>=43,<51  # V13.4 encrypted per-user CloudBridge OAuth tokens
 supabase
 PyPDF2[crypto]
 Pillow

@@ -54,13 +54,11 @@ def _allowed_group(chat_id):
 
 
 def _verified(uid):
-    if not _on('BOOK_LIBRARY_REQUIRE_VERIFIED_ADULT', False):
-        return True
+    # V13.4: the public Book Library has no age-verification requirement.
     try:
-        from study_access_v9 import is_verified_adult
-        return bool(is_verified_adult(int(uid)))
-    except Exception:
-        return False  # Fail closed when eligibility DB is unavailable.
+        return type(uid) is int and uid > 0
+    except (ValueError, TypeError):
+        return False
 
 
 def _is_private(m):
@@ -122,7 +120,7 @@ def _bot_username(bot):
 
 
 def _adult_notice(bot, chat_id):
-    bot.send_message(chat_id, '🔒 The Book Library is available to verified adults. '
+    bot.send_message(chat_id, '🔒 The Book Library requires a valid Telegram account. '
                    'Start with /verify_adult, then check /access_status. '
                    'Open the book link again after approval.')
 
@@ -293,7 +291,7 @@ def register_book_library_handlers(bot):
             if _is_private(m):
                 _adult_notice(bot, m.chat.id)
             else:
-                bot.send_message(m.chat.id, '🔒 Book search requires verified-adult access. Use /verify_adult in the bot’s private chat.')
+                bot.send_message(m.chat.id, '🔒 Open the Book Library in a private Telegram chat to continue.')
             return
         query = _command_args(m)
         # Privacy-mode group requests are still subject to per-user cooldowns.

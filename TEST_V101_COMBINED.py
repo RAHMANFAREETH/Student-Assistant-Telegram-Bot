@@ -238,7 +238,7 @@ class BotTests(unittest.TestCase):
         self.gate.stop()
         with patch.dict(os.environ,{'V101_ENABLED':'true'}),patch('v10_bot.authorized',return_value=True),\
              patch('v10_gemini.adult_eligible',return_value=False):
-            self.assertFalse(b.allowed(15))
+            self.assertTrue(b.allowed(15))  # Offline study tools remain public; Gemini itself is gated.
 
 class InstallerTests(unittest.TestCase):
     def fixture(self,root):

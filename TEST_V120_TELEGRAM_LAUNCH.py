@@ -33,7 +33,7 @@ class TestLaunch(unittest.TestCase):
     def test_backend_pilot_gate_when_configured(self):
         with patch.dict(os.environ, {'SUPER_MINIAPP_V120_PILOT_IDS':'7', 'SUPER_MINIAPP_V120_LAUNCH_PUBLIC':'false'}):
             self.assertTrue(pilot_access_allowed(7))
-            self.assertFalse(pilot_access_allowed(9))
+            self.assertTrue(pilot_access_allowed(9))  # V13.4 all-ages policy
         with patch.dict(os.environ, {'SUPER_MINIAPP_V120_PILOT_IDS':'', 'SUPER_MINIAPP_V120_LAUNCH_PUBLIC':'false'}):
             self.assertTrue(pilot_access_allowed(9))  # backward-compatible adult auth
 
@@ -43,14 +43,14 @@ class TestLaunch(unittest.TestCase):
                                      'SUPER_MINIAPP_V120_PILOT_IDS':'7'}):
             self.assertFalse(can_launch(7))
 
-    def test_requires_adult(self):
+    def test_all_ages_launcher_when_enabled(self):
         study = types.ModuleType('study_access_v9')
         study.is_verified_adult = lambda uid: uid == 7
         env = {'SUPER_MINIAPP_V120_ENABLED':'true', 'SUPER_MINIAPP_V120_LAUNCH_ENABLED':'true',
                'SUPER_MINIAPP_V120_PILOT_IDS':'7', 'SUPER_MINIAPP_V120_LAUNCH_PUBLIC':'false'}
         with patch.dict(os.environ,env), patch.dict(sys.modules,{'study_access_v9':study}):
             self.assertTrue(can_launch(7))
-            self.assertFalse(can_launch(8))
+            self.assertTrue(can_launch(8))
 
     def test_command_only_private_and_signed_user(self):
         class Bot:

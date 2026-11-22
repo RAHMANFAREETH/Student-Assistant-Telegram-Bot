@@ -259,6 +259,11 @@ from super_miniapp_v120_launch import register_super_app_launcher
 register_super_app_launcher(bot)
 # <<< V12.0 PRIVATE SUPER APP LAUNCH <<<
 
+# V13.4 CloudBridge: separate signed all-ages Mini App and private commands.
+# Feature flags are OFF by default; do not change existing AI/Library routes.
+from cloudbridge_v134 import register_cloudbridge
+register_cloudbridge(app, bot)
+
 # ==================================================
 # /HELP
 # ==================================================

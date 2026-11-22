@@ -2,7 +2,7 @@
 
 Production route exposure requires SUPER_MINIAPP_V120_ENABLED=true.
 Personalized access is only available to signed Telegram accounts with current
-server-side 18+ verification. The frontend sends no secrets or images to this API.
+signed Telegram identity. The frontend sends no secrets or images to this API.
 """
 from __future__ import annotations
 
@@ -21,8 +21,8 @@ def public_tools_enabled():
 
 
 def adult_verification_required():
-    """Opt out ONLY for the V12 benign Mini App, not for other bot/AI features."""
-    return os.getenv('SUPER_MINIAPP_V120_REQUIRE_ADULT', 'true').strip().lower() not in ('0', 'false', 'no', 'off')
+    """Deprecated in V13.4: the student utility Mini App is all-ages."""
+    return False
 
 
 def _guest_session():
@@ -39,16 +39,12 @@ def enabled():
 def verify_super_session(raw: str):
     """Re-use existing, HMAC-validated Telegram auth with short replay window.
 
-    V8 validation does not grant access; current verified-adult record required.
+    Verifies Telegram identity, independently of age or adult records.
     """
     from v8_miniapp import validate_init_data, MiniAppAuthError
     if not raw or len(raw) > 6000:
         raise MiniAppAuthError("Missing Telegram login.")
     uid = validate_init_data(raw, os.getenv("BOT_TOKEN", ""))
-    if adult_verification_required():
-        from study_access_v9 import is_verified_adult
-        if not is_verified_adult(uid):
-            raise PermissionError("Verified adult access required.")
     # V12.0 optional server-side pilot gate; HMAC and adult checks run first.
     from super_miniapp_v120_launch import pilot_access_allowed
     if not pilot_access_allowed(uid):
@@ -128,7 +124,7 @@ def register_super_miniapp(app):
             # Anonymous utilities are safe; private endpoints still check HMAC.
             if public_tools_enabled():
                 return _guest_session()
-            return jsonify({'error': 'Verified 18+ access is required.'}), 403
+            return jsonify({'error': 'Mini App access is restricted by operator settings.'}), 403
         # >>> V12.0 SESSION FAILURE DIAGNOSTIC >>>
         except (ValueError, TypeError) as exc:
             # Do not log initData, user ID or the bot token.
@@ -154,7 +150,7 @@ def register_super_miniapp(app):
         try:
             uid = verify_super_session(request.headers.get("X-Telegram-Init-Data", ""))
         except PermissionError:
-            return jsonify({"error": "Verified 18+ access is required."}), 403
+            return jsonify({"error": "Mini App access is restricted by operator settings."}), 403
         except (ValueError, TypeError):
             return jsonify({"error": "Open the app from Telegram and sign in again."}), 401
         from super_miniapp_v120_tasks import (list_tasks, create_task, TaskInputError, TaskLimitError)
@@ -183,7 +179,7 @@ def register_super_miniapp(app):
         try:
             uid = verify_super_session(request.headers.get("X-Telegram-Init-Data", ""))
         except PermissionError:
-            return jsonify({"error": "Verified 18+ access is required."}), 403
+            return jsonify({"error": "Mini App access is restricted by operator settings."}), 403
         except (ValueError, TypeError):
             return jsonify({"error": "Open the app from Telegram and sign in again."}), 401
         from super_miniapp_v120_tasks import update_task, delete_task, TaskInputError
@@ -210,7 +206,7 @@ def register_super_miniapp(app):
         try:
             uid = verify_super_session(request.headers.get("X-Telegram-Init-Data", ""))
         except PermissionError:
-            return jsonify({"error": "Verified 18+ access is required."}), 403
+            return jsonify({"error": "Mini App access is restricted by operator settings."}), 403
         except (ValueError, TypeError):
             return jsonify({"error": "Open the app from Telegram and sign in again."}), 401
         try:

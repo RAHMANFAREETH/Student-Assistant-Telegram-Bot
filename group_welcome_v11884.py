@@ -72,7 +72,7 @@ def _text(name):
         '📚 Search results show book files and language filters.\n'
         '📩 Tap a result to open the bot and receive the file privately.\n'
         f'🤖 Bot: https://t.me/{_BOT_USER}\n\n'
-        '🔞 Service is for eligible users aged 18+. Access rules apply.\n'
+        '🎓 Learning tools are available to students of all ages.\n'
         '💚 Please respect other members and share only material you may distribute.'
     )
 

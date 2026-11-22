@@ -88,22 +88,22 @@ class AuthorizationModeTests(unittest.TestCase):
         from v8_bot import allowed
         cls.access_fn = staticmethod(allowed)
 
-    def test_pilot_defaults_to_allowlist(self):
+    def test_all_ages_ignores_old_pilot_allowlist(self):
         with patch.dict(os.environ, {'V8_ENABLED':'true','V8_ALLOWED_USER_IDS':'123','STUDY_ACCESS_MODE':'pilot'}):
             self.assertTrue(self.access_fn(123))
-            self.assertFalse(self.access_fn(456))
+            self.assertTrue(self.access_fn(456))
 
-    def test_verified_adults_mode_requires_registry(self):
+    def test_legacy_adult_mode_no_longer_checks_registry(self):
         with patch.dict(os.environ, {'V8_ENABLED':'true','STUDY_ACCESS_MODE':'verified_adults'}):
             with patch('study_access_v9.is_verified_adult', return_value=True) as check:
                 self.assertTrue(self.access_fn(123))
-                check.assert_called_once_with(123)
+                check.assert_not_called()
             with patch('study_access_v9.is_verified_adult', return_value=False):
-                self.assertFalse(self.access_fn(999))
+                self.assertTrue(self.access_fn(999))
 
-    def test_unknown_mode_denied(self):
+    def test_public_mode_allows_students(self):
         with patch.dict(os.environ, {'V8_ENABLED':'true','STUDY_ACCESS_MODE':'public','V8_ALLOWED_USER_IDS':'123'}):
-            self.assertFalse(self.access_fn(123))
+            self.assertTrue(self.access_fn(123))
 
     def test_disabled_denied_even_if_verified(self):
         with patch.dict(os.environ, {'V8_ENABLED':'false','STUDY_ACCESS_MODE':'verified_adults'}):
