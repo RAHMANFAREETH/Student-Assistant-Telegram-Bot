@@ -27,7 +27,6 @@ def validate_init_data(raw: str, token: str, now: int | None = None) -> int:
             raise MiniAppAuthError("Duplicate fields.")
         payload=dict(pairs)
         signature=payload.pop("hash", "")
-        payload.pop("signature", None)  # Telegram may send third-party signature; not in HMAC input.
         if len(signature)!=64 or any(c not in '0123456789abcdefABCDEF' for c in signature):
             raise MiniAppAuthError("Invalid signature.")
         if not payload.get("auth_date") or not payload.get("user"):
